@@ -1,0 +1,58 @@
+name: Build and Release C4I Secure Node
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión del Release (Ej. 1.0.2)'
+        required: true
+        default: '1.0.1'
+      release_notes:
+        description: 'Notas del Parche (Qué cambió en esta versión)'
+        required: false
+        default: 'Mejoras de rendimiento y seguridad táctica.'
+        type: string
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Actualizar Versión en package.json
+        run: |
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Electron App (NSIS) and Publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: |
+          npm run electron:build -- --publish always
+          
+      - name: Create GitHub Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ github.event.inputs.version }}"
+          name: "C4I Secure Node v${{ github.event.inputs.version }}"
+          body: |
+            ## Actualización Táctica Desplegada: v${{ github.event.inputs.version }}
+            
+            ${{ github.event.inputs.release_notes }}
+            
+            *Este despliegue fue generado de forma automática mediante el Comando de Lanzamiento C4I (Mando Supremo).*
+          files: |
+            release/*.exe
+            release/latest.yml
+            release/*.blockmap

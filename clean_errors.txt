@@ -1,0 +1,10 @@
+﻿src/components/CandidateDashboard.tsx(1,20): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/CandidateDashboard.tsx(2,1): error TS6133: 'supabase' is declared but its value is never read.
+src/components/CandidateDashboard.tsx(14,11): error TS6133: 'user' is declared but its value is never read.
+src/components/CandidateDashboard.tsx(101,30): error TS6133: 'pieData' is declared but its value is never read.
+src/components/CommunicationsDashboard.tsx(17,12): error TS6133: 'loading' is declared but its value is never read.
+src/components/DigitalCommunicationsDashboard.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/DigitalCommunicationsDashboard.tsx(2,103): error TS6133: 'Users' is declared but its value is never read.
+src/components/DigitalCommunicationsDashboard.tsx(6,11): error TS6133: 'user' is declared but its value is never read.
+src/components/HighCommandDashboard.tsx(4,139): error TS6133: 'Search' is declared but its value is never read.
+src/components/HighCommandDashboard.tsx(4,157): error TS6133: 'BarChart2' is declared but its value is never read.

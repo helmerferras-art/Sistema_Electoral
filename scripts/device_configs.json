@@ -1,0 +1,28 @@
+{
+  "R8YY91ZR3XY": {
+    "waTap": {
+      "x": 660,
+      "y": 1460
+    },
+    "smsTap": {
+      "x": 650,
+      "y": 1450
+    },
+    "alias": "Samsung"
+  },
+  "LBY9X19411W01274": {
+    "waTap": {
+      "x": 641,
+      "y": 1296
+    },
+    "smsTap": {
+      "x": 630,
+      "y": 1283
+    },
+    "alias": "Huawey",
+    "gmail": "test@gmail.com"
+  },
+  "GLOBAL": {
+    "gmail": "sgechiapas@gmail.com"
+  }
+}

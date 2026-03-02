@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: LV 1
+        - generic [ref=e8]:
+          - generic [ref=e9]: Dios del Código
+          - generic [ref=e10]: "AGENTE: SuperAdmin Dev"
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - img [ref=e13]
+          - generic [ref=e15]: 0 XP
+        - button [ref=e17] [cursor=pointer]:
+          - img [ref=e18]
+        - button "Cerrar Sesión" [ref=e21] [cursor=pointer]:
+          - img [ref=e22]
+  - main [ref=e26]:
+    - generic [ref=e28]:
+      - heading "// NUEVO SIMPATIZANTE" [level=2] [ref=e30]
+      - generic [ref=e31]:
+        - 'textbox "[ REQUERIDO: NOMBRE COMPLETO ]" [ref=e32]'
+        - 'textbox "[ OPCIONAL: TELÉFONO ]" [ref=e33]'
+        - 'textbox "[ OPCIONAL: CURP ]" [ref=e34]'
+        - generic [ref=e35]:
+          - generic [ref=e36]: NIVEL DE COMPROMISO (1-5)
+          - slider [ref=e37]: "1"
+          - generic [ref=e38]: ⭐
+        - generic [ref=e39]:
+          - button "📍 RASTREAR GPS" [ref=e40] [cursor=pointer]
+          - generic [ref=e41]: OFFLINE LISTO
+        - button "REGISTRAR ALIADO" [ref=e42] [cursor=pointer]
+  - navigation [ref=e43]:
+    - button "Misión y Perfil" [ref=e44] [cursor=pointer]:
+      - img [ref=e45]
+      - generic [ref=e50]: MISIÓN
+    - button "Mapa Radar Estratégico" [ref=e51] [cursor=pointer]:
+      - img [ref=e52]
+      - generic [ref=e54]: RADAR
+    - button "Panel de Mando o Squad" [ref=e55] [cursor=pointer]:
+      - img [ref=e56]
+      - generic [ref=e57]: MANDO
+    - button "Operación Día D" [ref=e58] [cursor=pointer]:
+      - img [ref=e59]
+      - generic [ref=e61]: DÍA D
+    - button "Ruta Crítica y Objetivos" [ref=e62] [cursor=pointer]:
+      - img [ref=e63]
+      - generic [ref=e67]: OBJETIVOS
+    - button "LOGÍSTICA" [ref=e68] [cursor=pointer]:
+      - img [ref=e69]
+      - generic [ref=e72]: LOGÍSTICA
+    - button "Centro de Comunicados" [ref=e73] [cursor=pointer]:
+      - img [ref=e74]
+```
