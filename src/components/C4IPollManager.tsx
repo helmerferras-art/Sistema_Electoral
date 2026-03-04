@@ -26,7 +26,7 @@ export const C4IPollManager = () => {
         const { data, error } = await supabase
             .from('polls')
             .select('*')
-            .eq('tenant_id', user.tenant_id)
+            .in('tenant_id', user?.tenantScope || [])
             .order('created_at', { ascending: false });
 
         if (error) console.error("Error fetching polls:", error);

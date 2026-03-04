@@ -1,7 +1,9 @@
 /**
  * BridgeService - Capa de abstracción para el Puente de Hardware C4I
- * Interactúa con el servidor local scripts/sms_bridge.js (Puerto 5000)
+ * Interactúa con el servidor local scripts/sms_bridge.js descubriendo su puerto.
  */
+
+import { bridgeDiscovery } from './bridgeDiscovery';
 
 export interface BridgeDevice {
     id: string;
@@ -15,7 +17,10 @@ export interface BridgeStatus {
     devices: BridgeDevice[];
 }
 
-const BRIDGE_URL = 'http://localhost:5000';
+const getBridgeUrl = async () => {
+    const url = await bridgeDiscovery.getBaseUrl();
+    return url || 'http://localhost:5000';
+};
 
 export const BridgeService = {
     /**
@@ -23,7 +28,8 @@ export const BridgeService = {
      */
     async getStatus(): Promise<BridgeStatus> {
         try {
-            const resp = await fetch(`${BRIDGE_URL}/status`, {
+            const url = await getBridgeUrl();
+            const resp = await fetch(`${url}/status`, {
                 signal: AbortSignal.timeout(2000)
             });
             if (!resp.ok) throw new Error('Bridge offline');
@@ -43,7 +49,8 @@ export const BridgeService = {
      */
     async sendSMS(phone: string, message: string): Promise<boolean> {
         try {
-            const resp = await fetch(`${BRIDGE_URL}/send-sms`, {
+            const url = await getBridgeUrl();
+            const resp = await fetch(`${url}/send-sms`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone, message })
@@ -60,7 +67,8 @@ export const BridgeService = {
      */
     async sendWhatsApp(phone: string, message: string): Promise<boolean> {
         try {
-            const resp = await fetch(`${BRIDGE_URL}/send-wa`, {
+            const url = await getBridgeUrl();
+            const resp = await fetch(`${url}/send-wa`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ phone, message })
@@ -68,6 +76,24 @@ export const BridgeService = {
             return resp.ok;
         } catch (err) {
             console.error('[BridgeService] Error enviando WhatsApp:', err);
+            return false;
+        }
+    },
+
+    /**
+     * Vincula el puente local con el tenant actual
+     */
+    async pairBridge(tenant_id: string, name: string): Promise<boolean> {
+        try {
+            const url = await getBridgeUrl();
+            const resp = await fetch(`${url}/pair-gateway`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenant_id, name })
+            });
+            return resp.ok;
+        } catch (err) {
+            console.error('[BridgeService] Error vinculando puente:', err);
             return false;
         }
     }

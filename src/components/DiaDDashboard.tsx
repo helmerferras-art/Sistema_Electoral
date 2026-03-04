@@ -21,7 +21,7 @@ export const DiaDDashboard = () => {
             const { data } = await supabase
                 .from('d_day_reports')
                 .select('*')
-                .eq('tenant_id', user.tenant_id)
+                .in('tenant_id', user.tenantScope || [])
                 .order('timestamp', { ascending: false })
                 .limit(50);
 
@@ -32,7 +32,7 @@ export const DiaDDashboard = () => {
             const { data } = await supabase
                 .from('d_day_targets')
                 .select('*')
-                .eq('tenant_id', user.tenant_id)
+                .in('tenant_id', user.tenantScope || [])
                 .order('current_votes', { ascending: false });
             if (data) setTargets(data);
         };

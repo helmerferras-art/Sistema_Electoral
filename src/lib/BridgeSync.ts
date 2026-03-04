@@ -21,6 +21,24 @@ export const BridgeSync = {
             return;
         }
 
+        // 1.5 Auto-pair the bridge with the current tenant if available
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase
+                    .from('users')
+                    .select('tenant_id, name')
+                    .eq('auth_id', user.id)
+                    .single();
+
+                if (profile?.tenant_id) {
+                    await BridgeService.pairBridge(profile.tenant_id, profile.name);
+                }
+            }
+        } catch (e) {
+            console.warn('[BridgeSync] Auto-pairing failed:', e);
+        }
+
         // 2. Buscar usuarios con códigos pendientes de envío
         const { data: pendingUsers, error } = await supabase
             .from('users')

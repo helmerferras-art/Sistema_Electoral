@@ -10,7 +10,11 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"tsc -p tsconfig.electron.json -w\" \"vite\" \"wait-on tcp:5173 && electron .\"",
-    "electron:build": "vite build && tsc -p tsconfig.electron.json && electron-builder"
+    "electron:build": "vite build && tsc -p tsconfig.electron.json && electron-builder",
+    "sms-bridge": "node scripts/sms_bridge.js",
+    "mobile:build": "vite build && npx cap sync",
+    "android:open": "npx cap open android",
+    "ios:open": "npx cap open ios"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
@@ -45,7 +49,12 @@
     "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/cli": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
+    "@capacitor/ios": "^8.1.0",
     "@eslint/js": "^9.39.1",
+    "@faker-js/faker": "^10.3.0",
     "@playwright/test": "^1.58.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",

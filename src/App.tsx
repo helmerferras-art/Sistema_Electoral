@@ -98,21 +98,15 @@ const MainDashboard = () => {
   }, []);
 
   const loadAgentContext = () => {
-    // If we have a DB user, use that info primarily for the HUD
     if (user) {
-      setHasOnboarded(true);
+      // If user has not completed onboarding, force it
+      setHasOnboarded(!user.is_first_login);
       setAgentContext({
         name: user.name,
         xp: user.xp || 0,
         rank: user.rank_name || 'Explorador Nivel 1',
-        levelProgression: ((user.xp || 0) % 500) / 500 * 100 // Example: Level up every 500 XP
+        levelProgression: ((user.xp || 0) % 500) / 500 * 100
       });
-    } else {
-      const agent = localStorage.getItem('legion_chiapas_agent')
-      if (agent) {
-        setHasOnboarded(true)
-        setAgentContext(JSON.parse(agent))
-      }
     }
   }
 
@@ -122,11 +116,11 @@ const MainDashboard = () => {
     return () => window.removeEventListener('storage', loadAgentContext)
   }, [user])
 
-  const handleOnboardingComplete = (agentName: string) => {
-    const initialContext = { name: agentName, xp: 0, rank: 'Explorador', levelProgression: 0 }
-    localStorage.setItem('legion_chiapas_agent', JSON.stringify(initialContext))
-    setAgentContext(initialContext)
-    setHasOnboarded(true)
+  const handleOnboardingComplete = () => {
+    // Note: The actual database update is now inside OnboardingFlow.tsx 
+    // We just need to trigger the local state update
+    setHasOnboarded(true);
+    // Refresh user context if needed or just let it re-render
   }
 
   if (!hasOnboarded) {
@@ -284,14 +278,14 @@ const MainDashboard = () => {
         {activeTab === 'crm' && (
           user?.role === 'candidato'
             ? <CandidateDashboard />
-            : ['superadmin', 'coordinador_campana'].includes(user?.role || '')
+            : ['superadmin', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')
               ? <HighCommandDashboard />
               : user?.role === 'comunicacion_digital'
                 ? <DigitalCommunicationsDashboard />
                 : <BrigadistaDashboard />
         )}
-        {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '')) && <DiaDDashboard />}
-        {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
+        {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
+        {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
         {activeTab === 'OBJETIVOS' && <CriticalPath />}
       </main>
@@ -301,7 +295,7 @@ const MainDashboard = () => {
         {[
           { id: 'profile', icon: <Users size={24} />, label: 'MISIÓN' },
           { id: 'map', icon: <MapIcon size={24} />, label: 'RADAR' },
-          { id: 'crm', icon: <List size={24} />, label: ['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '') ? 'MANDO' : 'SQUAD' },
+          { id: 'crm', icon: <List size={24} />, label: ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '') ? 'MANDO' : 'SQUAD' },
           { id: 'OBJETIVOS', icon: <Target size={24} />, label: 'OBJETIVOS' },
           { id: 'suministros', icon: <Archive size={24} />, label: 'LOGÍSTICA' }
         ].map(tab => (
@@ -321,7 +315,7 @@ const MainDashboard = () => {
         ))}
 
         {/* Dynamic Dia D Tab */}
-        {(diaDActive || ['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '')) && (
+        {(diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && (
           <button
             onClick={() => setActiveTab('dia-d')}
             style={{
@@ -377,7 +371,8 @@ const MainDashboard = () => {
         )}
       </nav>
 
-      <PasswordSetModal />
+
+
 
       {/* TOAST NOTIFICATION RENDERER */}
       <div style={{
@@ -426,31 +421,34 @@ function AppContent() {
   }, [updatePassword]);
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
+    <>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Landing Page Dinámica de Candidato (NEMIA) */}
-      <Route path="/:slug" element={<CandidateLanding />} />
+        {/* Landing Page Dinámica de Candidato (NEMIA) */}
+        <Route path="/:slug" element={<CandidateLanding />} />
 
-      {/* Rutas Globales de Registro/Demandas (opcionales) */}
-      <Route path="/sumate" element={<div className="app-container" style={{ padding: '1rem' }}><RegistroForm /></div>} />
-      <Route path="/reportar" element={<div className="app-container" style={{ padding: '1rem' }}><PetitionsForm /></div>} />
-      <Route path="/mapa-social" element={<div className="app-container" style={{ padding: '1rem' }}><PublicMapView /></div>} />
+        {/* Rutas Globales de Registro/Demandas (opcionales) */}
+        <Route path="/sumate" element={<div className="app-container" style={{ padding: '1rem' }}><RegistroForm /></div>} />
+        <Route path="/reportar" element={<div className="app-container" style={{ padding: '1rem' }}><PetitionsForm /></div>} />
+        <Route path="/mapa-social" element={<div className="app-container" style={{ padding: '1rem' }}><PublicMapView /></div>} />
 
-      {/* SuperAdmin Route (Highest Privilege) */}
-      <Route path="/superadmin" element={
-        <ProtectedRoute requiredRole="superadmin">
-          <SuperAdminDashboard />
-        </ProtectedRoute>
-      } />
+        {/* SuperAdmin Route (Highest Privilege) */}
+        <Route path="/superadmin" element={
+          <ProtectedRoute requiredRole="superadmin">
+            <SuperAdminDashboard />
+          </ProtectedRoute>
+        } />
 
-      {/* Main App Route (Protected) */}
-      <Route path="/*" element={
-        <ProtectedRoute>
-          <MainDashboard />
-        </ProtectedRoute>
-      } />
-    </Routes>
+        {/* Main App Route (Protected) */}
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <MainDashboard />
+          </ProtectedRoute>
+        } />
+      </Routes>
+      <PasswordSetModal />
+    </>
   );
 }
 

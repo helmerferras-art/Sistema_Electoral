@@ -22,7 +22,7 @@ export const PetitionsManager = () => {
             let query = supabase
                 .from('petitions')
                 .select('*, reporter:users(name, phone)')
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .order('created_at', { ascending: false });
 
             if (filterStatus !== 'all') {

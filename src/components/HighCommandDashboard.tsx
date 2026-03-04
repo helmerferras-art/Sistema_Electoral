@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
-import { ShieldAlert, Target, Activity as ActivityIcon, HeartPulse, Eye, Shield, Zap, DollarSign, Trophy, UserPlus, X, MessageCircle, PhoneCall } from 'lucide-react';
+import { ShieldAlert, Target, Activity as ActivityIcon, HeartPulse, Eye, Shield, Zap, DollarSign, Trophy, UserPlus, X, MessageCircle, PhoneCall, Users, Map as MapIcon, Brain } from 'lucide-react';
 import { C4IPollManager } from './C4IPollManager';
 import { C4IFinanceManager } from './C4IFinanceManager';
-import { C4IPredictiveOracle } from './C4IPredictiveOracle';
 import { PetitionsManager } from './PetitionsManager';
+import { AlliancesManager } from './AlliancesManager';
+import { StrategicAdvisorUI } from './StrategicAdvisorUI';
+import { TerritoryAssignmentModal } from './TerritoryAssignmentModal';
 
 interface MetricTotals {
     totalSupporters: number;
@@ -25,7 +27,7 @@ interface MetricTotals {
 
 export const HighCommandDashboard = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'recursos' | 'futuro' | 'gestiones'>('pulso');
+    const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'recursos' | 'futuro' | 'gestiones' | 'alianzas'>('pulso');
 
     // Data for Activismo / Pulso
     const [metrics, setMetrics] = useState<MetricTotals>({
@@ -46,14 +48,16 @@ export const HighCommandDashboard = () => {
     const [isTogglingDiaD, setIsTogglingDiaD] = useState(false);
 
     const [isAddingUser, setIsAddingUser] = useState(false);
-    const [newUserForm, setNewUserForm] = useState({ name: '', phone: '', role: 'coordinador' });
+    const [isAssigningTerritory, setIsAssigningTerritory] = useState(false);
+    const [selectedUserForTerritory, setSelectedUserForTerritory] = useState<any>(null);
+    const [newUserForm, setNewUserForm] = useState({ name: '', phone: '', role: 'coordinador_territorial' });
     const [isSubmittingUser, setIsSubmittingUser] = useState(false);
+    const [selectedSectionsForNewUser, setSelectedSectionsForNewUser] = useState<string[]>([]);
 
     useEffect(() => {
         if (user && user.tenant_id) {
             fetchMetrics();
         } else if (user) {
-            // Stop loading if user exists but no tenant_id found yet
             setLoading(false);
         }
     }, [user]);
@@ -62,26 +66,46 @@ export const HighCommandDashboard = () => {
         setLoading(true);
         try {
             // 1. Fetch Total Supporters
-            const { count: totalSupporters } = await supabase
+            let supportersQuery = supabase
                 .from('supporters')
                 .select('*', { count: 'exact', head: true })
                 .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`);
 
+            // Apply territorial filter if user has assigned zones
+            const assignedZones = user?.assigned_territory?.zone_ids || [];
+            if (assignedZones.length > 0) {
+                supportersQuery = supportersQuery.in('section_id', assignedZones);
+            }
+
+            const { count: totalSupporters } = await supportersQuery;
+
             // 2. Fetch New This Week
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            const { count: newThisWeek } = await supabase
+            let newThisWeekQuery = supabase
                 .from('supporters')
                 .select('*', { count: 'exact', head: true })
                 .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`)
                 .gte('created_at', oneWeekAgo.toISOString());
 
+            if (assignedZones.length > 0) {
+                newThisWeekQuery = newThisWeekQuery.in('section_id', assignedZones);
+            }
+
+            const { count: newThisWeek } = await newThisWeekQuery;
+
             // 3. Fetch Lvl 5 Commitments
-            const { count: lvl5Commitments } = await supabase
+            let lvl5Query = supabase
                 .from('supporters')
                 .select('*', { count: 'exact', head: true })
                 .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`)
                 .eq('commitment_level', 5);
+
+            if (assignedZones.length > 0) {
+                lvl5Query = lvl5Query.in('section_id', assignedZones);
+            }
+
+            const { count: lvl5Commitments } = await lvl5Query;
 
             // 4. Fetch Tenant Info to get municipality/geographic_scope and position
             const { data: tenantInfo } = await supabase
@@ -102,17 +126,19 @@ export const HighCommandDashboard = () => {
             if (position === 'senaduria') histElectionType = 'senaduria';
             if (position === 'presidencia') histElectionType = 'presidencia';
 
-            const query = supabase
+            let histQuery = supabase
                 .from('historical_election_results')
-                .select('target_votes_calculated, total_votes, candidate_names, party_results')
+                .select('target_votes_calculated, total_votes, candidate_names, party_results, section_id')
                 .eq('election_year', 2024)
-                .eq('election_type', 'gubernatura');
+                .eq('election_type', histElectionType);
 
-            if (municipality) {
-                query.ilike('municipality', `%${municipality}%`);
+            if (assignedZones.length > 0) {
+                histQuery = histQuery.in('section_id', assignedZones);
+            } else {
+                histQuery = histQuery.ilike('municipality', `%${municipality}%`);
             }
 
-            const { data: historicalData } = await query;
+            const { data: historicalData } = await histQuery;
 
             // Recalculate Target based on Eduardo Ramirez's Gubernatura votes
             let historicalTarget = 0;
@@ -136,7 +162,7 @@ export const HighCommandDashboard = () => {
             const { data: coveredSections } = await supabase
                 .from('supporters')
                 .select('section_id')
-                .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`);
+                .in('tenant_id', user?.tenantScope || []);
 
             const uniqueCovered = new Set(coveredSections?.map(s => s.section_id)).size;
 
@@ -234,7 +260,7 @@ export const HighCommandDashboard = () => {
             const { data: topUsers } = await supabase
                 .from('users')
                 .select('id, name, rank_name, xp, phone')
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .order('xp', { ascending: false })
                 .limit(5);
 
@@ -243,8 +269,8 @@ export const HighCommandDashboard = () => {
             // 5b. Fetch Full Team for Activismo
             const { data: teamData } = await supabase
                 .from('users')
-                .select('id, name, rank_name, xp, phone, role')
-                .eq('tenant_id', user?.tenant_id)
+                .select('id, name, rank_name, xp, phone, role, assigned_territory')
+                .in('tenant_id', user?.tenantScope || [])
                 .order('name', { ascending: true });
 
             if (teamData) setFullTeam(teamData);
@@ -266,19 +292,19 @@ export const HighCommandDashboard = () => {
             const { data: expenses } = await supabase
                 .from('campaign_finances')
                 .select('amount, category')
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .eq('transaction_type', 'egreso');
 
             const { data: recruitCounts } = await supabase
                 .from('supporters')
                 .select('recruiter_id')
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .not('recruiter_id', 'is', null);
 
             const { data: allUsers } = await supabase
                 .from('users')
                 .select('id, name, role')
-                .eq('tenant_id', user?.tenant_id);
+                .in('tenant_id', user?.tenantScope || []);
 
             if (expenses && recruitCounts && allUsers) {
                 const userEfficiency: Record<string, { cost: number, recruits: number, name: string, role: string }> = {};
@@ -335,7 +361,7 @@ export const HighCommandDashboard = () => {
             // Generar Código Táctico de 6 dígitos
             const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-            const { error } = await supabase.from('users').insert([{
+            const { data, error } = await supabase.from('users').insert([{
                 tenant_id: user?.tenant_id,
                 name: newUserForm.name,
                 phone: phoneStr,
@@ -344,17 +370,22 @@ export const HighCommandDashboard = () => {
                 parent_id: user?.id,
                 temp_code: tacticalCode,
                 is_first_login: true,
-                xp: 0
-            }]);
+                xp: 0,
+                assigned_territory: {
+                    layer_type: 'seccion',
+                    zone_ids: selectedSectionsForNewUser
+                }
+            }]).select().single();
 
             if (error) {
                 if (error.code === '23505') throw new Error("Este número de teléfono ya está registrado.");
                 throw error;
             }
 
-            alert("Operador reclutado exitosamente.");
+            alert(`¡Operador ${data.name} reclutado exitosamente con su zona asignada!`);
             setIsAddingUser(false);
-            setNewUserForm({ name: '', phone: '', role: 'coordinador' });
+            setNewUserForm({ name: '', phone: '', role: 'coordinador_territorial' });
+            setSelectedSectionsForNewUser([]);
             fetchMetrics();
         } catch (error: any) {
             alert(error.message);
@@ -437,8 +468,9 @@ export const HighCommandDashboard = () => {
                         { id: 'monitoreo', label: 'MONITOREO', icon: <Eye size={18} /> },
                         { id: 'activismo', label: 'ACTIVISMO', icon: <Shield size={18} /> },
                         { id: 'recursos', label: 'RECURSOS', icon: <DollarSign size={18} /> },
-                        { id: 'futuro', label: 'FUTURO', icon: <Zap size={18} /> },
-                        { id: 'gestiones', label: 'GESTIÓN SOCIAL', icon: <MessageCircle size={18} /> }
+                        { id: 'futuro', label: 'ESTRATEGIA AI', icon: <Brain size={18} /> },
+                        { id: 'gestiones', label: 'GESTIÓN SOCIAL', icon: <MessageCircle size={18} /> },
+                        { id: 'alianzas', label: 'COALICIONES', icon: <Users size={18} /> }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -686,11 +718,40 @@ export const HighCommandDashboard = () => {
                                 {fullTeam.length === 0 ? <p style={{ color: '#64748B', textAlign: 'center' }}>No hay operadores registrados aún.</p> : fullTeam.map((member) => (
                                     <div key={member.id} className="flex-row-resp" style={{ justifyContent: 'space-between', padding: '0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', alignItems: 'center', borderLeft: member.role === 'coordinador_campana' ? '3px solid var(--secondary)' : '1px solid rgba(255,255,255,0.1)' }}>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span style={{ fontWeight: 'bold' }}>{member.name}</span>
-                                                <span style={{ fontSize: '0.6rem', padding: '2px 4px', borderRadius: '4px', background: 'rgba(0,212,255,0.1)', color: 'var(--tertiary)' }}>{member.role.toUpperCase()}</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'space-between', width: '100%' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                    <span style={{ fontWeight: 'bold' }}>{member.name}</span>
+                                                    <span style={{ fontSize: '0.6rem', padding: '2px 4px', borderRadius: '4px', background: 'rgba(0,212,255,0.1)', color: 'var(--tertiary)' }}>{member.role.toUpperCase()}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => { setSelectedUserForTerritory(member); setIsAssigningTerritory(true); }}
+                                                    className="squishy-btn mini"
+                                                    style={{ border: '1px solid var(--tertiary)', color: 'var(--tertiary)' }}
+                                                >
+                                                    <MapIcon size={12} /> ZONA
+                                                </button>
                                             </div>
                                             <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748B' }}>{member.phone || 'Sin teléfono'}</p>
+
+                                            {/* Panorama Territorial */}
+                                            {member.assigned_territory?.zone_ids?.length > 0 && (
+                                                <div style={{ marginTop: '0.5rem', width: '100%' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginBottom: '2px' }}>
+                                                        <span style={{ color: 'var(--tertiary)' }}>{member.assigned_territory.layer_type.toUpperCase()}: {member.assigned_territory.zone_ids.length}</span>
+                                                        <span style={{ color: '#888' }}>AVANCE ESTIMADO</span>
+                                                    </div>
+                                                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                                                        <div
+                                                            style={{
+                                                                height: '100%',
+                                                                width: '35%', // Simulación por ahora, se puede conectar a RPC
+                                                                background: 'linear-gradient(90deg, var(--tertiary), var(--primary))',
+                                                                boxShadow: '0 0 5px var(--tertiary)'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex-row-resp" style={{ gap: '0.5rem' }}>
                                             <a href={`tel:${member.phone}`} className="squishy-btn mini" style={{ background: 'rgba(0,212,255,0.1)', color: 'var(--tertiary)', padding: '0.4rem' }}>
@@ -743,9 +804,9 @@ export const HighCommandDashboard = () => {
                     </div>
                 )}
 
-                {activeTab === 'futuro' && (
+                {activeTab === 'futuro' && user?.tenant_id && (
                     <div className="tactile-card">
-                        <C4IPredictiveOracle />
+                        <StrategicAdvisorUI tenantId={user.tenant_id} />
                     </div>
                 )}
 
@@ -754,15 +815,21 @@ export const HighCommandDashboard = () => {
                         <PetitionsManager />
                     </div>
                 )}
+
+                {activeTab === 'alianzas' && (
+                    <div className="tactile-card">
+                        <AlliancesManager />
+                    </div>
+                )}
             </main>
 
             {/* MODAL RECLUTAMIENTO */}
             {isAddingUser && (
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '1rem' }}>
                     <div className="tactile-card" style={{ width: '100%', maxWidth: '450px', border: '1px solid var(--primary)' }}>
-                        <div className="flex-row-resp" style={{ justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0 }}>RECLUTAR OPERADOR</h3>
-                            <X size={24} style={{ cursor: 'pointer' }} onClick={() => setIsAddingUser(false)} />
+                        <div className="flex-row-resp" style={{ justifyContent: 'space-between', marginBottom: '1rem' }}>
+                            <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)' }}>// RECLUTAR OPERADOR</h3>
+                            <X size={24} style={{ cursor: 'pointer' }} onClick={() => { setIsAddingUser(false); setSelectedSectionsForNewUser([]); }} />
                         </div>
                         <form onSubmit={handleAddUser} className="flex-col gap-4">
                             <input
@@ -786,23 +853,83 @@ export const HighCommandDashboard = () => {
                                 className="squishy-input"
                                 style={{ background: '#0F1218' }}
                             >
-                                <option value="coordinador">Coordinador</option>
-                                <option value="lider">Líder</option>
-                                <option value="brigadista">Brigadista</option>
-                                {['superadmin', 'candidato'].includes(user?.role || '') && (
-                                    <>
-                                        <option value="coordinador_campana">Coordinador de Campaña</option>
-                                        <option value="comunicacion_digital">Comando Digital</option>
-                                        <option value="coordinador_logistica">Logística</option>
-                                    </>
-                                )}
+                                {user?.role === 'superadmin' && <option value="superadmin">SuperAdmin</option>}
+                                {(user?.role === 'superadmin' || user?.role === 'candidato') && <option value="coordinador_campana">Coordinador de Campaña</option>}
+                                {(user?.role === 'superadmin' || user?.role === 'candidato' || user?.role === 'coordinador_campana') && <option value="coordinador_territorial">Coordinador Territorial</option>}
+                                {(user?.role === 'coordinador_territorial') && <option value="lider">Líder</option>}
+                                {(user?.role === 'lider') && <option value="brigadista">Brigadista</option>}
                             </select>
-                            <button type="submit" disabled={isSubmittingUser} className="squishy-btn primary">
-                                {isSubmittingUser ? 'RECLUTANDO...' : 'CONFIRMAR'}
+
+                            <div style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                                <label style={{ fontSize: '0.8rem', color: '#64748B', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                    <MapIcon size={14} /> JURISDICCIÓN ASIGNADA
+                                </label>
+
+                                {(!user?.assigned_territory?.zone_ids || user.assigned_territory.zone_ids.length === 0) && !['superadmin', 'candidato'].includes(user?.role || '') ? (
+                                    <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #EF4444', borderRadius: '8px', textAlign: 'center' }}>
+                                        <p style={{ margin: 0, color: '#EF4444', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                                            BLOQUEO TÁCTICO: No tienes un área asignada. Debes solicitar a tu superior que te asigne secciones antes de poder reclutar.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div style={{ maxHeight: '180px', overflowY: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', padding: '0.5rem' }} className="custom-scrollbar">
+                                        {(user?.assigned_territory?.zone_ids || []).map((sectionId: string) => (
+                                            <div
+                                                key={sectionId}
+                                                onClick={() => {
+                                                    setSelectedSectionsForNewUser(prev =>
+                                                        prev.includes(sectionId) ? prev.filter(s => s !== sectionId) : [...prev, sectionId]
+                                                    );
+                                                }}
+                                                style={{
+                                                    padding: '0.6rem',
+                                                    marginBottom: '2px',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    background: selectedSectionsForNewUser.includes(sectionId) ? 'rgba(0,212,255,0.15)' : 'transparent',
+                                                    border: `1px solid ${selectedSectionsForNewUser.includes(sectionId) ? 'var(--tertiary)' : 'transparent'}`,
+                                                    fontSize: '0.85rem',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <span>SECCIÓN {sectionId}</span>
+                                                {selectedSectionsForNewUser.includes(sectionId) && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--tertiary)' }} />}
+                                            </div>
+                                        ))}
+                                        {['superadmin', 'candidato'].includes(user?.role || '') && (user?.assigned_territory?.zone_ids || []).length === 0 && (
+                                            <p style={{ fontSize: '0.8rem', color: '#888', textAlign: 'center', padding: '1rem' }}>
+                                                Eres SuperAdmin/Candidato. Puedes gestionar todo el territorio desde el Dashboard principal.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="squishy-btn primary"
+                                style={{ width: '100%', padding: '1.2rem', marginTop: '1rem', fontSize: '1.2rem' }}
+                                disabled={isSubmittingUser || (selectedSectionsForNewUser.length === 0 && !['superadmin', 'candidato'].includes(user?.role || ''))}
+                            >
+                                {isSubmittingUser ? 'RECLUTANDO...' : 'CONFIRMAR REGISTRO'}
                             </button>
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* MODAL ASIGNACIÓN TERRITORIAL */}
+            {isAssigningTerritory && selectedUserForTerritory && (
+                <TerritoryAssignmentModal
+                    targetUser={selectedUserForTerritory}
+                    onClose={() => {
+                        setIsAssigningTerritory(false);
+                        setSelectedUserForTerritory(null);
+                        fetchMetrics();
+                    }}
+                />
             )}
         </div>
     );

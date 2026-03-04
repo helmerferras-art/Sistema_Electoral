@@ -3,10 +3,13 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { C4IFinanceManager } from './C4IFinanceManager';
 import { SecuritySettings } from './SecuritySettings';
+import { AdminManager } from './AdminManager';
+import { AlliancesManager } from './AlliancesManager';
+import { AIAdvisorModule } from './AIAdvisorModule';
 
 import {
     Activity, TrendingUp, Users, DollarSign, BrainCircuit, MessageSquare,
-    BarChart2, Globe, ShieldCheck
+    BarChart2, Globe, ShieldCheck, UserPlus, Handshake
 } from 'lucide-react';
 import {
     ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -15,7 +18,7 @@ import {
 
 export const CandidateDashboard = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'finanzas' | 'predicciones' | 'seguridad'>('pulso');
+    const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'finanzas' | 'predicciones' | 'seguridad' | 'estructura' | 'alianzas' | 'asesor_ai'>('pulso');
 
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -74,7 +77,7 @@ export const CandidateDashboard = () => {
             const { data: supporters } = await supabase
                 .from('supporters')
                 .select('id, section_id, curp, birth_date')
-                .or(`tenant_id.eq.${user.tenant_id},tenant_id.is.null`)
+                .in('tenant_id', user?.tenantScope || [])
                 .eq('commitment_level', 5);
 
             if (results && results.length > 0) {
@@ -140,7 +143,7 @@ export const CandidateDashboard = () => {
             const { data: inboxData } = await supabase
                 .from('social_inbox')
                 .select('sentiment')
-                .eq('tenant_id', user.tenant_id);
+                .in('tenant_id', user?.tenantScope || []);
 
             if (inboxData) {
                 const counts = inboxData.reduce((acc: any, curr: any) => {
@@ -261,7 +264,9 @@ export const CandidateDashboard = () => {
                 <TabButton active={activeTab === 'finanzas'} onClick={() => setActiveTab('finanzas')} icon={<DollarSign size={18} />} label="Recursos" />
                 <TabButton active={activeTab === 'predicciones'} onClick={() => setActiveTab('predicciones')} icon={<BrainCircuit size={18} />} label="Futuro" />
                 <TabButton active={activeTab === 'seguridad'} onClick={() => setActiveTab('seguridad')} icon={<ShieldCheck size={18} />} label="Seguridad" />
-
+                <TabButton active={activeTab === 'estructura'} onClick={() => setActiveTab('estructura')} icon={<UserPlus size={18} />} label="Estructura" />
+                <TabButton active={activeTab === 'alianzas'} onClick={() => setActiveTab('alianzas')} icon={<Handshake size={18} />} label="Coaliciones" />
+                <TabButton active={activeTab === 'asesor_ai'} onClick={() => setActiveTab('asesor_ai')} icon={<BrainCircuit size={18} />} label="Asesor AI" />
             </div>
 
             {/* Dashboard Content Container */}
@@ -273,7 +278,9 @@ export const CandidateDashboard = () => {
                 {activeTab === 'finanzas' && <C4IFinanceManager />}
                 {activeTab === 'predicciones' && <PrediccionesModule data={intentionData} stats={stats} />}
                 {activeTab === 'seguridad' && <SecuritySettings />}
-
+                {activeTab === 'estructura' && <AdminManager />}
+                {activeTab === 'alianzas' && <AlliancesManager />}
+                {activeTab === 'asesor_ai' && <AIAdvisorModule tenantId={user?.tenant_id || ''} municipality={tenantInfo?.geographic_scope || ''} />}
             </div>
 
         </div>
@@ -331,8 +338,8 @@ const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats
 
         <DashboardCard title="Intención de Voto (Tracking Diario)" icon={<TrendingUp />} glowColor="var(--tertiary)">
 
-            <div style={{ height: '300px', width: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
+            <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
+                <ResponsiveContainer width="99%" height="100%">
                     <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                         <XAxis dataKey="date" stroke="#888" />
@@ -350,8 +357,8 @@ const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats
         {historicalComparison && historicalComparison.length > 0 && (
             <DashboardCard title="Distribución Real de Votos 2024" icon={<BarChart2 />} glowColor="var(--tertiary)">
 
-                <div style={{ height: '300px', width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
+                    <ResponsiveContainer width="99%" height="100%">
                         <BarChart data={historicalComparison} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                             <XAxis dataKey="name" stroke="#888" fontSize={10} interval={0} angle={-15} textAnchor="end" />
@@ -378,8 +385,8 @@ const MonitoreoModule = ({ sentimentData }: { sentimentData: any[] }) => (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
             <DashboardCard title="Sentimiento de Redes (Real)" icon={<MessageSquare />} glowColor="var(--secondary)">
 
-                <div style={{ height: '250px', width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ height: '250px', width: '100%', minHeight: '250px' }}>
+                    <ResponsiveContainer width="99%" height="100%">
                         <RechartsPieChart>
                             <Pie data={sentimentData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
                                 {sentimentData.map((entry, index) => (
@@ -416,8 +423,8 @@ const ActivismoModule = ({ demoData, stats }: { demoData: any[], stats: any }) =
         <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
             <DashboardCard title="Demografía de Base Convencida" icon={<BarChart2 />} glowColor="var(--tertiary)">
 
-                <div style={{ height: '300px', width: '100%' }}>
-                    <ResponsiveContainer width="100%" height="100%">
+                <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
+                    <ResponsiveContainer width="99%" height="100%">
                         <BarChart data={demoData} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                             <XAxis dataKey="age" stroke="#888" />
@@ -456,8 +463,8 @@ const PrediccionesModule = ({ data, stats }: { data: any[], stats: any }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <DashboardCard title="Modelo Predictivo: Simulación Día D" icon={<BrainCircuit />} glowColor="var(--tertiary)">
 
-            <div style={{ height: '300px', width: '100%' }}>
-                <ResponsiveContainer width="100%" height="100%">
+            <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
+                <ResponsiveContainer width="99%" height="100%">
                     <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorNosotros" x1="0" y1="0" x2="0" y2="1">

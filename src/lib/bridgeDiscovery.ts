@@ -3,6 +3,8 @@
  */
 
 let cachedPort: number | null = null;
+let lastScanTime = 0;
+const SCAN_COOLDOWN = 120000; // 2 minutes
 const SEARCH_RANGE = [5000, 5001, 5002, 5003, 5004, 5005];
 
 export const bridgeDiscovery = {
@@ -11,7 +13,9 @@ export const bridgeDiscovery = {
      * Returns the base URL (e.g., http://localhost:5000)
      */
     async getBaseUrl(): Promise<string | null> {
-        // 1. Try cached port first
+        const now = Date.now();
+
+        // 1. Try cached port first (always allowed)
         if (cachedPort) {
             try {
                 const res = await fetch(`http://localhost:${cachedPort}/status`, { signal: AbortSignal.timeout(1200) });
@@ -21,7 +25,13 @@ export const bridgeDiscovery = {
             }
         }
 
-        // 2. Scan ports
+        // 2. Check cooldown for full scan
+        if (now - lastScanTime < SCAN_COOLDOWN) {
+            return null;
+        }
+
+        // 3. Scan ports
+        lastScanTime = now;
         for (const port of SEARCH_RANGE) {
             try {
                 const res = await fetch(`http://localhost:${port}/status`, { signal: AbortSignal.timeout(1000) });

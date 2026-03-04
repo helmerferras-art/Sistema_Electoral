@@ -24,6 +24,7 @@ export const TerritoryAssignmentModal: React.FC<TerritoryAssignmentModalProps> =
     const [zoneTargets, setZoneTargets] = useState<Record<string, number>>({});
     const [layerType, setLayerType] = useState<string>('');
     const [tenantConfig, setTenantConfig] = useState<any>(null);
+    const [searchTerm, setSearchTerm] = useState<string>('');
 
     useEffect(() => {
         // Pre-fill existing assignments if available
@@ -166,6 +167,34 @@ export const TerritoryAssignmentModal: React.FC<TerritoryAssignmentModalProps> =
     const getFeatureName = (properties: any) => {
         if (!properties) return 'Área Desconocida';
 
+        // Mapas de Cabeceras para Chiapas
+        const cabecerasLocales: Record<string, string> = {
+            "1": "Tuxtla Gutiérrez Ote", "2": "Tuxtla Gutiérrez Pte", "3": "Chiapa de Corzo", "4": "Yajalón",
+            "5": "San Cristóbal", "6": "Comitán", "7": "Ocosingo", "8": "Simojovel",
+            "9": "Palenque", "10": "Frontera Comalapa", "11": "Bochil", "12": "Pichucalco",
+            "13": "Tuxtla Chico", "14": "Cintalapa", "15": "Tonalá", "16": "Huixtla",
+            "17": "Motozintla", "18": "Tapachula Nte", "19": "Tapachula Sur", "20": "Las Margaritas",
+            "21": "Tenejapa", "22": "Chamula", "23": "Villaflores", "24": "Cacahoatán"
+        };
+
+        const cabecerasFederales: Record<string, string> = {
+            "1": "Palenque", "2": "Bochil", "3": "Ocosingo", "4": "Pichucalco",
+            "5": "San Cristóbal", "6": "Tuxtla Gutiérrez Pte", "7": "Tonalá", "8": "Comitán de Domínguez",
+            "9": "Tuxtla Gutiérrez Ote", "10": "Villaflores", "11": "Las Margaritas", "12": "Tapachula", "13": "Huehuetán"
+        };
+
+        if (properties.distrito_l || properties.distrito || properties.ID_DISTRIT) {
+            const dId = (properties.distrito_l || properties.distrito || properties.ID_DISTRIT).toString();
+            const cabecera = cabecerasLocales[dId];
+            if (cabecera) return `Distrito ${dId} - ${cabecera}`;
+        }
+
+        if (properties.distrito_f) {
+            const dId = properties.distrito_f.toString();
+            const cabecera = cabecerasFederales[dId];
+            if (cabecera) return `Distrito Fed. ${dId} - ${cabecera}`;
+        }
+
         const keys = Object.keys(properties);
 
         // Priority 1: explicitly 'nombre', 'nom', 'nom_col', 'colonia', 'localidad'
@@ -207,18 +236,31 @@ export const TerritoryAssignmentModal: React.FC<TerritoryAssignmentModalProps> =
         const position = tenantConfig.position?.toLowerCase() || '';
         const electionType = tenantConfig.election_type?.toLowerCase() || '';
 
-        // 0. Strict Tactical Assignment Override (If the supervisor themselves is restricted to a specific zone)
+        // 0. Strict Tactical Assignment Override (Cascade Inheritance)
         const assigned = user?.assigned_territory;
         if (assigned && assigned.zone_ids && assigned.zone_ids.length > 0) {
             const currentLayer = availableLayers.find(l => l.id === activeLayerId);
-            if (currentLayer && currentLayer.layer_type.toLowerCase() === assigned.layer_type.toLowerCase()) {
-                const featureId = getFeatureId(props);
-                if (featureId) {
-                    if (!assigned.zone_ids.includes(featureId)) {
-                        return false;
-                    } else {
-                        return true;
-                    }
+            const superiorLayerType = assigned.layer_type.toLowerCase();
+            const activeType = currentLayer?.layer_type.toLowerCase();
+            const featureId = getFeatureId(props);
+
+            // If same level, must be in the list
+            if (activeType === superiorLayerType) {
+                return assigned.zone_ids.includes(featureId);
+            }
+
+            // CASCADE LOGIC: If superior has larger area (e.g. Municipio) and we are assigning smaller (e.g. Seccion)
+            if (superiorLayerType === 'municipio' && activeType === 'seccion') {
+                const munKey = Object.keys(props).find(k => ['municipio', 'cve_mun', 'mun'].includes(k.toLowerCase()));
+                const featureMunId = munKey ? String(props[munKey]) : null;
+                return featureMunId && assigned.zone_ids.includes(featureMunId);
+            }
+
+            // If superior has specific sections, and we are assigning those same sections or sub-zones
+            if (superiorLayerType === 'seccion') {
+                // If we are still in section layer, must be one of the superior's sections
+                if (activeType === 'seccion') {
+                    return assigned.zone_ids.includes(featureId);
                 }
             }
         }
@@ -354,35 +396,121 @@ export const TerritoryAssignmentModal: React.FC<TerritoryAssignmentModalProps> =
                 </div>
             </div>
 
-            <div style={{ flex: 1, borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--tertiary)', boxShadow: '0 0 20px rgba(0, 212, 255, 0.2)', position: 'relative' }}>
-                {loading || !geoJsonData ? (
-                    <div className="flex-center" style={{ height: '100%', background: 'rgba(0,0,0,0.5)' }}>
-                        <h3 style={{ color: 'var(--tertiary)', fontFamily: 'Oswald', animation: 'pulse 1.5s infinite' }}>CARGANDO CARTOGRAFÍA...</h3>
-                    </div>
-                ) : (
-                    <MapContainer center={[16.7569, -93.1292]} zoom={12} style={{ height: '100%', width: '100%', backgroundColor: '#0F1218' }}>
-                        <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-
-                        <GeoJSON
-                            key={activeLayerId + selectedZones.length}
-                            data={geoJsonData}
-                            style={getPolyStyle}
-                            filter={geoJsonFilter}
-                            onEachFeature={(feature, layer) => {
-                                const zoneId = getFeatureId(feature.properties);
-                                if (!zoneId) return;
-
-                                const displayName = getFeatureName(feature.properties);
-
-                                layer.bindTooltip(`<span style="font-family: Oswald; font-size: 1.1rem; text-transform: uppercase;">${layerType}: ${displayName}</span>`, { sticky: true });
-
-                                layer.on({
-                                    click: () => toggleZone(zoneId)
-                                });
-                            }}
+            <div style={{ display: 'flex', flex: 1, gap: '1rem', minHeight: 0 }}>
+                {/* List Panel */}
+                <div style={{
+                    width: '300px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    background: 'rgba(15, 18, 24, 0.8)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    padding: '1rem'
+                }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <input
+                            type="text"
+                            placeholder="Buscar sección o nombre..."
+                            className="squishy-input"
+                            style={{ margin: 0, width: '100%', fontSize: '0.9rem' }}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                    </MapContainer>
-                )}
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', paddingRight: '0.5rem' }} className="custom-scrollbar">
+                        {loading ? (
+                            <p style={{ color: '#64748B', textAlign: 'center' }}>Cargando...</p>
+                        ) : geoJsonData?.features?.filter(geoJsonFilter).length === 0 ? (
+                            <p style={{ color: '#64748B', textAlign: 'center' }}>No se encontraron zonas.</p>
+                        ) : (
+                            geoJsonData?.features
+                                ?.filter(geoJsonFilter)
+                                .filter((f: any) => {
+                                    if (!searchTerm) return true;
+                                    const id = getFeatureId(f.properties) || '';
+                                    const name = getFeatureName(f.properties).toLowerCase();
+                                    const s = searchTerm.toLowerCase();
+                                    return id.includes(s) || name.includes(s);
+                                })
+                                .sort((a: any, b: any) => {
+                                    const idA = getFeatureId(a.properties) || '';
+                                    const idB = getFeatureId(b.properties) || '';
+                                    return idA.localeCompare(idB, undefined, { numeric: true });
+                                })
+                                .map((feature: any) => {
+                                    const zoneId = getFeatureId(feature.properties);
+                                    if (!zoneId) return null;
+                                    const isSelected = selectedZones.includes(zoneId);
+                                    const name = getFeatureName(feature.properties);
+
+                                    return (
+                                        <div
+                                            key={zoneId}
+                                            onClick={() => toggleZone(zoneId)}
+                                            style={{
+                                                padding: '0.8rem',
+                                                marginBottom: '0.5rem',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                background: isSelected ? 'rgba(255, 51, 102, 0.2)' : 'rgba(255,255,255,0.03)',
+                                                border: `1px solid ${isSelected ? '#FF3366' : 'rgba(255,255,255,0.1)'}`,
+                                                transition: 'all 0.2s ease',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}
+                                            className="hover-card"
+                                        >
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', color: isSelected ? 'white' : 'var(--tertiary)' }}>
+                                                    {layerType.toUpperCase()} {zoneId}
+                                                </span>
+                                                <span style={{ fontSize: '0.7rem', color: '#888' }}>{name}</span>
+                                            </div>
+                                            {isSelected && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#FF3366', boxShadow: '0 0 8px #FF3366' }} />}
+                                        </div>
+                                    );
+                                })
+                        )}
+                    </div>
+                </div>
+
+                {/* Map Panel */}
+                <div style={{ flex: 1, borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--tertiary)', boxShadow: '0 0 20px rgba(0, 212, 255, 0.2)', position: 'relative' }}>
+                    {loading || !geoJsonData ? (
+                        <div className="flex-center" style={{ height: '100%', background: 'rgba(0,0,0,0.5)' }}>
+                            <div className="spin" style={{ width: '40px', height: '40px', border: '4px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                        </div>
+                    ) : (
+                        <MapContainer
+                            center={[16.75, -93.1]}
+                            zoom={8}
+                            style={{ height: '100%', width: '100%', background: '#05080f' }}
+                            attributionControl={false}
+                        >
+                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <GeoJSON
+                                key={`${activeLayerId}-${selectedZones.length}`}
+                                data={geoJsonData}
+                                style={getPolyStyle}
+                                filter={geoJsonFilter}
+                                onEachFeature={(feature, layer) => {
+                                    const zoneId = getFeatureId(feature.properties);
+                                    if (!zoneId) return;
+
+                                    const displayName = getFeatureName(feature.properties);
+
+                                    layer.bindTooltip(`<span style="font-family: Oswald; font-size: 1.1rem; text-transform: uppercase;">${layerType}: ${displayName}</span>`, { sticky: true });
+
+                                    layer.on({
+                                        click: () => toggleZone(zoneId)
+                                    });
+                                }}
+                            />
+                        </MapContainer>
+                    )}
+                </div>
             </div>
 
             <div style={{

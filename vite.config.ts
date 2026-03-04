@@ -21,24 +21,13 @@ export default defineConfig({
     renderer(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['vite.svg'],
       manifest: {
         name: 'Proyecto Electoral Chiapas',
         short_name: 'Elecciones',
         description: 'Herramienta de gestión de simpatizantes y brigadistas offline-first',
         theme_color: '#B7F0AD',
-        icons: [
-          {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
+        icons: []
       },
       workbox: {
         runtimeCaching: [

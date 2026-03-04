@@ -38,7 +38,7 @@ export const CriticalPath = () => {
         const { data } = await supabase
             .from('critical_path')
             .select('*')
-            .eq('tenant_id', user.tenant_id)
+            .in('tenant_id', user.tenantScope || [])
             .order('start_date', { ascending: true });
 
         if (data) setTasks(data);

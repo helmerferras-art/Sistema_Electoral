@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from './supabase';
+import { BridgeService } from './BridgeService';
 
 type UserData = {
     id: string;
@@ -15,11 +16,12 @@ type UserData = {
     longitude?: number;
     is_first_login?: boolean;
     two_factor_enabled?: boolean;
+    tenantScope: string[];
 };
-
 
 type AuthContextType = {
     user: UserData | null;
+    tenantScope: string[];
     session: any | null;
     loading: boolean;
     signInWithOtp: (phone: string) => Promise<{ error: any }>;
@@ -42,11 +44,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isImpersonating, setIsImpersonating] = useState(false);
 
     useEffect(() => {
-        // --- DEV BYPASS PERSISTENCE ---
+        // Bypass persistence check for non-production environments if explicitly set
         const localBypass = localStorage.getItem('gamefi_agent_context');
         let isBypassed = false;
 
-        if (localBypass) {
+        if (localBypass && import.meta.env.DEV) {
             try {
                 const parsed = JSON.parse(localBypass);
                 setUser({
@@ -57,7 +59,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     xp: parsed.xp,
                     rank_name: parsed.rank,
                     phone: parsed.phone,
-                    assigned_territory: parsed.assigned_territory
+                    assigned_territory: parsed.assigned_territory,
+                    tenantScope: parsed.tenantScope || [parsed.tenant_id]
                 });
                 setSession({ user: { id: 'mock-auth-id' } });
 
@@ -72,10 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         }
 
-        // If we are hard-bypassed, DO NOT trigger standard Supabase checks that will override our mock session.
-        if (isBypassed) {
-            return;
-        }
+        if (isBypassed) return;
 
         // Check active sessions and sets the user
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -115,7 +115,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (error) {
                 console.error("Error fetching user profile:", error);
             } else if (data) {
-                setUser(data as UserData);
+                // Fetch tenant scope (alliances structure)
+                let tenantScope = [data.tenant_id];
+                try {
+                    const { data: scopeData, error: scopeError } = await supabase
+                        .rpc('fn_get_tenant_scope', { p_tenant_id: data.tenant_id });
+
+                    if (!scopeError && scopeData) {
+                        tenantScope = scopeData.map((row: any) => row.tenant_id);
+                    } else if (scopeError) {
+                        console.warn("Could not fetch tenant scope:", scopeError);
+                    }
+                } catch (e) {
+                    console.warn("RPC fetch failed", e);
+                }
+
+                const completeUser = { ...data, tenantScope } as UserData;
+                setUser(completeUser);
+
                 // Also store minimal info in localStorage for complete offline scenarios
                 localStorage.setItem('gamefi_agent_context', JSON.stringify({
                     id: data.id,
@@ -125,7 +142,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     xp: data.xp,
                     rank: data.rank_name,
                     phone: data.phone,
-                    assigned_territory: data.assigned_territory
+                    assigned_territory: data.assigned_territory,
+                    tenantScope: tenantScope
                 }));
             }
         } catch (e) {
@@ -156,6 +174,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
         }
 
+        if (foundUser.is_first_login && foundUser.temp_code) {
+            const message = `SISTEMA C4I (NEMIA): Tu código táctico es ${foundUser.temp_code}. No lo compartas.`;
+            BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
+            console.log("C4I: Enviando SMS de primer login a", foundUser.phone);
+        }
+
         console.log("C4I: Usuario validado. Permitiendo ingreso de credenciales para:", formattedPhone);
         return { error: null };
     };
@@ -179,22 +203,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         if (foundUser) {
             // Caso 1: Primer login con Código Táctico
-            if (foundUser.is_first_login && foundUser.temp_code === token) {
+            if (foundUser.is_first_login && String(foundUser.temp_code).trim() === String(token).trim()) {
                 console.log("C4I: Código Táctico Correcto. Primer login detectado.");
                 return await devLogin(formattedPhone);
             }
 
             // Caso 2: Login con Contraseña (token actúa como password en este paso del form)
-            if (!foundUser.is_first_login && foundUser.password_hash === token) {
+            if (!foundUser.is_first_login && String(foundUser.password_hash).trim() === String(token).trim()) {
                 console.log("C4I: Contraseña Permanente Correcta. Verificando requerimientos de 2FA...");
 
                 // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
-                if (foundUser.two_factor_enabled || ['superadmin', 'candidato'].includes(foundUser.role)) {
+                if (foundUser.two_factor_enabled) {
                     const tactical2FA = Math.floor(100000 + Math.random() * 900000).toString();
                     await supabase
                         .from('users')
                         .update({ temp_code: tactical2FA, code_sent: false })
                         .eq('id', foundUser.id);
+
+                    const message = `SISTEMA C4I (NEMIA): Tu código de seguridad 2FA temporal es ${tactical2FA}.`;
+                    BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
 
                     console.log(`C4I 2FA: Desafío emitido vía Bridge para ${foundUser.phone}.`);
                     return { error: null, requires2FA: true };
@@ -205,10 +232,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
 
-        // Backdoor maestro 123456
-        if (token === '123456') {
-            return await devLogin(formattedPhone);
-        }
+        // No standard password/otp matched, fallback to Supabase Auth if integrated
 
         const { error } = await supabase.auth.verifyOtp({
             phone: formattedPhone,
@@ -281,7 +305,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
 
             // Manually set session state 
-            setUser(foundUser as UserData);
+
+            // For DevLogin we might not have the full scope available instantly via RPC if we're bypassing RLS or not setting things up right.
+            // Just use the tenant_id. The true scope requires a valid session or RPC that supports anon/service role.
+            let tenantScope = [foundUser.tenant_id];
+            try {
+                const { data: scopeData, error: scopeError } = await supabase
+                    .rpc('fn_get_tenant_scope', { p_tenant_id: foundUser.tenant_id });
+                if (!scopeError && scopeData) {
+                    tenantScope = scopeData.map((row: any) => row.tenant_id);
+                }
+            } catch (e) { }
+
+            const completeDevUser = { ...foundUser, tenantScope } as UserData;
+            setUser(completeDevUser);
             setSession({ user: { id: foundUser.auth_id || 'mock-auth-id' } }); // Mock session object
             localStorage.setItem('gamefi_agent_context', JSON.stringify({
                 id: foundUser.id,
@@ -290,7 +327,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 role: foundUser.role,
                 xp: foundUser.xp,
                 rank: foundUser.rank_name,
-                phone: foundUser.phone
+                phone: foundUser.phone,
+                tenantScope: tenantScope
             }));
             return { error: null };
 
@@ -353,7 +391,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             xp: targetUser.xp,
             rank: targetUser.rank_name,
             phone: targetUser.phone,
-            assigned_territory: targetUser.assigned_territory
+            assigned_territory: targetUser.assigned_territory,
+            tenantScope: targetUser.tenantScope || [targetUser.tenant_id]
         }));
         window.location.href = '/'; // Hard reload to clear component tree and enter Ghost Mode securely
     };
@@ -370,7 +409,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <AuthContext.Provider value={{
             user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, devLogin, signOut, updatePassword,
-            impersonateUser, abortImpersonation, isImpersonating
+            impersonateUser, abortImpersonation, isImpersonating, tenantScope: user?.tenantScope || []
         }}>
 
             {!loading && children}

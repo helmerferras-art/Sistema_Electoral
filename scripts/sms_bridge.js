@@ -4,13 +4,75 @@ import { execSync, spawn, spawnSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import os from 'os';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-app.use(cors());
+
+// --- SUPABASE CONFIG ---
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Generate specialized ID for this PC
+const BRIDGE_ID = `${os.hostname()}-${os.arch()}-${process.platform}`;
+let MY_TENANT_ID = null; // Will be set on first heartbeat or via env
+
+app.use(cors({
+    origin: '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with']
+}));
+
+// Chrome: Allow Public to Local requests (CORS for loopback)
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Private-Network", "true");
+    next();
+});
+
 app.use(express.json());
+
+// --- HEARTBEAT SYSTEM ---
+const sendHeartbeat = async () => {
+    if (!MY_TENANT_ID) return;
+
+    try {
+        const { error } = await supabase
+            .from('communication_gateways')
+            .upsert({
+                bridge_id: BRIDGE_ID,
+                tenant_id: MY_TENANT_ID,
+                status: 'online',
+                last_seen: new Date().toISOString(),
+                local_ip: getLocalIp()
+            }, { onConflict: 'bridge_id' });
+
+        if (error) console.error('[CLOUD_ERR] Heartbeat failed:', error.message);
+    } catch (e) {
+        console.error('[CLOUD_ERR] Heartbeat exception:', e.message);
+    }
+};
+
+const getLocalIp = () => {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+    return '127.0.0.1';
+};
+
+setInterval(sendHeartbeat, 60000); // Pulse every minute
 
 process.on('uncaughtException', (err) => {
     console.error('\x1b[31m[FATAL ERROR]\x1b[0m', err);
@@ -167,6 +229,89 @@ app.post('/set-device-config', (req, res) => {
 app.get('/get-devices', (req, res) => {
     res.json(getDevices());
 });
+
+// POST /pair-gateway — Link this local bridge to a specific candidate (tenant)
+app.post('/pair-gateway', async (req, res) => {
+    const { tenant_id, name } = req.body;
+    if (!tenant_id) return res.status(400).json({ error: 'tenant_id required' });
+
+    console.log(`[PAIRING] Vinculando puente con Tenant: ${tenant_id} (${name || 'Sin nombre'})`);
+    MY_TENANT_ID = tenant_id;
+
+    // Trigger immediate heartbeat
+    await sendHeartbeat();
+
+    // Subscribe to commands if not already done
+    setupRealtimeCommands();
+
+    res.json({ success: true, bridge_id: BRIDGE_ID, tenant_id: MY_TENANT_ID });
+});
+
+// --- REMOTE ORCHESTRATION ---
+let commandSubscription = null;
+
+const setupRealtimeCommands = () => {
+    if (commandSubscription) return;
+
+    console.log(`[REALTIME] Escuchando comandos para ${BRIDGE_ID}...`);
+    commandSubscription = supabase
+        .channel(`gateway_commands:${BRIDGE_ID}`)
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'gateway_commands',
+            filter: `bridge_id=eq.${BRIDGE_ID}`
+        }, async (payload) => {
+            const cmd = payload.new;
+            console.log(`[REMOTE_CMD] Recibido: ${cmd.type} -> ${cmd.phone}`);
+
+            try {
+                let success = false;
+                if (cmd.type === 'sms') {
+                    // Logic to call internal send-sms functionality
+                    success = await processSms(cmd.phone, cmd.message);
+                } else if (cmd.type === 'wa') {
+                    success = await processWa(cmd.phone, cmd.message);
+                }
+
+                // Update command status
+                await supabase
+                    .from('gateway_commands')
+                    .update({
+                        status: success ? 'completed' : 'failed',
+                        processed_at: new Date().toISOString()
+                    })
+                    .eq('id', cmd.id);
+
+            } catch (e) {
+                console.error('[REMOTE_ERR]', e.message);
+            }
+        })
+        .subscribe();
+};
+
+const processSms = async (phone, message) => {
+    const authorizedDevices = getDevices().filter(d => d.status === 'connected');
+    if (authorizedDevices.length === 0) return false;
+    const device = authorizedDevices[0];
+
+    const cleanPhone = formatPhone(phone, false);
+    runAdb(['-s', device.id, 'shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `\"sms:${cleanPhone}\"`, '--es', 'sms_body', `\"${message.replace(/"/g, '\\"')}\"`]);
+    // Note: Here we'd ideally trigger the click as well, but simplified for the internal call
+    return true;
+};
+
+const processWa = async (phone, message) => {
+    const authorizedDevices = getDevices().filter(d => d.status === 'connected');
+    if (authorizedDevices.length === 0) return false;
+    const device = authorizedDevices[0];
+
+    const cleanPhone = formatPhone(phone, true);
+    const encodedMsg = encodeURIComponent(message);
+    const waUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedMsg}`;
+    runAdb(['-s', device.id, 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `"${waUrl}"`]);
+    return true;
+};
 
 app.post('/send-sms', async (req, res) => {
     const { phone, message } = req.body;

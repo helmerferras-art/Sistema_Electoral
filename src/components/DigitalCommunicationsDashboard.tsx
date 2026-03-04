@@ -123,7 +123,7 @@ export const DigitalCommunicationsDashboard = () => {
     // --- Load pitch script from Supabase ---
     const fetchPitch = async () => {
         if (!user?.tenant_id) return;
-        const { data } = await supabase.from('audit_pitch').select('script, updated_at').eq('tenant_id', user.tenant_id).maybeSingle();
+        const { data } = await supabase.from('audit_pitch').select('script, updated_at').in('tenant_id', user.tenantScope || []).maybeSingle();
         if (data) {
             setCallScript(data.script);
             setScriptLastUpdated(data.updated_at);
@@ -158,7 +158,7 @@ export const DigitalCommunicationsDashboard = () => {
         const { data } = await supabase
             .from('audit_call_log')
             .select('outcome')
-            .eq('tenant_id', user.tenant_id)
+            .in('tenant_id', user.tenantScope || [])
             .gte('called_at', today.toISOString());
         if (!data) return;
         const counts = { simpatiza: 0, no_disponible: 0, rechazo: 0, sin_servicio: 0, buzon: 0 };
@@ -171,7 +171,7 @@ export const DigitalCommunicationsDashboard = () => {
         const { data } = await supabase
             .from('audit_call_log')
             .select('called_at, outcome')
-            .eq('tenant_id', user.tenant_id)
+            .in('tenant_id', user.tenantScope || [])
             .order('called_at', { ascending: false })
             .limit(100);
         if (data) setAuditHistory(data);
@@ -186,7 +186,7 @@ export const DigitalCommunicationsDashboard = () => {
                     outcome,
                     supporter:supporters(name, phone)
                 `)
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .order('called_at', { ascending: false });
 
             if (!logs || logs.length === 0) return alert("No hay datos para exportar");
@@ -256,21 +256,21 @@ export const DigitalCommunicationsDashboard = () => {
                     recruiter_id, 
                     users!recruiter_id(name, role)
                 `)
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .eq('status', 'pendiente')
                 .order('created_at', { ascending: false });
 
             const { count: verifiedToday } = await supabase
                 .from('supporters')
                 .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', user.tenant_id)
+                .in('tenant_id', user.tenantScope || [])
                 .eq('status', 'aprobado')
                 .gte('created_at', today.toISOString());
 
             const { count: rejectedToday } = await supabase
                 .from('supporters')
                 .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', user.tenant_id)
+                .in('tenant_id', user.tenantScope || [])
                 .eq('status', 'rechazado')
                 .gte('created_at', today.toISOString());
 
@@ -300,7 +300,7 @@ export const DigitalCommunicationsDashboard = () => {
             const { data } = await supabase
                 .from('whatsapp_campaigns')
                 .select('*')
-                .eq('tenant_id', user.tenant_id)
+                .in('tenant_id', user.tenantScope || [])
                 .order('created_at', { ascending: false });
 
             if (data) setWaCampaigns(data);
@@ -311,7 +311,7 @@ export const DigitalCommunicationsDashboard = () => {
 
     const fetchSocialData = async () => {
         if (!user?.tenant_id) return;
-        const { data } = await supabase.from('social_accounts').select('*').eq('tenant_id', user.tenant_id);
+        const { data } = await supabase.from('social_accounts').select('*').in('tenant_id', user.tenantScope || []);
         if (data) setSocialAccounts(data);
     };
 
@@ -335,7 +335,7 @@ export const DigitalCommunicationsDashboard = () => {
                 .from('supporters')
                 .select('id, name, phone')
                 .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
-                .eq('tenant_id', user?.tenant_id)
+                .in('tenant_id', user?.tenantScope || [])
                 .limit(5);
 
             if (error) throw error;

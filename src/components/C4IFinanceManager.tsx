@@ -46,7 +46,7 @@ export const C4IFinanceManager = () => {
         const { data, error } = await supabase
             .from('campaign_finances')
             .select('*')
-            .eq('tenant_id', user.tenant_id)
+            .in('tenant_id', user?.tenantScope || [])
             .order('reference_date', { ascending: false });
 
         if (error) {
@@ -229,8 +229,8 @@ export const C4IFinanceManager = () => {
                             <PieChartIcon size={18} color="var(--tertiary)" /> FLUJO DE CAPITAL VORAZ (EGRESOS)
                         </h4>
                         {donutData.length > 0 ? (
-                            <div style={{ width: '100%', height: '300px' }}>
-                                <ResponsiveContainer>
+                            <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
+                                <ResponsiveContainer width="99%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={donutData}

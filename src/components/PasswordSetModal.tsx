@@ -40,7 +40,7 @@ export const PasswordSetModal = () => {
 
     if (finished) {
         return (
-            <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999 }}>
+            <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
                 <div className="tactile-card flex-col gap-2" style={{ maxWidth: '400px', textAlign: 'center', animation: 'scaleUp 0.3s ease-out' }}>
                     <CheckCircle size={48} color="var(--tertiary)" style={{ margin: '0 auto' }} />
                     <h2 style={{ fontFamily: 'Oswald', color: 'white' }}>ACCESO GARANTIZADO</h2>
@@ -52,7 +52,7 @@ export const PasswordSetModal = () => {
     }
 
     return (
-        <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999, backdropFilter: 'blur(10px)' }}>
+        <div className="modal-overlay" style={{ display: 'flex', zIndex: 9999, backdropFilter: 'blur(10px)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100vh', justifyContent: 'center', alignItems: 'center' }}>
             <div className="tactile-card flex-col gap-2" style={{ maxWidth: '400px', width: '90%', border: '2px solid var(--primary)', background: 'rgba(15, 18, 24, 0.98)' }}>
                 <div style={{ textAlign: 'center' }}>
                     <Lock size={40} color="var(--primary)" style={{ margin: '0 auto' }} />

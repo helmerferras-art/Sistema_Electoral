@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { BridgeService } from '../lib/BridgeService';
 import { UserPlus, Trash2, CheckCircle, Search, Play, Key, PauseCircle, PlayCircle, Edit } from 'lucide-react';
 
 
@@ -19,6 +20,8 @@ export const AdminManager = () => {
     const [newPhone, setNewPhone] = useState('');
     const [newRole, setNewRole] = useState('candidato');
     const [newTenantId, setNewTenantId] = useState('');
+    const [targetMunicipality, setTargetMunicipality] = useState('');
+    const [targetSection, setTargetSection] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
@@ -68,7 +71,9 @@ export const AdminManager = () => {
                     rank_name: newRole === 'superadmin' ? 'Alto Mando' : 'Comandante Supremo',
                     is_first_login: true,
                     temp_code: tacticalCode,
-                    two_factor_enabled: newRole === 'superadmin'
+                    two_factor_enabled: newRole === 'superadmin',
+                    municipality: targetMunicipality || null,
+                    section: targetSection || null
                 }], { onConflict: 'phone' });
 
             if (error) throw error;
@@ -77,6 +82,12 @@ export const AdminManager = () => {
             setNewName('');
             setNewPhone('');
             loadData();
+
+            // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
+            const welcomeMsg = `SISTEMA C4I (NEMIA): Hola ${newName}, tu código de acceso táctico es ${tacticalCode}. Ingresa en nemia.lat/login y no lo compartas.`;
+            BridgeService.sendSMS(formattedPhone, welcomeMsg).catch(console.error);
+            console.log(`[C4I] SMS de bienvenida enviado a ${newName} (${formattedPhone})`);
+
         } catch (error: any) {
             setMessage(`❌ Error: ${error.message}`);
         } finally {
@@ -104,7 +115,7 @@ export const AdminManager = () => {
         setProcessingId(null);
     };
 
-    const handleResetCredentials = async (id: string, name: string) => {
+    const handleResetCredentials = async (id: string, name: string, phone: string) => {
         if (!confirm(`¿Generar un nuevo código de acceso temporal para ${name}? Esto borrará su contraseña actual.`)) return;
         setProcessingId(id);
         const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -118,6 +129,12 @@ export const AdminManager = () => {
             alert(`Error: ${error.message}`);
         } else {
             alert(`✅ Credenciales restablecidas.\n\nEl nuevo código temporal para ${name} es: ${tacticalCode}\nEntrégalo de forma segura.`);
+
+            // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
+            const resetMsg = `SISTEMA C4I (NEMIA): Hola ${name}, tus credenciales han sido restablecidas. Tu nuevo código táctico es ${tacticalCode}. Ingresa en nemia.lat/login`;
+            BridgeService.sendSMS(phone, resetMsg).catch(console.error);
+            console.log(`[C4I] SMS de reseteo enviado a ${name} (${phone})`);
+
             loadData();
         }
         setProcessingId(null);
@@ -225,6 +242,31 @@ export const AdminManager = () => {
                                 </select>
                             </div>
                         )}
+
+                        {(newRole === 'coordinador_campana' || newRole === 'operador') && (
+                            <>
+                                <div className="flex-col">
+                                    <label style={{ fontSize: '0.8rem', color: '#888' }}>MUNICIPIO ASIGNADO</label>
+                                    <input
+                                        type="text"
+                                        className="squishy-input"
+                                        value={targetMunicipality}
+                                        onChange={e => setTargetMunicipality(e.target.value)}
+                                        placeholder="Ej: TUXTLA GUTIERREZ"
+                                    />
+                                </div>
+                                <div className="flex-col">
+                                    <label style={{ fontSize: '0.8rem', color: '#888' }}>SECCIÓN (OPCIONAL)</label>
+                                    <input
+                                        type="text"
+                                        className="squishy-input"
+                                        value={targetSection}
+                                        onChange={e => setTargetSection(e.target.value)}
+                                        placeholder="Ej: 1542"
+                                    />
+                                </div>
+                            </>
+                        )}
                         <button
                             type="submit"
                             className="squishy-btn primary"
@@ -303,7 +345,7 @@ export const AdminManager = () => {
                                                     <Play size={16} />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleResetCredentials(u.id, u.name)}
+                                                    onClick={() => handleResetCredentials(u.id, u.name, u.phone)}
                                                     title="Restablecer Credenciales (Forzar Nuevo Código)"
                                                     style={{ background: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: '0.3rem' }}
                                                     disabled={processingId === u.id}

@@ -32,7 +32,7 @@ export const FieldPolls = () => {
                     )
                 )
             `)
-            .eq('tenant_id', user.tenant_id)
+            .in('tenant_id', user.tenantScope || [])
             .eq('active', true);
 
         if (!error && pollsData) {

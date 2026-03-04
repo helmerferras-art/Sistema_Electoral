@@ -101,6 +101,8 @@ CREATE TABLE historical_election_results (
   nominal_list_size INTEGER DEFAULT 0, -- Tamaño de la lista nominal
   target_votes_calculated INTEGER DEFAULT 0,
   party_results JSONB, -- party_name: votes
+  padron_hombres INTEGER DEFAULT 0,
+  padron_mujeres INTEGER DEFAULT 0,
   colonia TEXT,
   municipality_id TEXT -- Logical grouping for campaigns
 );
