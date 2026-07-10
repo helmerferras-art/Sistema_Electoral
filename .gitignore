@@ -1,3 +1,9 @@
+# Environment secrets
+.env
+.env.*
+!.env.example
+credenciales*.md
+
 # Logs
 logs
 *.log
