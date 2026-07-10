@@ -1,7 +1,14 @@
+import 'dotenv/config';
 import { Client } from 'pg';
 
+const connectionString = process.env.SUPABASE_DB_URL;
+if (!connectionString) {
+    console.error('[FATAL] Falta SUPABASE_DB_URL en .env (Dashboard → Settings → Database → Connection string, modo URI). No se debe commitear.');
+    process.exit(1);
+}
+
 const client = new Client({
-    connectionString: 'postgresql://postgres:%1112Rocko@@@@db.dlpbgbldfzxyxhbnmjfn.supabase.co:5432/postgres',
+    connectionString,
     ssl: { rejectUnauthorized: false }
 });
 

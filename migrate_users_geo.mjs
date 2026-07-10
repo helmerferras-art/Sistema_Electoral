@@ -16,20 +16,24 @@ const client = new Client({
 async function migrate() {
     try {
         await client.connect();
-        console.log("Connected to Postgres. Applying fix...");
+        console.log("Connected to Postgres. Adding geolocation columns to 'users'...");
 
-        // Add quantity to resource_assignments if missing
         await client.query(`
             DO $$ 
             BEGIN 
                 IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
-                               WHERE table_name='resource_assignments' AND column_name='quantity') THEN
-                    ALTER TABLE resource_assignments ADD COLUMN quantity INTEGER DEFAULT 1;
+                               WHERE table_name='users' AND column_name='latitude') THEN
+                    ALTER TABLE users ADD COLUMN latitude DOUBLE PRECISION;
+                END IF;
+
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                               WHERE table_name='users' AND column_name='longitude') THEN
+                    ALTER TABLE users ADD COLUMN longitude DOUBLE PRECISION;
                 END IF;
             END $$;
         `);
 
-        console.log("Migration applied successfully.");
+        console.log("Migration for users table applied successfully.");
     } catch (err) {
         console.error("Migration failed:", err);
     } finally {

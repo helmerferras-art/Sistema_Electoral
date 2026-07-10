@@ -1,9 +1,14 @@
 
+import 'dotenv/config';
 import pg from 'pg';
 import fs from 'fs';
 const { Client } = pg;
 
-const connectionString = 'postgresql://postgres:%1112Rocko@@@@db.dlpbgbldfzxyxhbnmjfn.supabase.co:5432/postgres';
+const connectionString = process.env.SUPABASE_DB_URL;
+if (!connectionString) {
+    console.error('[FATAL] Falta SUPABASE_DB_URL en .env (Dashboard → Settings → Database → Connection string, modo URI). No se debe commitear.');
+    process.exit(1);
+}
 
 const SURNAMES = ['Hernández', 'García', 'Martínez', 'López', 'González', 'Pérez', 'Rodríguez', 'Sánchez', 'Ramírez', 'Cruz', 'Flores', 'Gómez', 'Morales', 'Vázquez', 'Jiménez', 'Reyes', 'Díaz', 'Torres', 'Ruiz', 'Mendoza'];
 const NAMES = ['Juan', 'Maria', 'Jose', 'Ana', 'Luis', 'Leticia', 'Pedro', 'Rosa', 'Carlos', 'Silvia', 'Jorge', 'Guadalupe', 'Ricardo', 'Elena', 'Fernando', 'Teresa', 'Roberto', 'Adriana', 'Raul', 'Isabel'];
