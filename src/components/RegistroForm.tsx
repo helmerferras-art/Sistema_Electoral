@@ -167,7 +167,6 @@ export const RegistroForm = () => {
             setStatusMessage('Guardando...');
 
             const tenantId = user?.tenant_id || (window as any)._publicTenantId;
-            const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
             const supporterData = {
                 name: formData.name,
@@ -191,19 +190,21 @@ export const RegistroForm = () => {
             if (navigator.onLine) {
                 await syncOfflineData();
 
-                // --- INTEGRACION C4I: Crear cuenta de acceso ---
-                const cleanPhone = formData.phone.replace(/\D/g, '').slice(-10);
-                await supabase.from('users').upsert([{
-                    name: formData.name,
-                    phone: cleanPhone.startsWith('+') ? cleanPhone : `+52${cleanPhone}`,
-                    role: 'brigadista',
-                    rank_name: 'Recluta Voluntario',
-                    tenant_id: tenantId,
-                    is_first_login: true,
-                    temp_code: tacticalCode,
-                    code_sent: false
-                }], { onConflict: 'phone' });
-                console.log(`C4I: Perfil de usuario y código táctico (${tacticalCode}) creados para ${cleanPhone}.`);
+                // --- INTEGRACION C4I: Crear cuenta de acceso (vía Edge Function, sin sesión = solo brigadista) ---
+                const { data: accountResult, error: accountError } = await supabase.functions.invoke('create-team-member', {
+                    body: {
+                        name: formData.name,
+                        phone: formData.phone,
+                        role: 'brigadista',
+                        tenant_id: tenantId
+                    }
+                });
+
+                if (accountError || !accountResult?.success) {
+                    console.error('C4I: Error creando cuenta de acceso:', accountError || accountResult?.error);
+                } else {
+                    console.log(`C4I: Perfil de usuario y código táctico (${accountResult.temp_code}) creados para ${formData.phone}.`);
+                }
             }
 
             let earnedXp = 50;
