@@ -356,33 +356,23 @@ export const HighCommandDashboard = () => {
         e.preventDefault();
         setIsSubmittingUser(true);
         try {
-            const phoneStr = newUserForm.phone.startsWith('+52') ? newUserForm.phone : `+52${newUserForm.phone}`;
-
-            // Generar Código Táctico de 6 dígitos
-            const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-            const { data, error } = await supabase.from('users').insert([{
-                tenant_id: user?.tenant_id,
-                name: newUserForm.name,
-                phone: phoneStr,
-                role: newUserForm.role,
-                rank_name: 'Recluta Nivel 1',
-                parent_id: user?.id,
-                temp_code: tacticalCode,
-                is_first_login: true,
-                xp: 0,
-                assigned_territory: {
-                    layer_type: 'seccion',
-                    zone_ids: selectedSectionsForNewUser
+            const { data: accountResult, error } = await supabase.functions.invoke('create-team-member', {
+                body: {
+                    name: newUserForm.name,
+                    phone: newUserForm.phone,
+                    role: newUserForm.role,
+                    assigned_territory: {
+                        layer_type: 'seccion',
+                        zone_ids: selectedSectionsForNewUser
+                    }
                 }
-            }]).select().single();
+            });
 
-            if (error) {
-                if (error.code === '23505') throw new Error("Este número de teléfono ya está registrado.");
-                throw error;
+            if (error || !accountResult?.success) {
+                throw new Error(accountResult?.error || error?.message || 'Error desconocido');
             }
 
-            alert(`¡Operador ${data.name} reclutado exitosamente con su zona asignada!`);
+            alert(`¡Operador ${accountResult.user.name} reclutado exitosamente con su zona asignada!`);
             setIsAddingUser(false);
             setNewUserForm({ name: '', phone: '', role: 'coordinador_territorial' });
             setSelectedSectionsForNewUser([]);

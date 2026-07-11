@@ -57,26 +57,24 @@ export const AdminManager = () => {
         setMessage('');
         setIsSubmitting(true);
 
-        const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
         const formattedPhone = newPhone.startsWith('+52') ? newPhone : `+52${newPhone}`;
 
         try {
-            const { error } = await supabase
-                .from('users')
-                .upsert([{
+            const { data: accountResult, error } = await supabase.functions.invoke('create-team-member', {
+                body: {
                     name: newName,
-                    phone: formattedPhone,
+                    phone: newPhone,
                     role: newRole,
                     tenant_id: newTenantId || null,
-                    rank_name: newRole === 'superadmin' ? 'Alto Mando' : 'Comandante Supremo',
-                    is_first_login: true,
-                    temp_code: tacticalCode,
-                    two_factor_enabled: newRole === 'superadmin',
-                    municipality: targetMunicipality || null,
-                    section: targetSection || null
-                }], { onConflict: 'phone' });
+                    two_factor_enabled: newRole === 'superadmin'
+                }
+            });
 
-            if (error) throw error;
+            if (error || !accountResult?.success) {
+                throw new Error(accountResult?.error || error?.message || 'Error desconocido');
+            }
+
+            const tacticalCode = accountResult.temp_code;
 
             setMessage(`✅ Usuario creado: ${newName}. Código táctico inicial: ${tacticalCode}`);
             setNewName('');
@@ -118,16 +116,30 @@ export const AdminManager = () => {
     const handleResetCredentials = async (id: string, name: string, phone: string) => {
         if (!confirm(`¿Generar un nuevo código de acceso temporal para ${name}? Esto borrará su contraseña actual.`)) return;
         setProcessingId(id);
-        const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const { error } = await supabase.from('users').update({
-            temp_code: tacticalCode,
-            password_hash: null,
-            is_first_login: true
-        }).eq('id', id);
 
-        if (error) {
-            alert(`Error: ${error.message}`);
+        const targetUser = users.find(u => u.id === id);
+        if (!targetUser) {
+            alert('No se encontró el usuario en la lista cargada.');
+            setProcessingId(null);
+            return;
+        }
+
+        // create-team-member detecta que el teléfono ya existe y regenera credenciales
+        // (temp_code + contraseña real de Auth) en vez de crear un usuario duplicado.
+        const { data: accountResult, error } = await supabase.functions.invoke('create-team-member', {
+            body: {
+                name,
+                phone,
+                role: targetUser.role,
+                tenant_id: targetUser.tenant_id,
+                two_factor_enabled: targetUser.two_factor_enabled
+            }
+        });
+
+        if (error || !accountResult?.success) {
+            alert(`Error: ${accountResult?.error || error?.message}`);
         } else {
+            const tacticalCode = accountResult.temp_code;
             alert(`✅ Credenciales restablecidas.\n\nEl nuevo código temporal para ${name} es: ${tacticalCode}\nEntrégalo de forma segura.`);
 
             // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---

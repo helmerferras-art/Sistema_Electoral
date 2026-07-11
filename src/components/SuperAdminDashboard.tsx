@@ -520,29 +520,23 @@ export const SuperAdminDashboard = () => {
             return;
         }
 
-        // Generar Código Táctico de 6 dígitos
-        const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-        const { error: userError } = await supabase
-            .from('users')
-            .insert([{
-                tenant_id: tenantData.id,
+        const { data: accountResult, error: accountError } = await supabase.functions.invoke('create-team-member', {
+            body: {
                 name: `Candidato - ${newTenantName}`,
-                phone: newAdminPhone.startsWith('+52') ? newAdminPhone : `+52${newAdminPhone}`,
+                phone: newAdminPhone,
                 role: 'candidato',
-                rank_name: 'Comandante Supremo',
-                temp_code: tacticalCode,
-                is_first_login: true
-            }]);
+                tenant_id: tenantData.id
+            }
+        });
 
-        if (userError) {
-            setMessage(`Error al crear usuario administrador: ${userError.message}`);
+        if (accountError || !accountResult?.success) {
+            setMessage(`Error al crear usuario administrador: ${accountError?.message || accountResult?.error}`);
             return;
         }
 
         // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
         const formattedPhone = newAdminPhone.startsWith('+52') ? newAdminPhone : `+52${newAdminPhone}`;
-        const welcomeMsg = `SISTEMA C4I: Hola Candidato ${newTenantName}, tu clave tactica es ${tacticalCode}. Ingresa en nemia.lat/login`;
+        const welcomeMsg = `SISTEMA C4I: Hola Candidato ${newTenantName}, tu clave tactica es ${accountResult.temp_code}. Ingresa en nemia.lat/login`;
         BridgeService.sendSMS(formattedPhone, welcomeMsg).catch(console.error);
         console.log(`[C4I] SMS de bienvenida enviado a Candidato ${newTenantName} (${formattedPhone})`);
 
@@ -1231,7 +1225,7 @@ export const SuperAdminDashboard = () => {
                                             availableRegions.length > 0 ? (
                                                 <select className="squishy-input" value={geographicScope} onChange={e => setGeographicScope(e.target.value)} required>
                                                     <option value="" disabled>Seleccionar Jurisdicción</option>
-                                                    {availableRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                                                    {availableRegions.map(r => <option key={r} value={r}>{getMunicipalityName(r)}</option>)}
                                                 </select>
                                             ) : (
                                                 <input className="squishy-input" placeholder="Ej: Tuxtla Gutiérrez" value={geographicScope} onChange={e => setGeographicScope(e.target.value)} required />

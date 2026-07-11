@@ -27,12 +27,16 @@ type AuthContextType = {
     signInWithOtp: (phone: string) => Promise<{ error: any }>;
     verifyOtp: (phone: string, token: string) => Promise<{ error: any; requires2FA?: boolean }>;
     verifyTwoFactor: (phone: string, code: string) => Promise<{ error: any }>;
-    devLogin: (phone: string) => Promise<{ error: any }>;
     signOut: () => Promise<void>;
     updatePassword: (newPassword: string) => Promise<{ error: any }>;
     impersonateUser: (targetUser: any) => Promise<void>;
     abortImpersonation: () => Promise<void>;
     isImpersonating: boolean;
+};
+
+const toSyntheticEmail = (phone: string) => {
+    const digits = String(phone || '').replace(/\D/g, '').slice(-10);
+    return `${digits}@c4i.local`;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -190,7 +194,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             formattedPhone = '+52' + phone;
         }
 
-        // --- LOGICA C4I: Verificar Código Táctico o Contraseña ---
         const rawPhone = formattedPhone.replace('+52', '');
         const { data: userData } = await supabase
             .from('users')
@@ -201,139 +204,67 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         const foundUser = userData && userData.length > 0 ? userData[0] : null;
 
-        if (foundUser) {
-            // Caso 1: Primer login con Código Táctico
-            if (foundUser.is_first_login && String(foundUser.temp_code).trim() === String(token).trim()) {
-                console.log("C4I: Código Táctico Correcto. Primer login detectado.");
-                return await devLogin(formattedPhone);
-            }
-
-            // Caso 2: Login con Contraseña (token actúa como password en este paso del form)
-            if (!foundUser.is_first_login && String(foundUser.password_hash).trim() === String(token).trim()) {
-                console.log("C4I: Contraseña Permanente Correcta. Verificando requerimientos de 2FA...");
-
-                // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
-                if (foundUser.two_factor_enabled) {
-                    const tactical2FA = Math.floor(100000 + Math.random() * 900000).toString();
-                    await supabase
-                        .from('users')
-                        .update({ temp_code: tactical2FA, code_sent: false })
-                        .eq('id', foundUser.id);
-
-                    const message = `SISTEMA C4I (NEMIA): Tu código de seguridad 2FA temporal es ${tactical2FA}.`;
-                    BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
-
-                    console.log(`C4I 2FA: Desafío emitido vía Bridge para ${foundUser.phone}.`);
-                    return { error: null, requires2FA: true };
-                }
-
-                return await devLogin(formattedPhone);
-            }
+        if (!foundUser) {
+            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
         }
 
+        // token = código táctico (primer login) o contraseña permanente (login normal).
+        // En ambos casos es, literalmente, la contraseña actual de auth.users para este usuario.
+        const email = toSyntheticEmail(foundUser.phone);
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: token });
 
-        // No standard password/otp matched, fallback to Supabase Auth if integrated
+        if (signInErr || !signInData.session) {
+            return { error: { message: foundUser.is_first_login ? 'Código táctico incorrecto.' : 'Contraseña incorrecta.' } };
+        }
 
-        const { error } = await supabase.auth.verifyOtp({
-            phone: formattedPhone,
-            token,
-            type: 'sms',
-        });
-        return { error };
+        // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
+        // La contraseña era correcta, pero no dejamos la sesión activa hasta completar el 2FA.
+        if (!foundUser.is_first_login && foundUser.two_factor_enabled) {
+            await supabase.auth.signOut();
+
+            const tactical2FA = Math.floor(100000 + Math.random() * 900000).toString();
+            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+            await supabase
+                .from('users')
+                .update({ temp_code: tactical2FA, temp_code_expires_at: expiresAt, code_sent: false })
+                .eq('id', foundUser.id);
+
+            const message = `SISTEMA C4I (NEMIA): Tu código de seguridad 2FA temporal es ${tactical2FA}.`;
+            BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
+
+            console.log(`C4I 2FA: Desafío emitido vía Bridge para ${foundUser.phone}.`);
+            return { error: null, requires2FA: true };
+        }
+
+        // Sesión real ya establecida; onAuthStateChange -> fetchUserProfile completa el resto.
+        return { error: null };
     };
 
     const verifyTwoFactor = async (phone: string, code: string) => {
         let formattedPhone = phone.startsWith('+') ? phone : `+52${phone}`;
-        const rawPhone = formattedPhone.replace('+52', '');
 
-        const { data: userData } = await supabase
-            .from('users')
-            .select('*')
-            .or(`phone.eq.${formattedPhone},phone.eq.${rawPhone}`)
-            .eq('temp_code', code)
-            .limit(1)
-            .single();
-
-        if (!userData) {
-            return { error: { message: 'CÓDIGO 2FA INCORRECTO O EXPIRADO.' } };
-        }
-
-        console.log("C4I: 2FA Verificado. Otorgando acceso de Alto Mando.");
-        return await devLogin(formattedPhone);
-    };
-
-    // Helper for Dev Backdoor to bypass Supabase native auth and just use our users table
-    const devLogin = async (formattedPhone: string) => {
         try {
-            // Because the SuperAdmin form might have saved the phone number WITHOUT the +52, 
-            // we will query relying on `like` or stripping the prefix to make sure we find the Candidate user.
-            const rawPhone = formattedPhone.replace('+52', '');
+            const { data, error } = await supabase.functions.invoke('complete-2fa-login', {
+                body: { phone: formattedPhone, code }
+            });
 
-            let { data } = await supabase
-                .from('users')
-                .select('*')
-                .or(`phone.eq.${formattedPhone},phone.eq.${rawPhone}`)
-                .order('created_at', { ascending: false })
-                .limit(1);
-
-            let foundUser = data && data.length > 0 ? data[0] : null;
-
-            if (!foundUser) {
-                console.log("No user found for Dev Bypass. Auto-creating provisional user...");
-
-                // Get a default tenant to assign to new users
-                // In a production app, this would be a "Pending" or "Guest" tenant
-                const { data: tenantData } = await supabase.from('tenants').select('id').limit(1).single();
-
-                const { data: newData, error: upsertError } = await supabase
-                    .from('users')
-                    .upsert([{
-                        name: `Usuario ${rawPhone}`,
-                        phone: formattedPhone.startsWith('+') ? formattedPhone : `+52${formattedPhone}`,
-                        role: 'brigadista',
-                        rank_name: 'Brigadista Nivel 1',
-                        tenant_id: tenantData?.id,
-                        is_first_login: true
-                    }], { onConflict: 'phone' })
-                    .select()
-                    .limit(1);
-
-                if (upsertError || !newData || newData.length === 0) {
-                    return { error: { message: `Fallo el auto-registro: ${upsertError?.message || 'Error desconocido'}` } };
-                }
-                foundUser = newData[0];
+            if (error || !data?.success) {
+                return { error: { message: data?.error || 'CÓDIGO 2FA INCORRECTO O EXPIRADO.' } };
             }
 
-            // Manually set session state 
+            const { error: verifyErr } = await supabase.auth.verifyOtp({
+                token_hash: data.token_hash,
+                type: 'magiclink'
+            });
 
-            // For DevLogin we might not have the full scope available instantly via RPC if we're bypassing RLS or not setting things up right.
-            // Just use the tenant_id. The true scope requires a valid session or RPC that supports anon/service role.
-            let tenantScope = [foundUser.tenant_id];
-            try {
-                const { data: scopeData, error: scopeError } = await supabase
-                    .rpc('fn_get_tenant_scope', { p_tenant_id: foundUser.tenant_id });
-                if (!scopeError && scopeData) {
-                    tenantScope = scopeData.map((row: any) => row.tenant_id);
-                }
-            } catch (e) { }
+            if (verifyErr) {
+                return { error: { message: 'No se pudo completar el inicio de sesión.' } };
+            }
 
-            const completeDevUser = { ...foundUser, tenantScope } as UserData;
-            setUser(completeDevUser);
-            setSession({ user: { id: foundUser.auth_id || 'mock-auth-id' } }); // Mock session object
-            localStorage.setItem('gamefi_agent_context', JSON.stringify({
-                id: foundUser.id,
-                tenant_id: foundUser.tenant_id,
-                name: foundUser.name,
-                role: foundUser.role,
-                xp: foundUser.xp,
-                rank: foundUser.rank_name,
-                phone: foundUser.phone,
-                tenantScope: tenantScope
-            }));
+            console.log("C4I: 2FA Verificado. Otorgando acceso de Alto Mando.");
             return { error: null };
-
         } catch (e) {
-            return { error: e };
+            return { error: { message: 'Fallo de conexión al verificar 2FA.' } };
         }
     };
 
@@ -348,10 +279,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!user) return { error: { message: 'No hay usuario autenticado' } };
 
         try {
+            // Contraseña real, hasheada por Supabase Auth (requiere sesión activa)
+            const { error: authErr } = await supabase.auth.updateUser({ password: newPassword });
+            if (authErr) throw authErr;
+
             const { error } = await supabase
                 .from('users')
                 .update({
-                    password_hash: newPassword, // En producción se debería hashear
                     is_first_login: false,
                     temp_code: null
                 })
@@ -408,7 +342,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <AuthContext.Provider value={{
-            user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, devLogin, signOut, updatePassword,
+            user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, signOut, updatePassword,
             impersonateUser, abortImpersonation, isImpersonating, tenantScope: user?.tenantScope || []
         }}>
 

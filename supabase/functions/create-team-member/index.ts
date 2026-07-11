@@ -36,7 +36,7 @@ Deno.serve(async (req: Request) => {
         return json({ error: 'JSON inválido' }, 400);
     }
 
-    const { name, phone, role: targetRole, tenant_id: bodyTenantId, parent_id: bodyParentId, assigned_territory } = body;
+    const { name, phone, role: targetRole, tenant_id: bodyTenantId, parent_id: bodyParentId, assigned_territory, two_factor_enabled } = body;
 
     if (!name || !phone || !targetRole) {
         return json({ error: 'Faltan campos requeridos: name, phone, role' }, 400);
@@ -122,6 +122,7 @@ Deno.serve(async (req: Request) => {
                 is_first_login: true,
                 temp_code: tacticalCode,
                 code_sent: false,
+                two_factor_enabled: !!two_factor_enabled,
                 ...(assigned_territory ? { assigned_territory } : {}),
             })
             .eq('id', existingUser.id)
@@ -161,6 +162,7 @@ Deno.serve(async (req: Request) => {
             is_first_login: true,
             temp_code: tacticalCode,
             code_sent: false,
+            two_factor_enabled: !!two_factor_enabled,
             ...(assigned_territory ? { assigned_territory } : {}),
         }])
         .select()
