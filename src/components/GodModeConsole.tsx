@@ -51,6 +51,7 @@ export const GodModeConsole = () => {
             .subscribe();
 
         const interval = setInterval(() => {
+            if (document.hidden) return; // no consultar con la pestaña oculta
             fetchGateways();
             fetchLocalBridge();
         }, 15000);
@@ -62,7 +63,7 @@ export const GodModeConsole = () => {
     }, []);
 
     const fetchGlobalStats = async () => {
-        const { count } = await supabase.from('supporters').select('*', { count: 'exact', head: true });
+        const { count } = await supabase.from('supporters').select('id', { count: 'exact', head: true });
         setStats({ totalSupporters: count || 0 });
     };
 

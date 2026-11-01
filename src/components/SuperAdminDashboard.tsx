@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { USER_COLUMNS } from '../lib/userColumns';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Layers, Shield, PlusCircle, Upload, LogOut, Trash2, Activity, Settings, BarChart2, Search, FileText, Users, PieChart, ChevronDown, Network, Brain, Cpu, Key, List, AlertCircle } from 'lucide-react';
@@ -624,8 +625,8 @@ export const SuperAdminDashboard = () => {
     const handleBackup = async (tenantId: string, tenantName: string) => {
         setDownloadingDb(tenantId);
         try {
-            const { data: usersData } = await supabase.from('users').select('*').eq('tenant_id', tenantId);
-            const { data: supportersData } = await supabase.from('supporters').select('*').eq('tenant_id', tenantId);
+            const { data: usersData } = await supabase.from('users').select(USER_COLUMNS).eq('tenant_id', tenantId);
+            const { data: supportersData } = await supabase.rpc('fn_supporters_export', { p_tenant_id: tenantId });
             const { data: assignmentsData } = await supabase.from('resource_assignments').select('*').eq('tenant_id', tenantId);
 
             const backupData = {

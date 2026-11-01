@@ -17,7 +17,12 @@ const app = express();
 
 // --- SUPABASE CONFIG ---
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+// Llave de servicio: la cola gateway_commands y communication_gateways ya no aceptan la llave pública (anon).
+// Este proceso debe correr solo en equipos de confianza: la llave de servicio salta las reglas RLS.
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn('[BRIDGE] ⚠️ Falta SUPABASE_SERVICE_ROLE_KEY en .env: el puente no podrá leer ni actualizar la cola de mensajes.');
+}
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Generate specialized ID for this PC

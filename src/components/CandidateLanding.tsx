@@ -19,48 +19,21 @@ export const CandidateLanding = () => {
         if (!slug) return;
         setLoading(true);
         try {
-            // 1. Encontrar el tenant por slug
-            const { data: tenantData, error: tenantError } = await supabase
-                .from('tenants')
-                .select('*')
-                .eq('slug', slug)
-                .single();
+            // RPC pública segura: campaña, candidato y conteos en una sola llamada
+            const { data: landing, error: landingError } = await supabase.rpc('fn_public_landing', { p_slug: slug });
 
-            if (tenantError || !tenantData) {
+            if (landingError || !landing?.tenant) {
                 console.error("Tenant not found for slug:", slug);
                 setLoading(false);
                 return;
             }
 
+            const tenantData = landing.tenant;
             setTenant(tenantData);
-
-            // 2. Encontrar al candidato (owner o role=candidato)
-            const { data: candidateData } = await supabase
-                .from('users')
-                .select('name, photo_url, role')
-                .eq('tenant_id', tenantData.id)
-                .eq('role', 'candidato')
-                .maybeSingle();
-
-            setCandidate(candidateData);
-
-            // 3. Obtener estadísticas básicas
-            const { count: supportsCount } = await supabase
-                .from('supporters')
-                .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', tenantData.id);
-
-            // Asumimos que 'petitions' ya existe o fallará silenciosamente
-            const { count: petitionsCount } = await supabase
-                .from('petitions')
-                .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', tenantData.id);
-
-            const { count: resolvedCount } = await supabase
-                .from('petitions')
-                .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', tenantData.id)
-                .eq('status', 'resuelto');
+            setCandidate(landing.candidate || null);
+            const supportsCount = landing.supporters ?? 0;
+            const petitionsCount = landing.petitions ?? 0;
+            const resolvedCount = landing.resolved ?? 0;
 
             setStats({
                 supports: supportsCount || 0,

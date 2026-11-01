@@ -51,25 +51,11 @@ export const RegistroForm = () => {
         const tId = user?.tenant_id || (window as any)._publicTenantId;
         if (!tId) return;
         try {
-            const { data } = await supabase
-                .from('users')
-                .select('name, phone')
-                .eq('tenant_id', tId)
-                .eq('role', 'candidato')
-                .maybeSingle();
-
-            if (data) {
-                setCandidateInfo({
-                    name: data.name,
-                    phone: data.phone || ''
-                });
-            } else {
-                const { data: tenant } = await supabase
-                    .from('tenants')
-                    .select('name')
-                    .eq('id', tId)
-                    .single();
-                if (tenant) setCandidateInfo(prev => ({ ...prev, name: tenant.name }));
+            // RPC pública segura: solo nombre/teléfono del candidato y nombre de la campaña
+            const { data } = await supabase.rpc('fn_public_candidate', { p_tenant_id: tId });
+            const info = data && data.length > 0 ? data[0] : null;
+            if (info) {
+                setCandidateInfo({ name: info.name || info.tenant_name || 'Candidato', phone: info.phone || '' });
             }
         } catch (e) {
             console.error("Error fetching candidate info:", e);
@@ -149,10 +135,7 @@ export const RegistroForm = () => {
 
             // 1. Verificar duplicados en tiempo real (Proactivo)
             const { data: existingSupporter, error: checkError } = await supabase
-                .from('supporters')
-                .select('id')
-                .eq('phone', formData.phone)
-                .maybeSingle();
+                .rpc('fn_supporter_phone_exists', { p_phone: formData.phone, p_tenant_id: null });
 
             if (checkError) {
                 console.error("Error verificando duplicados:", checkError);
@@ -174,7 +157,8 @@ export const RegistroForm = () => {
                 curp: formData.curp,
                 clave_elector: formData.clave_elector,
                 domicilio: formData.domicilio,
-                seccion_id: formData.seccion,
+                section_id: formData.seccion,
+                seccion: formData.seccion,
                 vigencia: formData.vigencia,
                 birth_date: formData.birth_date || null,
                 photo_evidence_url: formData.photo_url,
@@ -186,6 +170,12 @@ export const RegistroForm = () => {
             };
 
             await saveOfflineSupporter(supporterData);
+
+            // Última ubicación conocida del brigadista (para el mapa de su coordinador). No bloquea el registro.
+            if (user && navigator.onLine && formData.latitude && formData.longitude) {
+                supabase.rpc('fn_update_my_location', { p_lat: Number(formData.latitude), p_lng: Number(formData.longitude) })
+                    .then(({ error }) => { if (error) console.warn('No se pudo actualizar la ubicación:', error.message); });
+            }
 
             if (navigator.onLine) {
                 await syncOfflineData();

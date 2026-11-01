@@ -15,10 +15,8 @@ export const DataGrid = () => {
         setLoading(true);
         try {
             // Load from Supabase
-            const { data: onlineData } = await supabase
-                .from('supporters')
-                .select('*')
-                .order('created_at', { ascending: false });
+            // Incluye CURP: solo disponible para candidato / coordinador de campaña / superadmin
+            const { data: onlineData } = await supabase.rpc('fn_supporters_export', { p_tenant_id: null });
 
             let allData = onlineData || [];
 

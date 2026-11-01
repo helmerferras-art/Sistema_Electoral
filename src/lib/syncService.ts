@@ -20,7 +20,9 @@ export const syncOfflineData = async () => {
 
         for (const supporter of offlineSupporters) {
             // Remove local-only properties before sending to Supabase
-            const { saved_at_local, ...dataToSync } = supporter;
+            // seccion_id: nombre viejo usado por versiones anteriores del formulario (la columna real es section_id)
+            const { saved_at_local, seccion_id, ...rest } = supporter;
+            const dataToSync = { ...rest, section_id: rest.section_id ?? seccion_id ?? null };
 
             const { error } = await supabase
                 .from('supporters')

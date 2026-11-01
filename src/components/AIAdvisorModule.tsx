@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { AiAdvisorService, AIStrategicInsight } from '../lib/AiAdvisorService';
+import { AiAdvisorService, type AIStrategicInsight } from '../lib/AiAdvisorService';
 import { BrainCircuit, Send, User, Activity, CheckCircle, Clock } from 'lucide-react';
 
 export const AIAdvisorModule = ({ tenantId, municipality }: { tenantId: string, municipality: string }) => {

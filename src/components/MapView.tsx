@@ -152,6 +152,8 @@ export const MapView = () => {
     const { user } = useAuth();
     const [supporters, setSupporters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingRealtimeReload = useRef(false);
 
     const [rawGeoJson, setRawGeoJson] = useState<any>(null);
     const [availableLayers, setAvailableLayers] = useState<any[]>([]);
@@ -368,11 +370,27 @@ export const MapView = () => {
                     table: 'supporters',
                     filter: user.tenant_id ? `tenant_id=eq.${user.tenant_id}` : undefined
                 }, () => {
-                    loadSupportersData();
+                    // Debounce: agrupa ráfagas de cambios (Día D) en una sola recarga
+                    if (realtimeReloadTimer.current) clearTimeout(realtimeReloadTimer.current);
+                    realtimeReloadTimer.current = setTimeout(() => {
+                        realtimeReloadTimer.current = null;
+                        if (document.visibilityState === 'visible') loadSupportersData();
+                        else pendingRealtimeReload.current = true;
+                    }, 4000);
                 })
                 .subscribe();
 
+            const onVisible = () => {
+                if (document.visibilityState === 'visible' && pendingRealtimeReload.current) {
+                    pendingRealtimeReload.current = false;
+                    loadSupportersData();
+                }
+            };
+            document.addEventListener('visibilitychange', onVisible);
+
             return () => {
+                if (realtimeReloadTimer.current) clearTimeout(realtimeReloadTimer.current);
+                document.removeEventListener('visibilitychange', onVisible);
                 supabase.removeChannel(channel);
             };
         }
@@ -553,7 +571,8 @@ export const MapView = () => {
                         break;
                     }
                     if (data && data.length > 0) {
-                        targetData = [...targetData, ...data];
+                        targetData.push(...data);
+                        if (data.length < t_limit) break; // última página
                     } else {
                         break;
                     }
@@ -585,7 +604,8 @@ export const MapView = () => {
                         break;
                     }
                     if (chunk && chunk.length > 0) {
-                        demographicData = [...demographicData, ...chunk];
+                        demographicData.push(...chunk);
+                        if (chunk.length < d_limit) break; // última página
                     } else {
                         break;
                     }
@@ -798,28 +818,9 @@ export const MapView = () => {
     const loadMarkersForZone = async (zoneId: string) => {
         setLoading(true);
         try {
-            // 1. Fetch Hierarchy IDs (Pyramidal aggregation)
-            let teamIds: string[] = user ? [user.id] : [];
-
-            if (user && !['superadmin', 'candidato', 'coordinador_campana'].includes(user.role)) {
-                // Get all subordinates (recursive)
-                const { data: teamFetch } = await supabase.rpc('get_team_ids', { root_user_id: user.id });
-                if (teamFetch) teamIds = teamFetch;
-            }
-
-            // 2. Fetch STAFF (Users) in the zone
-            let staffQuery = supabase
-                .from('users')
-                .select('id, name, phone, role, xp, rank_name, assigned_targets, latitude, longitude')
-                .in('tenant_id', user?.tenantScope || [])
-                .not('latitude', 'is', null);
-
-            if (!['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '')) {
-                // Only see my team staff
-                staffQuery = staffQuery.in('id', teamIds);
-            }
-
-            const { data: staffData } = await staffQuery;
+            // 1-2. STAFF: última ubicación conocida. La RPC ya aplica la jerarquía
+            // (mandos ven todo su alcance; los demás, solo su equipo hacia abajo).
+            const { data: staffData } = await supabase.rpc('fn_get_staff_locations');
             setMarkerStaff(staffData || []);
 
             // 3. Fetch SUPPORTERS (Convencidos + Volunteers) via Secure RPC

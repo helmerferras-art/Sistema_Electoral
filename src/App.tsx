@@ -1,28 +1,30 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon } from 'lucide-react'
 import { RegistroForm } from './components/RegistroForm'
-import { MapView } from './components/MapView'
-import { BrigadistaDashboard } from './components/BrigadistaDashboard'
-import { DiaDDashboard } from './components/DiaDDashboard'
-import { HighCommandDashboard } from './components/HighCommandDashboard'
+const MapView = lazy(() => import('./components/MapView').then(m => ({ default: m.MapView })));
+const BrigadistaDashboard = lazy(() => import('./components/BrigadistaDashboard').then(m => ({ default: m.BrigadistaDashboard })));
+const DiaDDashboard = lazy(() => import('./components/DiaDDashboard').then(m => ({ default: m.DiaDDashboard })));
+const HighCommandDashboard = lazy(() => import('./components/HighCommandDashboard').then(m => ({ default: m.HighCommandDashboard })));
 import { OnboardingFlow } from './components/OnboardingFlow'
 import { LoginPage } from './components/LoginPage'
-import { SuperAdminDashboard } from './components/SuperAdminDashboard'
-import SuppliesDashboard from './components/SuppliesDashboard'
-import MySupplies from './components/MySupplies'
-import { CommunicationsDashboard } from './components/CommunicationsDashboard';
-import { DigitalCommunicationsDashboard } from './components/DigitalCommunicationsDashboard';
-import { CandidateDashboard } from './components/CandidateDashboard';
-import { CriticalPath } from './components/CriticalPath';
-import { CandidateLanding } from './components/CandidateLanding';
-import { PetitionsForm } from './components/PetitionsForm';
-import { PublicMapView } from './components/PublicMapView';
+const SuperAdminDashboard = lazy(() => import('./components/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const SuppliesDashboard = lazy(() => import('./components/SuppliesDashboard'));
+const MySupplies = lazy(() => import('./components/MySupplies'));
+const CommunicationsDashboard = lazy(() => import('./components/CommunicationsDashboard').then(m => ({ default: m.CommunicationsDashboard })));
+const DigitalCommunicationsDashboard = lazy(() => import('./components/DigitalCommunicationsDashboard').then(m => ({ default: m.DigitalCommunicationsDashboard })));
+const CandidateDashboard = lazy(() => import('./components/CandidateDashboard').then(m => ({ default: m.CandidateDashboard })));
+const CriticalPath = lazy(() => import('./components/CriticalPath').then(m => ({ default: m.CriticalPath })));
+const CandidateLanding = lazy(() => import('./components/CandidateLanding').then(m => ({ default: m.CandidateLanding })));
+const PetitionsForm = lazy(() => import('./components/PetitionsForm').then(m => ({ default: m.PetitionsForm })));
+const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { NotificationProvider, useNotifications } from './lib/NotificationContext'
 import { supabase } from './lib/supabase'
 import { SetupWizard } from './components/SetupWizard'
 import './index.css'
+
+const PageLoader = () => <div className="flex-center" style={{ minHeight: '40vh', color: 'var(--primary)' }}>Cargando módulo...</div>;
 
 // --- Protected Route Wrapper ---
 import { PasswordSetModal } from './components/PasswordSetModal';
@@ -273,6 +275,7 @@ const MainDashboard = () => {
 
       {/* Main Content Area */}
       <main className="main-content">
+        <Suspense fallback={<PageLoader />}>
         {activeTab === 'profile' && <RegistroForm />}
         {activeTab === 'map' && <MapView />}
         {activeTab === 'crm' && (
@@ -288,6 +291,7 @@ const MainDashboard = () => {
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
         {activeTab === 'OBJETIVOS' && <CriticalPath />}
+        </Suspense>
       </main>
 
       {/* Bottom Navigation */}
@@ -422,6 +426,7 @@ function AppContent() {
 
   return (
     <>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
@@ -447,6 +452,7 @@ function AppContent() {
           </ProtectedRoute>
         } />
       </Routes>
+      </Suspense>
       <PasswordSetModal />
     </>
   );

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { SUPPORTER_COLUMNS } from '../lib/userColumns';
 import {
     Headphones, PhoneCall, CheckCircle, XCircle,
     Search, Send, MessageCircle, Settings,
@@ -262,14 +263,14 @@ export const DigitalCommunicationsDashboard = () => {
 
             const { count: verifiedToday } = await supabase
                 .from('supporters')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .in('tenant_id', user.tenantScope || [])
                 .eq('status', 'aprobado')
                 .gte('created_at', today.toISOString());
 
             const { count: rejectedToday } = await supabase
                 .from('supporters')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .in('tenant_id', user.tenantScope || [])
                 .eq('status', 'rechazado')
                 .gte('created_at', today.toISOString());
@@ -359,7 +360,7 @@ export const DigitalCommunicationsDashboard = () => {
                     phone: user.phone || '521234567890',
                     status: 'aprobado'
                 }])
-                .select()
+                .select(SUPPORTER_COLUMNS)
                 .single();
 
             if (error) throw error;
@@ -784,10 +785,10 @@ export const DigitalCommunicationsDashboard = () => {
             // Calculate real total based on role
             let totalTarget = 0;
             if (targetRole === 'todos') {
-                const { count } = await supabase.from('users').select('*', { count: 'exact', head: true });
+                const { count } = await supabase.from('users').select('id', { count: 'exact', head: true });
                 totalTarget = count || 0;
             } else {
-                const { count } = await supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', targetRole);
+                const { count } = await supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', targetRole);
                 totalTarget = count || 0;
             }
 
