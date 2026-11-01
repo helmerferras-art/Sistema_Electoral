@@ -33,6 +33,15 @@ Las capas INE de Chiapas (entidad 07) originales están en `C:\Users\helme\Downl
 Versiones ligeras (simplificadas ~10x) en `...\07\07\ligeras\`, incluyendo `por_municipio/secciones/<mun>.json`,
 `por_municipio/colonias/<mun>.json` y `colonia_seccion.csv` (cruce espacial colonia → secciones con % de superficie).
 
+### Cargar capas y secciones (una vez, desde la raíz del proyecto)
+
+```bash
+# 1) Capas ligeras del mapa → bucket map_layers + tabla global_map_layers
+node scripts/dev/subir_capas_ligeras.mjs "C:\Users\helme\Downloads\Capas\07\07\ligeras"
+# 2) Polígonos de secciones → PostGIS (asigna la sección de cada simpatizante por GPS)
+node scripts/dev/cargar_secciones_postgis.mjs "C:\Users\helme\Downloads\Capas\07\07\SECCION.json"
+```
+
 ## Variables de entorno
 
 Copiar `.env.example` a `.env`. Nunca subir `.env` ni archivos `credenciales*.md`.

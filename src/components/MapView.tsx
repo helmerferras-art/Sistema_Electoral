@@ -154,6 +154,7 @@ export const MapView = () => {
     const [loading, setLoading] = useState(true);
     const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingRealtimeReload = useRef(false);
+    const [sectionCounts, setSectionCounts] = useState<Record<string, number> | null>(null);
 
     const [rawGeoJson, setRawGeoJson] = useState<any>(null);
     const [availableLayers, setAvailableLayers] = useState<any[]>([]);
@@ -190,6 +191,9 @@ export const MapView = () => {
 
         const currentLayer = availableLayers.find(l => l.id === activeLayerId);
         const layerType = currentLayer?.layer_type?.toLowerCase() || 'seccion';
+
+        // Conteo de PostGIS solo si todos los simpatizantes visibles ya tienen sección asignada
+        const dbCountsReady = !!sectionCounts && supporters.every((s: any) => !!s.section_id);
 
         // 1. Create a spatial grid index for supporters to avoid O(N*M) lookup
         // We'll use a simple 0.1 degree grid
@@ -258,35 +262,41 @@ export const MapView = () => {
                 feature.properties._edadRangos = h.edad_rangos || {};
             }
 
-            // Optimization: Only check supporters in grid cells that intersect feature bounds
-            try {
-                const fg = L.geoJSON(feature);
-                const bounds = fg.getBounds();
-                const minGx = Math.floor(bounds.getWest() * 10) / 10;
-                const maxGx = Math.floor(bounds.getEast() * 10) / 10;
-                const minGy = Math.floor(bounds.getSouth() * 10) / 10;
-                const maxGy = Math.floor(bounds.getNorth() * 10) / 10;
+            // Capa de secciones: el conteo ya viene calculado por PostGIS (fn_supporters_by_section),
+            // así que no hace falta el point-in-polygon en el navegador.
+            if (layerType === 'seccion' && dbCountsReady && fid != null) {
+                count = sectionCounts[String(fid)] || 0;
+            } else {
+                // Optimization: Only check supporters in grid cells that intersect feature bounds
+                try {
+                    const fg = L.geoJSON(feature);
+                    const bounds = fg.getBounds();
+                    const minGx = Math.floor(bounds.getWest() * 10) / 10;
+                    const maxGx = Math.floor(bounds.getEast() * 10) / 10;
+                    const minGy = Math.floor(bounds.getSouth() * 10) / 10;
+                    const maxGy = Math.floor(bounds.getNorth() * 10) / 10;
 
-                for (let x = minGx; x <= maxGx; x = Number((x + 0.1).toFixed(1))) {
-                    for (let y = minGy; y <= maxGy; y = Number((y + 0.1).toFixed(1))) {
-                        const gkey = `${x}:${y}`;
-                        const cellSupporters = grid[gkey];
-                        if (cellSupporters) {
-                            cellSupporters.forEach(s => {
-                                const pt = point([s.longitude, s.latitude]);
-                                if (booleanPointInPolygon(pt, feature)) {
-                                    count++;
-                                }
-                            });
+                    for (let x = minGx; x <= maxGx; x = Number((x + 0.1).toFixed(1))) {
+                        for (let y = minGy; y <= maxGy; y = Number((y + 0.1).toFixed(1))) {
+                            const gkey = `${x}:${y}`;
+                            const cellSupporters = grid[gkey];
+                            if (cellSupporters) {
+                                cellSupporters.forEach(s => {
+                                    const pt = point([s.longitude, s.latitude]);
+                                    if (booleanPointInPolygon(pt, feature)) {
+                                        count++;
+                                    }
+                                });
+                            }
                         }
                     }
+                } catch (e) {
+                    // Fallback to simpler check if bounds fails
+                    supporters.forEach(s => {
+                        const pt = point([s.longitude, s.latitude]);
+                        if (booleanPointInPolygon(pt, feature)) count++;
+                    });
                 }
-            } catch (e) {
-                // Fallback to simpler check if bounds fails
-                supporters.forEach(s => {
-                    const pt = point([s.longitude, s.latitude]);
-                    if (booleanPointInPolygon(pt, feature)) count++;
-                });
             }
 
             // 3. For Colony/Locality layers, perform a spatial intersection with the Section layer
@@ -337,7 +347,7 @@ export const MapView = () => {
         }
 
         return processed;
-    }, [rawGeoJson, supporters, historicalTargets, activeLayerId, availableLayers, seccionGeoJson, dataUpdateTick]);
+    }, [rawGeoJson, supporters, historicalTargets, activeLayerId, availableLayers, seccionGeoJson, dataUpdateTick, sectionCounts]);
 
     useEffect(() => {
         const pm = localStorage.getItem('radar_poll_mode');
@@ -872,8 +882,18 @@ export const MapView = () => {
                 return;
             }
 
-            // Normal Supporters Load via Secure RPC
-            const { data: onlineData } = await supabase.rpc('fn_get_map_supporters');
+            // Normal Supporters Load via Secure RPC (+ conteo por sección calculado en PostGIS)
+            const [{ data: onlineData }, { data: bySection, error: bySectionErr }] = await Promise.all([
+                supabase.rpc('fn_get_map_supporters'),
+                supabase.rpc('fn_supporters_by_section')
+            ]);
+            if (!bySectionErr && bySection) {
+                const counts: Record<string, number> = {};
+                (bySection as { section_id: string; total: number }[]).forEach(r => { counts[String(r.section_id)] = Number(r.total); });
+                setSectionCounts(counts);
+            } else {
+                setSectionCounts(null); // sin datos de la base: se usa el conteo en el navegador
+            }
 
             let allData = onlineData || [];
 

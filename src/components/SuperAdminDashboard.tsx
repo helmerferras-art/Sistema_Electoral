@@ -573,7 +573,7 @@ export const SuperAdminDashboard = () => {
                 .insert([{
                     layer_type: layerType,
                     layer_name: file.name,
-                    layer_url: publicUrl
+                    geojson_url: publicUrl // la columna real es geojson_url (layer_url no existe)
                 }]);
 
             if (dbError) throw dbError;
@@ -595,7 +595,10 @@ export const SuperAdminDashboard = () => {
             const { error: dbError } = await supabase.from('global_map_layers').delete().eq('id', id);
             if (dbError) throw dbError;
 
-            await supabase.storage.from('map_layers').remove([layerName]);
+            // Borrar el archivo real del bucket (su nombre está al final de la URL pública, no es layer_name)
+            const layer = globalLayers.find(l => l.id === id);
+            const storagePath = layer?.geojson_url?.split('/map_layers/')[1];
+            if (storagePath) await supabase.storage.from('map_layers').remove([decodeURIComponent(storagePath)]);
 
             setMessage('✅ Capa eliminada exitosamente.');
             loadData();
