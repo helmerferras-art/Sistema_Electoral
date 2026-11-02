@@ -40,7 +40,16 @@ Versiones ligeras (simplificadas ~10x) en `...\07\07\ligeras\`, incluyendo `por_
 node scripts/dev/subir_capas_ligeras.mjs "C:\Users\helme\Downloads\Capas\07\07\ligeras"
 # 2) Polígonos de secciones → PostGIS (asigna la sección de cada simpatizante por GPS)
 node scripts/dev/cargar_secciones_postgis.mjs "C:\Users\helme\Downloads\Capas\07\07\SECCION.json"
+# 3) Resultados 2024, padrón y cruce colonia→sección (base de las METAS). Prueba primero con --dry-run
+node scripts/dev/cargar_datos_electorales.mjs "C:\Users\helme\Downloads\Subir CSV" --colonias "C:\Users\helme\Downloads\Capas\07\07\ligeras\colonia_seccion.csv"
 ```
+
+### Metas en cascada (pestaña OBJETIVOS)
+
+Meta de votos por sección = votos del ganador 2024 × (1 + margen), ajustada por el crecimiento de la lista nominal
+(o lista nominal × participación histórica × % objetivo). Simpatizantes = % de la meta de votos; contactos =
+simpatizantes × contactos por simpatizante. Parámetros editables por candidato / coord. de campaña. Quien tiene
+territorio asignado recibe la suma de sus secciones; quien no, un reparto de lo que falta de la meta de su superior.
 
 ## Variables de entorno
 

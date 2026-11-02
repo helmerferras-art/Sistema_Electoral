@@ -17,6 +17,7 @@ const CandidateDashboard = lazy(() => import('./components/CandidateDashboard').
 const CriticalPath = lazy(() => import('./components/CriticalPath').then(m => ({ default: m.CriticalPath })));
 const CandidateLanding = lazy(() => import('./components/CandidateLanding').then(m => ({ default: m.CandidateLanding })));
 const PetitionsForm = lazy(() => import('./components/PetitionsForm').then(m => ({ default: m.PetitionsForm })));
+const GoalsCascade = lazy(() => import('./components/GoalsCascade').then(m => ({ default: m.GoalsCascade })));
 const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => ({ default: m.FieldActivity })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
@@ -296,7 +297,7 @@ const MainDashboard = () => {
         {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
-        {activeTab === 'OBJETIVOS' && <CriticalPath />}
+        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><CriticalPath /></>)}
         {activeTab === 'campo' && <FieldActivity />}
         </Suspense>
       </main>
