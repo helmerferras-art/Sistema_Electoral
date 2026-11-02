@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SUPPORTER_COLUMNS, USER_COLUMNS } from '../lib/userColumns';
+import { resendVerification, verificationState, VERIFICATION_BADGE } from '../lib/verification';
 import { getOfflineSupporters } from '../lib/indexedDB';
 import { supabase } from '../lib/supabase';
 import { Trophy, Shield, UserCheck, Flame, PersonStanding, Users, Radio, Smartphone, CheckCircle, MessageCircle, PhoneCall } from 'lucide-react';
@@ -194,7 +195,13 @@ export const BrigadistaDashboard = () => {
                                         <p style={{ margin: 0, fontWeight: 'bold' }}>{sup.name}</p>
                                         <div className="flex-row-resp" style={{ gap: '0.5rem', alignItems: 'center' }}>
                                             <CheckCircle size={12} color="var(--secondary)" />
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--secondary)' }}>ENCRIPTADO</span>
+                                            <span style={{ fontSize: '0.75rem', color: VERIFICATION_BADGE[verificationState(sup)].color }}>{VERIFICATION_BADGE[verificationState(sup)].text}</span>
+                                            {['pendiente', 'enviado'].includes(verificationState(sup)) && sup.recruiter_id === user?.id && (
+                                                <button className="squishy-btn mini" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
+                                                    onClick={() => resendVerification(sup, user?.name).catch(e => alert(e.message))}>
+                                                    Validar
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex-row-resp" style={{ gap: '0.5rem', alignItems: 'center' }}>

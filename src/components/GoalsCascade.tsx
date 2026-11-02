@@ -9,7 +9,7 @@ type BoardRow = {
     meta_votos: number | null; meta_simpatizantes: number | null; meta_contactos: number | null; method: string | null;
     periodo_inicio: string; periodo_fin: string; dias_restantes: number; fraccion_esperada: number;
     esperado_simpatizantes: number; esperado_contactos: number;
-    avance_simpatizantes: number; avance_contactos: number; avance_convencidos: number; avance_conocian: number; actividades: number;
+    avance_simpatizantes: number; avance_verificados: number; avance_alertas: number; avance_contactos: number; avance_convencidos: number; avance_conocian: number; actividades: number;
     repartido_simpatizantes: number; equipo: number; sin_meta: number;
 };
 type Suggestion = {
@@ -266,7 +266,11 @@ export const GoalsCascade = () => {
                             {objective === 'votos'
                                 ? <div style={{ fontSize: '0.8rem', color: '#9aa' }}>Meta de votos del territorio: <strong style={{ color: '#fff' }}>{fmt(me.meta_votos)}</strong></div>
                                 : <div style={{ fontSize: '0.8rem', color: '#9aa' }}>{OBJECTIVE_LABEL[objective]} · meta de alcance: <strong style={{ color: '#fff' }}>{fmt(me.meta_contactos)}</strong> personas</div>}
-                            <Progress label="Simpatizantes registrados" value={me.avance_simpatizantes} goal={me.meta_simpatizantes} expected={me.esperado_simpatizantes} color="var(--secondary)" />
+                            <Progress label="Simpatizantes validados por WhatsApp" value={me.avance_verificados} goal={me.meta_simpatizantes} expected={me.esperado_simpatizantes} color="var(--secondary)" />
+                            <div style={{ fontSize: '0.72rem', color: '#9aa', marginTop: '-0.35rem', marginBottom: '0.45rem' }}>
+                                Registrados: {fmt(me.avance_simpatizantes)} · validados {pctTxt(me.avance_verificados, me.avance_simpatizantes)}
+                                {me.avance_alertas > 0 && <span style={{ color: '#FFB000' }}> · ⚠️ {fmt(me.avance_alertas)} con alerta (revisar)</span>}
+                            </div>
                             <Progress label={L.alcance} value={me.avance_contactos} goal={me.meta_contactos} expected={me.esperado_contactos} color="var(--tertiary)" />
                             <div style={{ fontSize: '0.75rem', color: '#9aa' }}>
                                 {L.prefieren}: {fmt(me.avance_convencidos)} ({pctTxt(me.avance_convencidos, me.avance_contactos)}) ·
@@ -317,8 +321,9 @@ export const GoalsCascade = () => {
                 <div className="flex-col" style={{ gap: '0.5rem' }}>
                     <h4 style={{ margin: '0.3rem 0 0', fontFamily: 'Oswald, sans-serif' }}><Users size={16} /> EQUIPO DIRECTO ({team.length})</h4>
                     {team.map(t => {
-                        const pct = t.meta_simpatizantes ? Math.min(100, Math.round((t.avance_simpatizantes / t.meta_simpatizantes) * 100)) : null;
-                        const ritmo = pace(t.avance_simpatizantes, t.esperado_simpatizantes);
+                        const pct = t.meta_simpatizantes ? Math.min(100, Math.round((t.avance_verificados / t.meta_simpatizantes) * 100)) : null;
+                        const ritmo = pace(t.avance_verificados, t.esperado_simpatizantes);
+                        const tasaValidacion = t.avance_simpatizantes > 0 ? Math.round((t.avance_verificados / t.avance_simpatizantes) * 100) : null;
                         return (
                             <div key={t.user_id} className="tactile-card" style={{ padding: '0.6rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
@@ -330,11 +335,17 @@ export const GoalsCascade = () => {
                                             {t.equipo > 0 && ` · equipo de ${t.equipo}`}
                                         </div>
                                         {pct !== null && <div style={{ fontSize: '0.7rem', color: '#9aa' }}>{fdate(t.periodo_inicio)} → {fdate(t.periodo_fin)}</div>}
+                                        {t.avance_simpatizantes > 0 && (
+                                            <div style={{ fontSize: '0.7rem', color: tasaValidacion !== null && tasaValidacion < 50 ? 'var(--primary)' : '#9aa' }}>
+                                                {fmt(t.avance_simpatizantes)} registrados · {tasaValidacion}% validados
+                                                {t.avance_alertas > 0 && <span style={{ color: '#FFB000' }}> · ⚠️ {t.avance_alertas} alertas</span>}
+                                            </div>
+                                        )}
                                     </div>
                                     <div style={{ textAlign: 'right', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
                                         {pct === null ? <span style={{ color: 'var(--primary)' }}>Sin meta</span> : (
                                             <>
-                                                <div style={{ color: '#9aa' }}>{fmt(t.avance_simpatizantes)}/{fmt(t.meta_simpatizantes)} · {pct}%</div>
+                                                <div style={{ color: '#9aa' }}>{fmt(t.avance_verificados)}/{fmt(t.meta_simpatizantes)} validados · {pct}%</div>
                                                 {ritmo === null
                                                     ? <span style={{ color: '#9aa' }}>Aún no inicia</span>
                                                     : <strong style={{ color: ritmo >= 100 ? 'var(--secondary)' : ritmo >= 70 ? '#FFB000' : 'var(--primary)' }}>

@@ -17,6 +17,7 @@ const CandidateDashboard = lazy(() => import('./components/CandidateDashboard').
 const CriticalPath = lazy(() => import('./components/CriticalPath').then(m => ({ default: m.CriticalPath })));
 const CandidateLanding = lazy(() => import('./components/CandidateLanding').then(m => ({ default: m.CandidateLanding })));
 const PetitionsForm = lazy(() => import('./components/PetitionsForm').then(m => ({ default: m.PetitionsForm })));
+const VerifyVisit = lazy(() => import('./components/VerifyVisit').then(m => ({ default: m.VerifyVisit })));
 const GoalsCascade = lazy(() => import('./components/GoalsCascade').then(m => ({ default: m.GoalsCascade })));
 const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => ({ default: m.FieldActivity })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
@@ -443,6 +444,9 @@ function AppContent() {
       <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Validación pública de visitas (la abre la persona contactada desde el WhatsApp del brigadista) */}
+        <Route path="/v/:token" element={<div className="app-container" style={{ padding: '1rem' }}><VerifyVisit /></div>} />
 
         {/* Landing Page Dinámica de Candidato (NEMIA) */}
         <Route path="/:slug" element={<CandidateLanding />} />

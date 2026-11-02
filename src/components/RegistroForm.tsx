@@ -6,6 +6,7 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { WhatsAppQR } from './WhatsAppQR';
 import { ScannerINE } from './ScannerINE';
+import { newVerificationToken, getDeviceId, sendVerificationWhatsApp } from '../lib/verification';
 
 export const RegistroForm = () => {
     const { user } = useAuth();
@@ -32,6 +33,31 @@ export const RegistroForm = () => {
     const [showScanner, setShowScanner] = useState(false);
     const [registrationMode, setRegistrationMode] = useState<'MANUAL' | 'OCR'>('MANUAL');
     const [candidateInfo, setCandidateInfo] = useState({ name: 'Candidato', phone: '' });
+    const isLoggedIn = !!user;
+    // ¿Vive aquí? Sí → la sección sale del GPS. No → se elige su colonia y la sección se deduce del cruce colonia→sección.
+    const [livesHere, setLivesHere] = useState(true);
+    const [coloniaQuery, setColoniaQuery] = useState('');
+    const [coloniaOptions, setColoniaOptions] = useState<{ colonia_id: number; colonia: string; cp: string | null; seccion: number }[]>([]);
+    const [colonia, setColonia] = useState<{ colonia_id: number; colonia: string; cp: string | null; seccion: number } | null>(null);
+    // Último registro, para validar la visita por WhatsApp
+    const [lastRegistered, setLastRegistered] = useState<{ name: string; phone: string; token: string } | null>(null);
+    const [validationSent, setValidationSent] = useState(false);
+
+    useEffect(() => {
+        if (livesHere || !isLoggedIn || coloniaQuery.trim().length < 3) { setColoniaOptions(prev => (prev.length ? [] : prev)); return; }
+        const t = setTimeout(async () => {
+            const { data } = await supabase.from('colonia_secciones')
+                .select('colonia_id, colonia, cp, seccion, porcentaje')
+                .ilike('colonia', `%${coloniaQuery.trim()}%`)
+                .order('porcentaje', { ascending: false })
+                .limit(60);
+            // Una opción por colonia, con la sección que cubre la mayor parte de ella
+            const best = new Map<number, any>();
+            (data || []).forEach((r: any) => { if (!best.has(r.colonia_id)) best.set(r.colonia_id, r); });
+            setColoniaOptions(Array.from(best.values()).slice(0, 12));
+        }, 300);
+        return () => clearTimeout(t);
+    }, [coloniaQuery, livesHere, isLoggedIn]);
 
     useEffect(() => {
         setupSyncListeners();
@@ -150,6 +176,12 @@ export const RegistroForm = () => {
             setStatusMessage('Guardando...');
 
             const tenantId = user?.tenant_id || (window as any)._publicTenantId;
+            if (user && !livesHere && !colonia && !formData.seccion) {
+                setStatusMessage('⚠️ Elige la colonia donde vive la persona');
+                setIsSaving(false);
+                return;
+            }
+            const verificationToken = user ? newVerificationToken() : null;
 
             const supporterData = {
                 name: formData.name,
@@ -157,8 +189,13 @@ export const RegistroForm = () => {
                 curp: formData.curp,
                 clave_elector: formData.clave_elector,
                 domicilio: formData.domicilio,
-                section_id: formData.seccion,
-                seccion: formData.seccion,
+                // Prioridad: sección de la credencial > colonia elegida > GPS (lo calcula la base si va vacía)
+                section_id: formData.seccion || (!livesHere && colonia ? String(colonia.seccion) : null),
+                seccion: formData.seccion || null,
+                lives_here: user ? livesHere : null,
+                colonia_id: !livesHere && colonia ? colonia.colonia_id : null,
+                verification_token: verificationToken,
+                recruiter_device: user ? getDeviceId() : null,
                 vigencia: formData.vigencia,
                 birth_date: formData.birth_date || null,
                 photo_evidence_url: formData.photo_url,
@@ -211,6 +248,10 @@ export const RegistroForm = () => {
             }
 
             setXpGained(user ? earnedXp : null);
+            if (user && verificationToken) {
+                setLastRegistered({ name: formData.name, phone: formData.phone, token: verificationToken });
+                setValidationSent(false);
+            }
             setShowQR(!!user); // Solo mostrar QR de contacto si es reclutamiento asistido
 
             if (!user) {
@@ -233,6 +274,7 @@ export const RegistroForm = () => {
                 longitude: null,
                 commitment_level: 1
             });
+            setColonia(null); setColoniaQuery(''); setLivesHere(true);
             updateOfflineCount();
 
             setTimeout(() => {
@@ -420,6 +462,34 @@ export const RegistroForm = () => {
                         </div>
                     </div>
 
+                    {user && (
+                        <div style={{ padding: '0.6rem', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', marginTop: '0.5rem' }}>
+                            <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '0.4rem' }}>¿La persona vive aquí, donde la estás registrando?</div>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button type="button" className={`squishy-btn ${livesHere ? 'primary' : ''}`} style={{ flex: 1 }} onClick={() => { setLivesHere(true); setColonia(null); }}>Sí, vive aquí</button>
+                                <button type="button" className={`squishy-btn ${!livesHere ? 'primary' : ''}`} style={{ flex: 1 }} onClick={() => setLivesHere(false)}>No, vive en otro lado</button>
+                            </div>
+                            {livesHere ? (
+                                <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.35rem' }}>La sección y la colonia se toman del GPS.</div>
+                            ) : colonia ? (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                                    <span>📍 {colonia.colonia}{colonia.cp ? ` (CP ${colonia.cp})` : ''} · Secc. {colonia.seccion}</span>
+                                    <button type="button" className="squishy-btn" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setColonia(null)}>Cambiar</button>
+                                </div>
+                            ) : (
+                                <div style={{ marginTop: '0.5rem' }}>
+                                    <input className="squishy-input" placeholder="Escribe su colonia (mín. 3 letras)" value={coloniaQuery} onChange={e => setColoniaQuery(e.target.value)} />
+                                    {coloniaOptions.map(o => (
+                                        <button type="button" key={o.colonia_id} onClick={() => { setColonia(o); setColoniaOptions([]); }}
+                                            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'rgba(255,255,255,0.04)', border: 'none', color: 'inherit', padding: '0.45rem', marginTop: '0.2rem', borderRadius: 6, cursor: 'pointer' }}>
+                                            {o.colonia}{o.cp ? ` · CP ${o.cp}` : ''} <span style={{ color: '#94A3B8' }}>· Secc. {o.seccion}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                         <button
                             type="button"
@@ -483,6 +553,24 @@ export const RegistroForm = () => {
                                 +{xpGained} XP GANADOS
                             </p>
                         </div>
+
+                        {lastRegistered && (
+                            <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                                <button
+                                    className="squishy-btn primary"
+                                    style={{ width: '100%', padding: '0.9rem', background: '#25D366', borderColor: '#25D366', color: '#0F1218' }}
+                                    onClick={async () => {
+                                        await sendVerificationWhatsApp({ phone: lastRegistered.phone, personName: lastRegistered.name, recruiterName: user?.name, campaignName: candidateInfo.name, token: lastRegistered.token });
+                                        setValidationSent(true);
+                                    }}
+                                >
+                                    {validationSent ? '✅ MENSAJE ABIERTO · REENVIAR' : `VALIDAR VISITA POR WHATSAPP`}
+                                </button>
+                                <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.4rem' }}>
+                                    Se abre WhatsApp en tu celular con el mensaje para {lastRegistered.name.split(' ')[0]}. Cuando confirme desde su teléfono, tu registro cuenta como validado.
+                                </div>
+                            </div>
+                        )}
 
                         <WhatsAppQR
                             phone={candidateInfo.phone || '5219611234567'}
