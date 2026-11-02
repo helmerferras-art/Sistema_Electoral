@@ -51,6 +51,7 @@ export const FieldActivity = () => {
     const [recent, setRecent] = useState<any[]>([]);
     const [team, setTeam] = useState<any[]>([]);
     const [viewer, setViewer] = useState<{ activity: any; files: { kind: string; url: string }[] } | null>(null);
+    const [weekGoal, setWeekGoal] = useState<any>(null);
 
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
@@ -82,6 +83,9 @@ export const FieldActivity = () => {
             .order('occurred_at', { ascending: false })
             .limit(10);
         if (data) setRecent(data);
+        // Meta de esta semana según el calendario de campaña
+        const { data: schedule } = await supabase.rpc('fn_goal_schedule', { p_user_id: user.id });
+        setWeekGoal((schedule as any[] | null)?.find(w => w.is_current) || null);
         if (isLeader) {
             const { data: summary } = await supabase.rpc('fn_activity_summary', { p_days: 7 });
             if (summary) setTeam(summary);
@@ -234,6 +238,28 @@ export const FieldActivity = () => {
                     </div>
                 ))}
             </div>
+
+            {weekGoal && (weekGoal.meta_contactos > 0 || weekGoal.meta_simpatizantes > 0) && (
+                <div className="tactile-card" style={{ padding: '0.6rem', borderColor: 'var(--tertiary)' }}>
+                    <div style={{ fontSize: '0.78rem', color: '#9aa', marginBottom: '0.3rem' }}>
+                        🎯 Tu meta de esta semana{weekGoal.phase ? ` · ${weekGoal.phase}` : ''}
+                    </div>
+                    {[['Contactos', weekGoal.real_contactos, weekGoal.meta_contactos, 'var(--tertiary)'],
+                      ['Simpatizantes', weekGoal.real_simpatizantes, weekGoal.meta_simpatizantes, 'var(--secondary)']].map(([label, real, meta, color]) => {
+                        const pct = meta > 0 ? Math.min(100, Math.round((real / meta) * 100)) : 0;
+                        return (
+                            <div key={label as string} style={{ marginBottom: '0.3rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                                    <span>{label}</span><span>{real} / {meta}</span>
+                                </div>
+                                <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3 }}>
+                                    <div style={{ width: `${pct}%`, height: '100%', background: color as string, borderRadius: 3 }} />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
 
             {pending > 0 && (
                 <div className="tactile-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: 'var(--primary)', padding: '0.6rem' }}>
