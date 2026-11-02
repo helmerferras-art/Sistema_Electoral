@@ -68,10 +68,10 @@ export const resendVerification = async (supporter: { id: string; phone: string;
 };
 
 export type VerificationState = 'confirmado' | 'rechazado' | 'alerta' | 'enviado' | 'pendiente' | 'baja';
-export const verificationState = (s: { verification_response?: string | null; verification_flags?: string[] | null; verification_sent_at?: string | null; privacy_opt_out_at?: string | null }): VerificationState => {
+export const verificationState = (s: { verification_response?: string | null; verification_flags?: string[] | null; verification_sent_at?: string | null; privacy_opt_out_at?: string | null; quality_flags?: string[] | null }): VerificationState => {
     if (s.privacy_opt_out_at) return 'baja';
     if (s.verification_response === 'no') return 'rechazado';
-    if (s.verification_response === 'si') return (s.verification_flags?.length ?? 0) > 0 ? 'alerta' : 'confirmado';
+    if (s.verification_response === 'si') return ((s.verification_flags?.length ?? 0) + (s.quality_flags?.length ?? 0)) > 0 ? 'alerta' : 'confirmado';
     return s.verification_sent_at ? 'enviado' : 'pendiente';
 };
 export const VERIFICATION_BADGE: Record<VerificationState, { text: string; color: string }> = {
@@ -81,4 +81,17 @@ export const VERIFICATION_BADGE: Record<VerificationState, { text: string; color
     enviado: { text: '⏳ Esperando respuesta', color: '#9aa' },
     pendiente: { text: '○ Sin validar', color: '#9aa' },
     baja: { text: '🚫 Pidió no usar sus datos', color: '#9aa' },
+};
+
+/** Explicación corta de cada alerta automática (registro o validación). */
+export const FLAG_LABEL: Record<string, string> = {
+    rafaga: 'Varios registros en menos de 45 s',
+    mismas_coordenadas: '3+ registros en el mismo punto ese día',
+    nocturno: 'Registrado de noche (22:00–06:00)',
+    telefono_repetido: 'Teléfono ya registrado',
+    telefonos_consecutivos: 'Teléfonos casi consecutivos',
+    mismo_dispositivo: 'Validó desde el celular del brigadista',
+    misma_red: 'Validó desde la misma red del brigadista',
+    muy_rapido: 'Validó segundos después del envío',
+    telefono_distinto: 'El celular al validar no coincide',
 };

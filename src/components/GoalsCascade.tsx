@@ -3,6 +3,7 @@ import { Target, ChevronRight, ArrowLeft, Calculator, Settings, X, Users, Calend
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { ThanksPageEditor } from './ThanksPageEditor';
+import { AuditPanel } from './AuditPanel';
 
 type BoardRow = {
     user_id: string; name: string; role: string; is_root: boolean;
@@ -103,6 +104,8 @@ export const GoalsCascade = () => {
     const [objective, setObjective] = useState<Objective>('votos');
     const [thermo, setThermo] = useState<Thermo[]>([]);
     const [showThanks, setShowThanks] = useState(false);
+    const [showAudit, setShowAudit] = useState(false);
+    const canAudit = ['superadmin', 'candidato', 'coordinador_campana', 'comunicacion_digital'].includes(user?.role || '');
 
     const root = stack[stack.length - 1];
     const canEditSettings = SETTINGS_ROLES.includes(user?.role || '');
@@ -241,6 +244,9 @@ export const GoalsCascade = () => {
                 <h2 style={{ fontFamily: 'Oswald, sans-serif', letterSpacing: '0.08em', margin: 0, flex: 1 }}>
                     <Target size={20} /> METAS {stack.length > 1 ? `· ${root.name}` : ''}
                 </h2>
+                {canAudit && stack.length === 1 && (
+                    <button className="squishy-btn" style={{ padding: '0.3rem 0.5rem' }} onClick={() => setShowAudit(true)} aria-label="Auditoría de calidad" title="Auditoría de calidad">🔎</button>
+                )}
                 {canEditSettings && stack.length === 1 && (
                     <button className="squishy-btn" style={{ padding: '0.3rem 0.5rem' }} onClick={() => setShowThanks(true)} aria-label="Página de agradecimiento" title="Página de agradecimiento">📣</button>
                 )}
@@ -383,6 +389,7 @@ export const GoalsCascade = () => {
             )}
 
             {showThanks && <ThanksPageEditor onClose={() => setShowThanks(false)} />}
+            {showAudit && <AuditPanel onClose={() => setShowAudit(false)} />}
 
             {/* Editor de meta */}
             {editing && (

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { USER_COLUMNS } from './userColumns';
 import { supabase } from './supabase';
-import { BridgeService } from './BridgeService';
 
 type UserData = {
     id: string;
@@ -208,18 +207,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
         // La contraseña era correcta, pero no dejamos la sesión activa hasta completar el 2FA.
         if (!foundUser.is_first_login && foundUser.two_factor_enabled) {
-            // Guardar el código ANTES de cerrar la sesión: con sesión anónima la política RLS bloquea el update.
-            const tactical2FA = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-            await supabase
-                .from('users')
-                .update({ temp_code: tactical2FA, temp_code_expires_at: expiresAt, code_sent: false })
-                .eq('auth_id', signInData.session.user.id);
-
+            // El servidor genera el código y lo encola por SMS en el Bridge de la campaña (el código nunca pasa por el navegador).
+            // Debe pedirse ANTES de cerrar la sesión: la función identifica al usuario por su sesión.
+            const { data: queued, error: qErr } = await supabase.rpc('fn_issue_2fa_code');
             await supabase.auth.signOut();
-
-            const message = `SISTEMA C4I (NEMIA): Tu código de seguridad 2FA temporal es ${tactical2FA}.`;
-            BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
+            if (qErr || !queued) {
+                return { error: { message: 'No se pudo enviar el código de seguridad (¿el Bridge de SMS está encendido?). Intenta de nuevo o pide a tu administrador desactivar temporalmente el 2FA.' } };
+            }
 
             console.log(`C4I 2FA: Desafío emitido vía Bridge para ${foundUser.phone}.`);
             return { error: null, requires2FA: true };

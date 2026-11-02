@@ -10,4 +10,4 @@ export const USER_COLUMNS = 'id, tenant_id, auth_id, created_at, name, phone, ro
  * curp, clave_elector, domicilio y vigencia solo se obtienen con la RPC `fn_supporters_export`
  * (candidato / coordinador de campaña / superadmin).
  */
-export const SUPPORTER_COLUMNS = 'id, tenant_id, created_at, name, phone, latitude, longitude, commitment_level, offline_id, recruiter_id, section_id, status, photo_evidence_url, seccion, birth_date, geo_section_id, verification_sent_at, verified_at, verification_response, verification_flags, lives_here, colonia_id, verification_channel, privacy_opt_out_at' as const;
+export const SUPPORTER_COLUMNS = 'id, tenant_id, created_at, name, phone, latitude, longitude, commitment_level, offline_id, recruiter_id, section_id, status, photo_evidence_url, seccion, birth_date, geo_section_id, verification_sent_at, verified_at, verification_response, verification_flags, lives_here, colonia_id, verification_channel, privacy_opt_out_at, captured_at, quality_flags' as const;
