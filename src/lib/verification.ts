@@ -31,7 +31,7 @@ export const newVerificationToken = (): string => {
     return btoa(String.fromCharCode(...bytes)).replace(/\//g, 'x').replace(/\+/g, 'z').replace(/=+$/, '');
 };
 
-export const verificationLink = (token: string) => `${PUBLIC_URL}/v/${token}`;
+export const verificationLink = (token: string, channel: 'wa' | 'qr' = 'wa') => `${PUBLIC_URL}/v/${token}${channel === 'qr' ? '?c=qr' : ''}`;
 
 const firstName = (s?: string | null) => (s || '').trim().split(/\s+/)[0] || '';
 
@@ -39,9 +39,8 @@ export const verificationMessage = (opts: { personName: string; recruiterName?: 
     const persona = firstName(opts.personName);
     const yo = firstName(opts.recruiterName);
     const proyecto = opts.campaignName ? ` del equipo de ${opts.campaignName}` : '';
-    return `Hola ${persona}, soy ${yo}${proyecto}. Gracias por platicar conmigo. ` +
-        `¿Me ayudas a confirmar que te visité? Solo toca este enlace: ${verificationLink(opts.token)} ` +
-        `(ahí también puedes ver cómo cuidamos tus datos).`;
+    return `Hola ${persona}, soy ${yo}${proyecto}. ¡Gracias por platicar conmigo y escucharnos! ` +
+        `Aquí te dejo un mensaje especial: ${verificationLink(opts.token)}`;
 };
 
 /** Número mexicano a formato de wa.me (52 + 10 dígitos). */
@@ -68,8 +67,9 @@ export const resendVerification = async (supporter: { id: string; phone: string;
     await sendVerificationWhatsApp({ phone: supporter.phone, personName: supporter.name, recruiterName, campaignName, token: token as string });
 };
 
-export type VerificationState = 'confirmado' | 'rechazado' | 'alerta' | 'enviado' | 'pendiente';
-export const verificationState = (s: { verification_response?: string | null; verification_flags?: string[] | null; verification_sent_at?: string | null }): VerificationState => {
+export type VerificationState = 'confirmado' | 'rechazado' | 'alerta' | 'enviado' | 'pendiente' | 'baja';
+export const verificationState = (s: { verification_response?: string | null; verification_flags?: string[] | null; verification_sent_at?: string | null; privacy_opt_out_at?: string | null }): VerificationState => {
+    if (s.privacy_opt_out_at) return 'baja';
     if (s.verification_response === 'no') return 'rechazado';
     if (s.verification_response === 'si') return (s.verification_flags?.length ?? 0) > 0 ? 'alerta' : 'confirmado';
     return s.verification_sent_at ? 'enviado' : 'pendiente';
@@ -80,4 +80,5 @@ export const VERIFICATION_BADGE: Record<VerificationState, { text: string; color
     rechazado: { text: '❌ Negó la visita', color: 'var(--primary)' },
     enviado: { text: '⏳ Esperando respuesta', color: '#9aa' },
     pendiente: { text: '○ Sin validar', color: '#9aa' },
+    baja: { text: '🚫 Pidió no usar sus datos', color: '#9aa' },
 };

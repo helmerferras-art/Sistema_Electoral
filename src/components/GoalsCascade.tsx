@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Target, ChevronRight, ArrowLeft, Calculator, Settings, X, Users, CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
+import { ThanksPageEditor } from './ThanksPageEditor';
 
 type BoardRow = {
     user_id: string; name: string; role: string; is_root: boolean;
@@ -101,6 +102,7 @@ export const GoalsCascade = () => {
     const [calendar, setCalendar] = useState<{ row: BoardRow; weeks: Week[] | null } | null>(null);
     const [objective, setObjective] = useState<Objective>('votos');
     const [thermo, setThermo] = useState<Thermo[]>([]);
+    const [showThanks, setShowThanks] = useState(false);
 
     const root = stack[stack.length - 1];
     const canEditSettings = SETTINGS_ROLES.includes(user?.role || '');
@@ -240,6 +242,9 @@ export const GoalsCascade = () => {
                     <Target size={20} /> METAS {stack.length > 1 ? `· ${root.name}` : ''}
                 </h2>
                 {canEditSettings && stack.length === 1 && (
+                    <button className="squishy-btn" style={{ padding: '0.3rem 0.5rem' }} onClick={() => setShowThanks(true)} aria-label="Página de agradecimiento" title="Página de agradecimiento">📣</button>
+                )}
+                {canEditSettings && stack.length === 1 && (
                     <button className="squishy-btn" style={{ padding: '0.3rem 0.5rem' }} onClick={() => setShowSettings(true)} aria-label="Calendario y parámetros"><Settings size={16} /></button>
                 )}
             </div>
@@ -376,6 +381,8 @@ export const GoalsCascade = () => {
                     })}
                 </div>
             )}
+
+            {showThanks && <ThanksPageEditor onClose={() => setShowThanks(false)} />}
 
             {/* Editor de meta */}
             {editing && (

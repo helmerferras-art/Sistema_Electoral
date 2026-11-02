@@ -6,7 +6,8 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { WhatsAppQR } from './WhatsAppQR';
 import { ScannerINE } from './ScannerINE';
-import { newVerificationToken, getDeviceId, sendVerificationWhatsApp } from '../lib/verification';
+import { newVerificationToken, getDeviceId, sendVerificationWhatsApp, verificationLink } from '../lib/verification';
+import { QRCodeSVG } from 'qrcode.react';
 
 export const RegistroForm = () => {
     const { user } = useAuth();
@@ -42,6 +43,7 @@ export const RegistroForm = () => {
     // Último registro, para validar la visita por WhatsApp
     const [lastRegistered, setLastRegistered] = useState<{ name: string; phone: string; token: string } | null>(null);
     const [validationSent, setValidationSent] = useState(false);
+    const [showValidationQR, setShowValidationQR] = useState(false);
 
     useEffect(() => {
         if (livesHere || !isLoggedIn || coloniaQuery.trim().length < 3) { setColoniaOptions(prev => (prev.length ? [] : prev)); return; }
@@ -251,6 +253,7 @@ export const RegistroForm = () => {
             if (user && verificationToken) {
                 setLastRegistered({ name: formData.name, phone: formData.phone, token: verificationToken });
                 setValidationSent(false);
+                setShowValidationQR(false);
             }
             setShowQR(!!user); // Solo mostrar QR de contacto si es reclutamiento asistido
 
@@ -556,19 +559,31 @@ export const RegistroForm = () => {
 
                         {lastRegistered && (
                             <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
+                                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>VALIDA LA VISITA</div>
+                                {showValidationQR ? (
+                                    <div style={{ background: '#fff', padding: '0.8rem', borderRadius: 12, display: 'inline-block' }}>
+                                        <QRCodeSVG value={verificationLink(lastRegistered.token, 'qr')} size={220} level="M" />
+                                    </div>
+                                ) : (
+                                    <button className="squishy-btn primary" style={{ width: '100%', padding: '0.9rem' }} onClick={() => setShowValidationQR(true)}>
+                                        MOSTRAR QR PARA QUE LO ESCANEE
+                                    </button>
+                                )}
+                                <div style={{ fontSize: '0.75rem', color: '#94A3B8', margin: '0.4rem 0 0.6rem' }}>
+                                    {showValidationQR
+                                        ? `Pide a ${lastRegistered.name.split(' ')[0]} que lo escanee con la cámara de su celular y escriba su número. Ahí verá un mensaje de agradecimiento.`
+                                        : 'La forma más segura: la persona lo escanea con su celular en ese momento.'}
+                                </div>
                                 <button
-                                    className="squishy-btn primary"
-                                    style={{ width: '100%', padding: '0.9rem', background: '#25D366', borderColor: '#25D366', color: '#0F1218' }}
+                                    className="squishy-btn"
+                                    style={{ width: '100%', padding: '0.7rem', borderColor: '#25D366', color: '#25D366' }}
                                     onClick={async () => {
                                         await sendVerificationWhatsApp({ phone: lastRegistered.phone, personName: lastRegistered.name, recruiterName: user?.name, campaignName: candidateInfo.name, token: lastRegistered.token });
                                         setValidationSent(true);
                                     }}
                                 >
-                                    {validationSent ? '✅ MENSAJE ABIERTO · REENVIAR' : `VALIDAR VISITA POR WHATSAPP`}
+                                    {validationSent ? '✅ WHATSAPP ABIERTO · REENVIAR' : 'O ENVIARLE EL ENLACE POR WHATSAPP'}
                                 </button>
-                                <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '0.4rem' }}>
-                                    Se abre WhatsApp en tu celular con el mensaje para {lastRegistered.name.split(' ')[0]}. Cuando confirme desde su teléfono, tu registro cuenta como validado.
-                                </div>
                             </div>
                         )}
 
