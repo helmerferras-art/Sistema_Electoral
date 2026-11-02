@@ -159,7 +159,11 @@ export const MapView = () => {
     const [rawGeoJson, setRawGeoJson] = useState<any>(null);
     const [availableLayers, setAvailableLayers] = useState<any[]>([]);
     const [activeLayerId, setActiveLayerId] = useState<string>('');
-    const [viewMode, setViewMode] = useState<'niebla' | 'heatmap' | 'markers'>('niebla');
+    const [viewMode, setViewMode] = useState<'niebla' | 'heatmap' | 'markers' | 'trabajo'>('niebla');
+    // Mapa de calor del trabajo territorial (bitácora de campo de brigadistas)
+    const [activityDays, setActivityDays] = useState(30);
+    const [activityPoints, setActivityPoints] = useState<[number, number, number][]>([]);
+    const [activityCount, setActivityCount] = useState(0);
     const [selectedRegion, setSelectedRegion] = useState<any>(null);
 
     const [seccionGeoJson, setSeccionGeoJson] = useState<any>(null);
@@ -912,6 +916,21 @@ export const MapView = () => {
         }
     };
 
+    useEffect(() => {
+        if (viewMode !== 'trabajo') return;
+        let cancelled = false;
+        supabase.rpc('fn_activity_heatmap', { p_days: activityDays }).then(({ data, error }) => {
+            if (cancelled) return;
+            if (error || !data) { setActivityPoints([]); setActivityCount(0); return; }
+            const rows = data as { lat: number; lng: number; weight: number }[];
+            const max = Math.max(1, ...rows.map(r => r.weight));
+            // Intensidad relativa al punto con más contactos; mínimo 0.3 para que toda actividad se vea
+            setActivityPoints(rows.map(r => [r.lat, r.lng, Math.max(0.3, r.weight / max)] as [number, number, number]));
+            setActivityCount(rows.length);
+        });
+        return () => { cancelled = true; };
+    }, [viewMode, activityDays]);
+
     // Prepare heatmap data: [lat, lng, intensity (based on commitment)]
     const heatPoints = supporters.map(s => [
         s.latitude,
@@ -1161,6 +1180,29 @@ export const MapView = () => {
                     >
                         📍 PUNTOS
                     </button>
+                    <button
+                        className={`squishy-btn ${viewMode === 'trabajo' ? 'primary' : ''}`}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                        onClick={() => setViewMode('trabajo')}
+                        title="Mapa de calor de la bitácora de campo"
+                    >
+                        🧭 TRABAJO
+                    </button>
+                    {viewMode === 'trabajo' && (
+                        <select
+                            className="squishy-input"
+                            style={{ padding: '0.3rem', fontSize: '0.8rem', width: 'auto' }}
+                            value={activityDays}
+                            onChange={(e) => setActivityDays(Number(e.target.value))}
+                            aria-label="Periodo del trabajo territorial"
+                        >
+                            <option value={1}>Hoy</option>
+                            <option value={7}>7 días</option>
+                            <option value={30}>30 días</option>
+                            <option value={90}>90 días</option>
+                        </select>
+                    )}
+                    {viewMode === 'trabajo' && <span style={{ fontSize: '0.8rem', color: '#9aa' }}>{activityCount} actividades</span>}
                 </div>
             </div>
 
@@ -1317,6 +1359,7 @@ export const MapView = () => {
                         )}
 
                         {viewMode === 'heatmap' && <HeatmapLayer points={heatPoints} />}
+                        {viewMode === 'trabajo' && <HeatmapLayer points={activityPoints} />}
 
                         {/* STAFF (STAFF) - MULTI-COLOR PINS */}
                         {viewMode === 'markers' && markerStaff.map((tm) => {

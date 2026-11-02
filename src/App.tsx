@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon } from 'lucide-react'
+import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon, Camera } from 'lucide-react'
 import { RegistroForm } from './components/RegistroForm'
 const MapView = lazy(() => import('./components/MapView').then(m => ({ default: m.MapView })));
 const BrigadistaDashboard = lazy(() => import('./components/BrigadistaDashboard').then(m => ({ default: m.BrigadistaDashboard })));
@@ -17,6 +17,7 @@ const CandidateDashboard = lazy(() => import('./components/CandidateDashboard').
 const CriticalPath = lazy(() => import('./components/CriticalPath').then(m => ({ default: m.CriticalPath })));
 const CandidateLanding = lazy(() => import('./components/CandidateLanding').then(m => ({ default: m.CandidateLanding })));
 const PetitionsForm = lazy(() => import('./components/PetitionsForm').then(m => ({ default: m.PetitionsForm })));
+const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => ({ default: m.FieldActivity })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { NotificationProvider, useNotifications } from './lib/NotificationContext'
@@ -60,6 +61,11 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 const MainDashboard = () => {
   const [activeTab, setActiveTab] = useState('profile')
   const { user, signOut, isImpersonating, abortImpersonation } = useAuth(); // SaaS User Info
+
+  // El brigadista abre directo en su bitácora de campo
+  useEffect(() => {
+    if (user?.role === 'brigadista') setActiveTab('campo');
+  }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
   const [showNotifMenu, setShowNotifMenu] = useState(false);
 
@@ -291,6 +297,7 @@ const MainDashboard = () => {
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
         {activeTab === 'OBJETIVOS' && <CriticalPath />}
+        {activeTab === 'campo' && <FieldActivity />}
         </Suspense>
       </main>
 
@@ -298,6 +305,9 @@ const MainDashboard = () => {
       <nav className="bottom-nav">
         {[
           { id: 'profile', icon: <Users size={24} />, label: 'MISIÓN' },
+          // Bitácora de campo: quien trabaja territorio y su cadena de mando
+          ...(['brigadista', 'lider', 'coordinador_territorial', 'coordinador', 'coordinador_campana', 'candidato'].includes(user?.role || '')
+            ? [{ id: 'campo', icon: <Camera size={24} />, label: 'CAMPO' }] : []),
           { id: 'map', icon: <MapIcon size={24} />, label: 'RADAR' },
           { id: 'crm', icon: <List size={24} />, label: ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '') ? 'MANDO' : 'SQUAD' },
           { id: 'OBJETIVOS', icon: <Target size={24} />, label: 'OBJETIVOS' },
@@ -406,6 +416,7 @@ const MainDashboard = () => {
 
 
 import { BridgeSync } from './lib/BridgeSync';
+import { startActivitySyncListener } from './lib/activitySync';
 
 // --- App Content (Inside Providers) ---
 function AppContent() {
@@ -414,6 +425,8 @@ function AppContent() {
   useEffect(() => {
     // Iniciar centinela de hardware C4I
     BridgeSync.startWatcher();
+    // Subir bitácoras de campo guardadas sin señal
+    startActivitySyncListener();
     // Exponer función para el botón de ajustes rápido
     (window as any)._updatePassword = async (p: string) => {
       if (updatePassword) {
