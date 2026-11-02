@@ -419,14 +419,21 @@ const MainDashboard = () => {
 
 import { BridgeSync } from './lib/BridgeSync';
 import { startActivitySyncListener } from './lib/activitySync';
+import { isNativeApp } from './lib/location';
 
 // --- App Content (Inside Providers) ---
 function AppContent() {
-  const { updatePassword } = useAuth();
+  const { updatePassword, user } = useAuth();
+
+  // El puente SMS vive en la PC: buscarlo cada 30 s desde un celular solo gasta batería y datos.
+  useEffect(() => {
+    const MANDOS = ['superadmin', 'candidato', 'coordinador_campana', 'coordinador', 'coordinador_territorial', 'coordinador_logistica'];
+    if (!user || isNativeApp() || !MANDOS.includes(user.role)) return;
+    BridgeSync.startWatcher();
+    return () => BridgeSync.stopWatcher();
+  }, [user?.role]);
 
   useEffect(() => {
-    // Iniciar centinela de hardware C4I
-    BridgeSync.startWatcher();
     // Subir bitácoras de campo guardadas sin señal
     startActivitySyncListener();
     // Exponer función para el botón de ajustes rápido

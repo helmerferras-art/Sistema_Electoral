@@ -8,6 +8,7 @@ import { WhatsAppQR } from './WhatsAppQR';
 import { ScannerINE } from './ScannerINE';
 import { newVerificationToken, getDeviceId, sendVerificationWhatsApp, verificationLink } from '../lib/verification';
 import { QRCodeSVG } from 'qrcode.react';
+import { getPositionOnce, locationErrorText } from '../lib/location';
 
 export const RegistroForm = () => {
     const { user } = useAuth();
@@ -100,26 +101,14 @@ export const RegistroForm = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleGPS = () => {
+    const handleGPS = async () => {
         setStatusMessage('Obteniendo ubicación...');
-        if ('geolocation' in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setFormData(prev => ({
-                        ...prev,
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude
-                    }));
-                    setStatusMessage('📍 Ubicación capturada');
-                },
-                (error) => {
-                    console.error("Error getting location:", error);
-                    setStatusMessage('❌ Error al obtener GPS');
-                },
-                { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-            );
-        } else {
-            setStatusMessage('Geolocalización no soportada');
+        try {
+            const f = await getPositionOnce({ maxAgeMs: 60000, timeoutMs: 15000 });
+            setFormData(prev => ({ ...prev, latitude: f.lat, longitude: f.lng }));
+            setStatusMessage(`📍 Ubicación capturada (±${f.acc} m)`);
+        } catch (err) {
+            setStatusMessage(`❌ ${locationErrorText(err)}`);
         }
     };
 
@@ -185,6 +174,15 @@ export const RegistroForm = () => {
             }
             const verificationToken = user ? newVerificationToken() : null;
 
+            // Una sola lectura de GPS al guardar si no se capturó antes (la sección "vive aquí" depende de ella)
+            let lat = formData.latitude, lng = formData.longitude;
+            if (user && lat == null) {
+                setStatusMessage('Tomando ubicación...');
+                try { const f = await getPositionOnce({ timeoutMs: 10000 }); lat = f.lat; lng = f.lng; }
+                catch (err) { console.warn('Registro sin GPS:', locationErrorText(err)); }
+                setStatusMessage('Guardando...');
+            }
+
             const supporterData = {
                 name: formData.name,
                 phone: formData.phone,
@@ -201,8 +199,8 @@ export const RegistroForm = () => {
                 vigencia: formData.vigencia,
                 birth_date: formData.birth_date || null,
                 photo_evidence_url: formData.photo_url,
-                latitude: formData.latitude,
-                longitude: formData.longitude,
+                latitude: lat,
+                longitude: lng,
                 commitment_level: formData.commitment_level,
                 tenant_id: tenantId,
                 recruiter_id: user?.id || null
@@ -211,8 +209,8 @@ export const RegistroForm = () => {
             await saveOfflineSupporter(supporterData);
 
             // Última ubicación conocida del brigadista (para el mapa de su coordinador). No bloquea el registro.
-            if (user && navigator.onLine && formData.latitude && formData.longitude) {
-                supabase.rpc('fn_update_my_location', { p_lat: Number(formData.latitude), p_lng: Number(formData.longitude) })
+            if (user && navigator.onLine && lat && lng) {
+                supabase.rpc('fn_update_my_location', { p_lat: Number(lat), p_lng: Number(lng) })
                     .then(({ error }) => { if (error) console.warn('No se pudo actualizar la ubicación:', error.message); });
             }
 

@@ -4,6 +4,7 @@ import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { saveOfflineActivity, getOfflineActivities, type OfflineEvidence } from '../lib/indexedDB';
 import { syncOfflineActivities, compressImage } from '../lib/activitySync';
+import { getPositionOnce, lastKnownFix, locationErrorText } from '../lib/location';
 
 const ACTIVITY_TYPES = [
     { id: 'casa_por_casa', label: '🏠 Casa por casa' },
@@ -43,7 +44,8 @@ export const FieldActivity = () => {
     const [notes, setNotes] = useState('');
     const [consent, setConsent] = useState(false);
     const [gps, setGps] = useState<Gps>(null);
-    const [gpsStatus, setGpsStatus] = useState<'buscando' | 'ok' | 'error'>('buscando');
+    const [gpsStatus, setGpsStatus] = useState<'espera' | 'buscando' | 'ok' | 'error'>('espera');
+    const [gpsError, setGpsError] = useState('');
     const [evidences, setEvidences] = useState<LocalEvidence[]>([]);
     const [recording, setRecording] = useState(false);
     const [recSeconds, setRecSeconds] = useState(0);
@@ -63,14 +65,22 @@ export const FieldActivity = () => {
     const isLeader = LEADER_ROLES.includes(user?.role || '');
 
     // ─── GPS ──────────────────────────────────────────────
-    const locate = () => {
-        if (!navigator.geolocation) { setGpsStatus('error'); return; }
-        setGpsStatus('buscando');
-        navigator.geolocation.getCurrentPosition(
-            (p) => { setGps({ lat: p.coords.latitude, lng: p.coords.longitude, acc: Math.round(p.coords.accuracy) }); setGpsStatus('ok'); },
-            () => setGpsStatus('error'),
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 }
-        );
+    // El GPS se enciende solo cuando el brigadista empieza a capturar (y se reutiliza la lectura por 2 min),
+    // no al abrir la pantalla. Así no gasta batería si solo vino a revisar su avance.
+    const locate = async (force = false): Promise<Gps> => {
+        setGpsStatus('buscando'); setGpsError('');
+        try {
+            const f = await getPositionOnce({ maxAgeMs: force ? 0 : 120000, timeoutMs: 15000 });
+            const g = { lat: f.lat, lng: f.lng, acc: f.acc };
+            setGps(g); setGpsStatus('ok');
+            return g;
+        } catch (e) {
+            setGpsStatus('error'); setGpsError(locationErrorText(e));
+            return null;
+        }
+    };
+    const ensureLocation = () => {
+        if (gpsStatus === 'espera' || (gpsStatus === 'ok' && !lastKnownFix(120000))) locate();
     };
 
     // ─── Datos ────────────────────────────────────────────
@@ -99,7 +109,6 @@ export const FieldActivity = () => {
             supabase.from('goal_settings').select('objective').eq('tenant_id', user.tenant_id).maybeSingle()
                 .then(({ data }) => setObjective(((data as any)?.objective) || 'votos'));
         }
-        locate();
         refreshPending();
         loadRecent();
         const onSynced = () => { refreshPending(); loadRecent(); };
@@ -175,6 +184,7 @@ export const FieldActivity = () => {
         if (evidences.some(e => e.kind === 'audio') && !consent) { setMessage('⚠️ Falta confirmar el consentimiento para el audio.'); return; }
         setSaving(true);
         try {
+            const pos = (gps && lastKnownFix(120000)) ? gps : await locate();
             await saveOfflineActivity({
                 offline_id: crypto.randomUUID(),
                 tenant_id: user.tenant_id,
@@ -184,9 +194,9 @@ export const FieldActivity = () => {
                 contacts_count: contacts,
                 convinced_count: convinced,
                 known_count: known,
-                latitude: gps?.lat ?? null,
-                longitude: gps?.lng ?? null,
-                accuracy_m: gps?.acc ?? null,
+                latitude: pos?.lat ?? null,
+                longitude: pos?.lng ?? null,
+                accuracy_m: pos?.acc ?? null,
                 consent_confirmed: consent,
                 occurred_at: new Date().toISOString(),
                 evidences: evidences.map(({ preview, ...ev }) => ev),
@@ -202,7 +212,6 @@ export const FieldActivity = () => {
             }
             refreshPending();
             loadRecent();
-            locate();
         } catch (e: any) {
             setMessage(`❌ No se pudo guardar: ${e?.message || e}`);
         } finally {
@@ -276,7 +285,7 @@ export const FieldActivity = () => {
             )}
 
             {/* Formulario */}
-            <div className="tactile-card flex-col gap-2">
+            <div className="tactile-card flex-col gap-2" onPointerDownCapture={ensureLocation} onFocusCapture={ensureLocation}>
                 <label style={{ fontSize: '0.8rem', color: '#9aa' }}>¿Dónde estás trabajando?</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
                     {ACTIVITY_TYPES.map(t => (
@@ -301,9 +310,10 @@ export const FieldActivity = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
                     <MapPin size={18} color={gpsStatus === 'ok' ? 'var(--secondary)' : gpsStatus === 'error' ? 'var(--primary)' : '#9aa'} />
                     {gpsStatus === 'ok' && gps && <span>Ubicación lista (±{gps.acc} m){gps.acc > 100 ? ' — señal débil, intenta al aire libre' : ''}</span>}
+                    {gpsStatus === 'espera' && <span>La ubicación se toma al empezar a capturar.</span>}
                     {gpsStatus === 'buscando' && <span>Buscando ubicación...</span>}
-                    {gpsStatus === 'error' && <span>Sin ubicación. Activa el GPS.</span>}
-                    <button type="button" className="squishy-btn" style={{ padding: '0.2rem 0.5rem', marginLeft: 'auto' }} onClick={locate}><RefreshCw size={14} /></button>
+                    {gpsStatus === 'error' && <span>{gpsError || 'Sin ubicación. Activa el GPS.'}</span>}
+                    <button type="button" className="squishy-btn" style={{ padding: '0.2rem 0.5rem', marginLeft: 'auto' }} onClick={() => locate(true)} aria-label="Actualizar ubicación"><RefreshCw size={14} /></button>
                 </div>
 
                 <textarea className="squishy-input" rows={2} maxLength={2000} placeholder="Notas: colonia, calle, qué te dijeron, necesidades..."

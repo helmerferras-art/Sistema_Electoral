@@ -13,6 +13,7 @@ export const BridgeSync = {
      * Procesa todos los usuarios que tienen un código generado pero no enviado.
      */
     async processQueue() {
+        if (document.hidden) return;
         // 1. Verificar si hay hardware listo
         const status = await BridgeService.getStatus();
         const readyDevices = status.devices.filter(d => d.status === 'connected');

@@ -48,7 +48,10 @@ export const syncOfflineData = async () => {
 };
 
 // Setup listeners to automatically trigger sync when coming online
+let syncListenerReady = false;
 export const setupSyncListeners = () => {
+    if (syncListenerReady) return; // antes se agregaba uno nuevo cada vez que se abría el formulario
+    syncListenerReady = true;
     window.addEventListener('online', () => {
         console.log('Network is back online, triggering sync...');
         syncOfflineData();
