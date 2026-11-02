@@ -256,7 +256,7 @@ export const AdminManager = () => {
                             </div>
                         )}
 
-                        {(newRole === 'coordinador_campana' || newRole === 'operador') && (
+                        {newRole === 'coordinador_campana' && (
                             <>
                                 <div className="flex-col">
                                     <label style={{ fontSize: '0.8rem', color: '#888' }}>MUNICIPIO ASIGNADO</label>
