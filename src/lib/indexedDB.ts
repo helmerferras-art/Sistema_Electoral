@@ -69,6 +69,7 @@ export interface OfflineActivity {
     notes: string;
     contacts_count: number;
     convinced_count: number;
+    known_count?: number; // contactados que ya conocían al aspirante/candidato
     latitude: number | null;
     longitude: number | null;
     accuracy_m: number | null;

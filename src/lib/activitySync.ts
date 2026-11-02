@@ -29,6 +29,7 @@ const syncOne = async (a: OfflineActivity) => {
                 notes: a.notes || null,
                 contacts_count: a.contacts_count,
                 convinced_count: a.convinced_count,
+                known_count: a.known_count ?? 0,
                 latitude: a.latitude,
                 longitude: a.longitude,
                 accuracy_m: a.accuracy_m,

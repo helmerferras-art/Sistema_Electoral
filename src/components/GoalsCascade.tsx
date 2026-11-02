@@ -9,11 +9,11 @@ type BoardRow = {
     meta_votos: number | null; meta_simpatizantes: number | null; meta_contactos: number | null; method: string | null;
     periodo_inicio: string; periodo_fin: string; dias_restantes: number; fraccion_esperada: number;
     esperado_simpatizantes: number; esperado_contactos: number;
-    avance_simpatizantes: number; avance_contactos: number; avance_convencidos: number; actividades: number;
+    avance_simpatizantes: number; avance_contactos: number; avance_convencidos: number; avance_conocian: number; actividades: number;
     repartido_simpatizantes: number; equipo: number; sin_meta: number;
 };
 type Suggestion = {
-    method: 'historico' | 'reparto' | 'sin_base'; sections_count?: number; sections_with_data?: number;
+    method: 'historico' | 'reparto' | 'sin_base'; objective?: Objective; sections_count?: number; sections_with_data?: number;
     lista_nominal?: number; votos_base?: number; ganador_base?: number; secciones_competidas?: number;
     meta_votos?: number; meta_simpatizantes?: number; meta_contactos?: number; repartido_entre?: number; mensaje?: string;
 };
@@ -22,6 +22,18 @@ type Week = {
     meta_simpatizantes: number; meta_contactos: number; meta_simpatizantes_acum: number; meta_contactos_acum: number;
     real_simpatizantes: number; real_contactos: number; real_simpatizantes_acum: number; real_contactos_acum: number;
 };
+type Objective = 'votos' | 'encuesta' | 'conocimiento';
+type Thermo = { section_id: string; contactos: number; conocian: number; prefieren: number; pct_conocimiento: number | null; pct_preferencia: number | null };
+
+/** Etiquetas según el tipo de proceso: campaña (votos) o aspirante (encuesta / darse a conocer). */
+const OBJECTIVE_LABEL: Record<Objective, string> = {
+    votos: 'Campaña constitucional', encuesta: 'Proceso interno por encuesta', conocimiento: 'Darse a conocer',
+};
+const labelsFor = (o: Objective) => o === 'votos'
+    ? { alcance: 'Personas contactadas (bitácora)', alcanceMeta: 'Meta de personas contactadas', prefieren: 'Convencidos en campo' }
+    : { alcance: 'Personas alcanzadas (bitácora)', alcanceMeta: 'Meta de personas a alcanzar', prefieren: o === 'encuesta' ? 'Lo prefieren' : 'Se suman' };
+const pctTxt = (n: number, d: number) => (d > 0 ? `${Math.round((n / d) * 100)}%` : '—');
+
 type Phase = { id?: string; name: string; start_date: string; end_date: string; weight: number; sort: number };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -87,6 +99,8 @@ export const GoalsCascade = () => {
     const [phases, setPhases] = useState<Phase[]>([]);
     const [showSettings, setShowSettings] = useState(false);
     const [calendar, setCalendar] = useState<{ row: BoardRow; weeks: Week[] | null } | null>(null);
+    const [objective, setObjective] = useState<Objective>('votos');
+    const [thermo, setThermo] = useState<Thermo[]>([]);
 
     const root = stack[stack.length - 1];
     const canEditSettings = SETTINGS_ROLES.includes(user?.role || '');
@@ -99,6 +113,18 @@ export const GoalsCascade = () => {
     };
     useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [root.id]);
 
+    // Tipo de proceso (lo ven todos) y termómetro de posicionamiento por sección
+    useEffect(() => {
+        if (!user?.tenant_id) return;
+        supabase.from('goal_settings').select('objective').eq('tenant_id', user.tenant_id).maybeSingle()
+            .then(({ data }) => setObjective(((data as any)?.objective as Objective) || 'votos'));
+        if (user.role !== 'brigadista') {
+            supabase.rpc('fn_recognition_by_section', { p_days: 30 })
+                .then(({ data }) => setThermo(((data as Thermo[]) || []).filter(t => t.contactos > 0)));
+        }
+    }, [user?.tenant_id, user?.role]);
+    const L = labelsFor(objective);
+
     const loadSettings = async () => {
         if (!user?.tenant_id) return;
         const [{ data: s }, { data: ph }] = await Promise.all([
@@ -108,6 +134,7 @@ export const GoalsCascade = () => {
         setSettings(s || {
             tenant_id: user.tenant_id, method: 'ganador', win_margin: 0.10, target_share: 0.50,
             supporter_ratio: 0.40, contacts_per_supporter: 3, campaign_start: null, campaign_end: null, pacing: 'fases',
+            objective: 'votos', reach_target: 0.25, preference_target: 0.40,
         });
         setPhases((ph || []) as Phase[]);
     };
@@ -194,6 +221,7 @@ export const GoalsCascade = () => {
                 phases.map((p, i) => ({ tenant_id: user!.tenant_id, name: p.name, start_date: p.start_date, end_date: p.end_date, weight: Number(p.weight) || 0, sort: i + 1 })));
             if (e3) { alert(e3.message); return; }
         }
+        setObjective(settings.objective || 'votos');
         setShowSettings(false);
         load();
     };
@@ -235,10 +263,15 @@ export const GoalsCascade = () => {
                     ) : (
                         <>
                             <div style={{ fontSize: '0.78rem', color: '#9aa' }}><CalendarDays size={13} /> {periodLabel(me)}</div>
-                            <div style={{ fontSize: '0.8rem', color: '#9aa' }}>Meta de votos del territorio: <strong style={{ color: '#fff' }}>{fmt(me.meta_votos)}</strong></div>
+                            {objective === 'votos'
+                                ? <div style={{ fontSize: '0.8rem', color: '#9aa' }}>Meta de votos del territorio: <strong style={{ color: '#fff' }}>{fmt(me.meta_votos)}</strong></div>
+                                : <div style={{ fontSize: '0.8rem', color: '#9aa' }}>{OBJECTIVE_LABEL[objective]} · meta de alcance: <strong style={{ color: '#fff' }}>{fmt(me.meta_contactos)}</strong> personas</div>}
                             <Progress label="Simpatizantes registrados" value={me.avance_simpatizantes} goal={me.meta_simpatizantes} expected={me.esperado_simpatizantes} color="var(--secondary)" />
-                            <Progress label="Personas contactadas (bitácora)" value={me.avance_contactos} goal={me.meta_contactos} expected={me.esperado_contactos} color="var(--tertiary)" />
-                            <div style={{ fontSize: '0.75rem', color: '#9aa' }}>Convencidos en campo: {fmt(me.avance_convencidos)} · {fmt(me.actividades)} actividades</div>
+                            <Progress label={L.alcance} value={me.avance_contactos} goal={me.meta_contactos} expected={me.esperado_contactos} color="var(--tertiary)" />
+                            <div style={{ fontSize: '0.75rem', color: '#9aa' }}>
+                                {L.prefieren}: {fmt(me.avance_convencidos)} ({pctTxt(me.avance_convencidos, me.avance_contactos)}) ·
+                                {' '}Ya lo conocían: {fmt(me.avance_conocian)} ({pctTxt(me.avance_conocian, me.avance_contactos)}) · {fmt(me.actividades)} actividades
+                            </div>
                             {me.equipo > 0 && (
                                 <div style={{ fontSize: '0.78rem', marginTop: '0.3rem', color: repartoPct < 100 ? 'var(--primary)' : 'var(--secondary)' }}>
                                     Repartido a tu equipo: {fmt(me.repartido_simpatizantes)} de {fmt(me.meta_simpatizantes)} simpatizantes ({repartoPct}%)
@@ -257,6 +290,26 @@ export const GoalsCascade = () => {
                             <button className="squishy-btn" style={{ flex: 1 }} onClick={() => openCalendar(me)}><CalendarDays size={16} /> Calendario</button>
                         )}
                     </div>
+                </div>
+            )}
+
+            {thermo.length > 0 && stack.length === 1 && (
+                <div className="tactile-card flex-col" style={{ gap: '0.3rem', padding: '0.6rem' }}>
+                    <h4 style={{ margin: 0, fontFamily: 'Oswald, sans-serif' }}>🌡️ TERMÓMETRO POR SECCIÓN · 30 DÍAS</h4>
+                    <div style={{ fontSize: '0.72rem', color: '#9aa' }}>De la gente contactada en campo: qué % ya conocía {objective === 'votos' ? 'al candidato' : 'al aspirante'} y qué % {objective === 'votos' ? 'se convenció' : 'lo prefiere'}. Sirve para anticipar la encuesta y decidir a dónde mandar brigadas.</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '0.2rem 0.7rem', fontSize: '0.78rem' }}>
+                        <span style={{ color: '#9aa' }}>Sección</span><span style={{ color: '#9aa', textAlign: 'right' }}>Contactos</span><span style={{ color: '#9aa', textAlign: 'right' }}>Conocen</span><span style={{ color: '#9aa', textAlign: 'right' }}>{objective === 'votos' ? 'Convencidos' : 'Prefieren'}</span>
+                        {thermo.slice(0, 12).map(t => {
+                            const k = Math.round((t.pct_conocimiento ?? 0) * 100), v = Math.round((t.pct_preferencia ?? 0) * 100);
+                            return [
+                                <span key={`${t.section_id}-s`}>{t.section_id}</span>,
+                                <span key={`${t.section_id}-c`} style={{ textAlign: 'right' }}>{fmt(t.contactos)}</span>,
+                                <span key={`${t.section_id}-k`} style={{ textAlign: 'right', color: k >= 50 ? 'var(--secondary)' : k >= 25 ? '#FFB000' : 'var(--primary)' }}>{k}%</span>,
+                                <span key={`${t.section_id}-v`} style={{ textAlign: 'right', color: v >= 30 ? 'var(--secondary)' : v >= 15 ? '#FFB000' : 'var(--primary)' }}>{v}%</span>,
+                            ];
+                        })}
+                    </div>
+                    {thermo.some(t => t.contactos < 30) && <div style={{ fontSize: '0.7rem', color: '#9aa' }}>Con menos de 30 contactos en una sección, el porcentaje todavía es poco confiable.</div>}
                 </div>
             )}
 
@@ -324,12 +377,18 @@ export const GoalsCascade = () => {
                     {!editing.suggestion && <div style={{ color: '#9aa' }}>Calculando con el histórico...</div>}
                     {editing.suggestion?.method === 'historico' && (
                         <div style={{ background: 'rgba(0,212,255,0.08)', padding: '0.6rem', borderRadius: 8 }}>
-                            <strong>Cálculo histórico</strong> · {editing.suggestion.sections_count} secciones
-                            ({editing.suggestion.sections_with_data} con datos 2024)<br />
-                            Lista nominal: {fmt(editing.suggestion.lista_nominal)} · Votaron en 2024: {fmt(editing.suggestion.votos_base)}<br />
-                            Votos del ganador 2024: {fmt(editing.suggestion.ganador_base)}
-                            {(editing.suggestion.secciones_competidas ?? 0) > 0 && <><br />⚠️ {editing.suggestion.secciones_competidas} secciones muy competidas (margen menor a 10%)</>}
-                            <br />Sugerido: <strong>{fmt(editing.suggestion.meta_votos)}</strong> votos · <strong>{fmt(editing.suggestion.meta_simpatizantes)}</strong> simpatizantes · <strong>{fmt(editing.suggestion.meta_contactos)}</strong> contactos
+                            {objective === 'votos' ? (<>
+                                <strong>Cálculo histórico</strong> · {editing.suggestion.sections_count} secciones
+                                ({editing.suggestion.sections_with_data} con datos 2024)<br />
+                                Lista nominal: {fmt(editing.suggestion.lista_nominal)} · Votaron en 2024: {fmt(editing.suggestion.votos_base)}<br />
+                                Votos del ganador 2024: {fmt(editing.suggestion.ganador_base)}
+                                {(editing.suggestion.secciones_competidas ?? 0) > 0 && <><br />⚠️ {editing.suggestion.secciones_competidas} secciones muy competidas (margen menor a 10%)</>}
+                                <br />Sugerido: <strong>{fmt(editing.suggestion.meta_votos)}</strong> votos · <strong>{fmt(editing.suggestion.meta_simpatizantes)}</strong> simpatizantes · <strong>{fmt(editing.suggestion.meta_contactos)}</strong> contactos
+                            </>) : (<>
+                                <strong>Cálculo por alcance</strong> ({OBJECTIVE_LABEL[objective]}) · {editing.suggestion.sections_count} secciones<br />
+                                Lista nominal del territorio: {fmt(editing.suggestion.lista_nominal)}<br />
+                                Sugerido: alcanzar a <strong>{fmt(editing.suggestion.meta_contactos)}</strong> personas · <strong>{fmt(editing.suggestion.meta_simpatizantes)}</strong> simpatizantes registrados
+                            </>)}
                         </div>
                     )}
                     {editing.suggestion?.method === 'reparto' && (
@@ -343,7 +402,8 @@ export const GoalsCascade = () => {
                         <button className="squishy-btn" onClick={applySuggestion}>Usar lo sugerido</button>
                     )}
 
-                    {([['votos', 'Meta de votos'], ['simp', 'Meta de simpatizantes registrados'], ['contactos', 'Meta de personas contactadas']] as const).map(([k, label]) => (
+                    {([['votos', 'Meta de votos'], ['simp', 'Meta de simpatizantes registrados'], ['contactos', L.alcanceMeta]] as const)
+                        .filter(([k]) => objective === 'votos' || k !== 'votos').map(([k, label]) => (
                         <label key={k} style={{ display: 'flex', flexDirection: 'column', color: '#bbb', gap: '0.2rem' }}>
                             {label}
                             <input type="number" min={0} className="squishy-input" value={editing[k]}
@@ -457,6 +517,26 @@ export const GoalsCascade = () => {
                     )}
 
                     <h4 style={{ margin: '0.5rem 0 0', fontFamily: 'Oswald, sans-serif' }}><Calculator size={15} /> CÁLCULO DE LA META</h4>
+                    <label className="flex-col" style={{ gap: '0.2rem' }}>Tipo de proceso
+                        <select className="squishy-input" value={settings.objective || 'votos'} onChange={e => setSettings({ ...settings, objective: e.target.value })}>
+                            <option value="votos">Campaña constitucional: meta de votos</option>
+                            <option value="encuesta">Aspirante: ganar una encuesta interna</option>
+                            <option value="conocimiento">Aspirante: darse a conocer</option>
+                        </select>
+                    </label>
+                    {(settings.objective || 'votos') !== 'votos' ? (<>
+                        <label className="flex-col" style={{ gap: '0.2rem' }}>Personas a alcanzar (% de la lista nominal del territorio)
+                            <input type="number" className="squishy-input" min={1} max={100} value={Math.round((settings.reach_target ?? 0.25) * 100)}
+                                onChange={e => setSettings({ ...settings, reach_target: Number(e.target.value) / 100 })} />
+                        </label>
+                        <label className="flex-col" style={{ gap: '0.2rem' }}>Simpatizantes a registrar (% de las personas alcanzadas)
+                            <input type="number" className="squishy-input" min={1} max={100} value={Math.round((settings.preference_target ?? 0.40) * 100)}
+                                onChange={e => setSettings({ ...settings, preference_target: Number(e.target.value) / 100 })} />
+                        </label>
+                        <div style={{ fontSize: '0.75rem', background: 'rgba(255,176,0,0.1)', padding: '0.5rem', borderRadius: 8 }}>
+                            ⚖️ Antes de la precampaña no se permiten llamados expresos al voto ni propaganda electoral: el trabajo de campo debe ser presentar al aspirante y escuchar a la gente. El INE fiscaliza los recursos de estos procesos, así que conviene documentar los gastos.
+                        </div>
+                    </>) : (<>
                     <label className="flex-col" style={{ gap: '0.2rem' }}>Método para la meta de votos
                         <select className="squishy-input" value={settings.method} onChange={e => setSettings({ ...settings, method: e.target.value })}>
                             <option value="ganador">Superar al ganador de 2024 por un margen</option>
@@ -482,6 +562,7 @@ export const GoalsCascade = () => {
                         <input type="number" className="squishy-input" min={1} max={20} step={0.5} value={settings.contacts_per_supporter}
                             onChange={e => setSettings({ ...settings, contacts_per_supporter: Number(e.target.value) })} />
                     </label>
+                    </>)}
                     <div style={{ fontSize: '0.75rem', color: '#9aa' }}>Los parámetros de cálculo aplican a las metas que se calculen de aquí en adelante. El calendario aplica de inmediato al ritmo de todas las metas.</div>
                     <button className="squishy-btn primary" onClick={saveSettings}>Guardar</button>
                 </Modal>

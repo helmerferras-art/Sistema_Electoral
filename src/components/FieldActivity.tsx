@@ -38,6 +38,8 @@ export const FieldActivity = () => {
     const [activityType, setActivityType] = useState('casa_por_casa');
     const [contacts, setContacts] = useState(0);
     const [convinced, setConvinced] = useState(0);
+    const [known, setKnown] = useState(0);
+    const [objective, setObjective] = useState<'votos' | 'encuesta' | 'conocimiento'>('votos');
     const [notes, setNotes] = useState('');
     const [consent, setConsent] = useState(false);
     const [gps, setGps] = useState<Gps>(null);
@@ -93,6 +95,10 @@ export const FieldActivity = () => {
     };
 
     useEffect(() => {
+        if (user?.tenant_id) {
+            supabase.from('goal_settings').select('objective').eq('tenant_id', user.tenant_id).maybeSingle()
+                .then(({ data }) => setObjective(((data as any)?.objective) || 'votos'));
+        }
         locate();
         refreshPending();
         loadRecent();
@@ -177,6 +183,7 @@ export const FieldActivity = () => {
                 notes: notes.trim(),
                 contacts_count: contacts,
                 convinced_count: convinced,
+                known_count: known,
                 latitude: gps?.lat ?? null,
                 longitude: gps?.lng ?? null,
                 accuracy_m: gps?.acc ?? null,
@@ -185,7 +192,7 @@ export const FieldActivity = () => {
                 evidences: evidences.map(({ preview, ...ev }) => ev),
             });
             evidences.forEach(e => URL.revokeObjectURL(e.preview));
-            setEvidences([]); setContacts(0); setConvinced(0); setNotes(''); setConsent(false);
+            setEvidences([]); setContacts(0); setConvinced(0); setKnown(0); setNotes(''); setConsent(false);
             if (navigator.onLine) {
                 setMessage('⏳ Subiendo...');
                 const r = await syncOfflineActivities();
@@ -231,7 +238,7 @@ export const FieldActivity = () => {
 
             {/* Resumen del día */}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {[['Actividades hoy', today.length], ['Contactados', todayContacts], ['Convencidos', todayConvinced]].map(([l, v]) => (
+                {[['Actividades hoy', today.length], ['Contactados', todayContacts], [objective === 'votos' ? 'Convencidos' : objective === 'encuesta' ? 'Lo prefieren' : 'Se suman', todayConvinced]].map(([l, v]) => (
                     <div key={l as string} className="tactile-card flex-col" style={{ flex: 1, alignItems: 'center', padding: '0.5rem' }}>
                         <span style={{ fontSize: '1.4rem', fontFamily: 'Oswald, sans-serif', color: 'var(--secondary)' }}>{v}</span>
                         <span style={{ fontSize: '0.7rem', color: '#9aa' }}>{l}</span>
@@ -279,9 +286,17 @@ export const FieldActivity = () => {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Counter label="CONTACTADOS" value={contacts} onChange={(v) => { setContacts(v); if (convinced > v) setConvinced(v); }} />
-                    <Counter label="CONVENCIDOS" value={convinced} onChange={setConvinced} max={contacts} />
+                    <Counter label="CONTACTADOS" value={contacts} onChange={(v) => { setContacts(v); if (convinced > v) setConvinced(v); if (known > v) setKnown(v); }} />
+                    <Counter label="YA LO CONOCÍAN" value={known} onChange={setKnown} max={contacts} />
                 </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <Counter label={objective === 'votos' ? 'CONVENCIDOS' : objective === 'encuesta' ? 'LO PREFIEREN' : 'SE SUMAN'} value={convinced} onChange={setConvinced} max={contacts} />
+                </div>
+                {objective !== 'votos' && (
+                    <div style={{ fontSize: '0.75rem', color: '#bbb', background: 'rgba(255,176,0,0.08)', padding: '0.45rem', borderRadius: 8 }}>
+                        ⚖️ Presenta al aspirante y escucha a la gente. No pidas el voto: antes de la precampaña está prohibido.
+                    </div>
+                )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
                     <MapPin size={18} color={gpsStatus === 'ok' ? 'var(--secondary)' : gpsStatus === 'error' ? 'var(--primary)' : '#9aa'} />
