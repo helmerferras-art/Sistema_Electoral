@@ -146,7 +146,7 @@ begin
             (array[null, null, 'Buena recepción, piden más presencia en la colonia.', 'Preguntan por agua y alumbrado.',
                    'Varios jóvenes interesados en sumarse.', 'Señoras del mercado piden reunión con el equipo.',
                    'Poca gente en casa, regresar por la tarde.'])[1 + floor(random() * 7)::int],
-            c, floor(c * (case when p_objective = 'votos' then 0.18 else 0.25 end + random() * 0.2))::int,
+            c, floor(floor(c * greatest(0.05, v_known)) * (0.40 + random() * 0.25))::int,  -- solo prefiere quien ya conocía
             floor(c * greatest(0.05, v_known))::int, pt.lat, pt.lng, 5 + floor(random() * 20), true,
             (t at time zone 'America/Mexico_City'), (t at time zone 'America/Mexico_City'));
   end loop;
