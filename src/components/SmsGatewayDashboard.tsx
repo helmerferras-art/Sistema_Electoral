@@ -165,7 +165,7 @@ export const SmsGatewayDashboard = () => {
     // Simulation for demo purposes, but ready to connect to local bridge
     useEffect(() => {
         fetchDevices();
-        const interval = setInterval(fetchDevices, 10000); // Check every 10s
+        const interval = setInterval(() => { if (!document.hidden) fetchDevices(); }, 10000); // Check every 10s (pausado si la pestaña no está visible)
         return () => clearInterval(interval);
     }, []);
 

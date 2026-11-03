@@ -5,6 +5,9 @@ import electron from 'vite-plugin-electron'
 import renderer from 'vite-plugin-electron-renderer'
 
 export default defineConfig({
+  // Web (Netlify): rutas absolutas para que /v/<token> y otras rutas profundas encuentren /assets.
+  // Escritorio (Electron) y celulares: rutas relativas, porque cargan index.html desde archivo.
+  base: process.env.NETLIFY ? '/' : './',
   plugins: [
     react(),
     electron([

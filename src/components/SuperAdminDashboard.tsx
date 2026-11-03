@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { USER_COLUMNS } from '../lib/userColumns';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Layers, Shield, PlusCircle, Upload, LogOut, Trash2, Activity, Settings, BarChart2, Search, FileText, Users, PieChart, ChevronDown, Network, Brain, Cpu, Key, List, AlertCircle } from 'lucide-react';
@@ -572,7 +573,7 @@ export const SuperAdminDashboard = () => {
                 .insert([{
                     layer_type: layerType,
                     layer_name: file.name,
-                    layer_url: publicUrl
+                    geojson_url: publicUrl // la columna real es geojson_url (layer_url no existe)
                 }]);
 
             if (dbError) throw dbError;
@@ -594,7 +595,10 @@ export const SuperAdminDashboard = () => {
             const { error: dbError } = await supabase.from('global_map_layers').delete().eq('id', id);
             if (dbError) throw dbError;
 
-            await supabase.storage.from('map_layers').remove([layerName]);
+            // Borrar el archivo real del bucket (su nombre está al final de la URL pública, no es layer_name)
+            const layer = globalLayers.find(l => l.id === id);
+            const storagePath = layer?.geojson_url?.split('/map_layers/')[1];
+            if (storagePath) await supabase.storage.from('map_layers').remove([decodeURIComponent(storagePath)]);
 
             setMessage('✅ Capa eliminada exitosamente.');
             loadData();
@@ -624,8 +628,8 @@ export const SuperAdminDashboard = () => {
     const handleBackup = async (tenantId: string, tenantName: string) => {
         setDownloadingDb(tenantId);
         try {
-            const { data: usersData } = await supabase.from('users').select('*').eq('tenant_id', tenantId);
-            const { data: supportersData } = await supabase.from('supporters').select('*').eq('tenant_id', tenantId);
+            const { data: usersData } = await supabase.from('users').select(USER_COLUMNS).eq('tenant_id', tenantId);
+            const { data: supportersData } = await supabase.rpc('fn_supporters_export', { p_tenant_id: tenantId });
             const { data: assignmentsData } = await supabase.from('resource_assignments').select('*').eq('tenant_id', tenantId);
 
             const backupData = {

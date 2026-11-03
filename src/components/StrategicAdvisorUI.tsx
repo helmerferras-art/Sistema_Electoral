@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Sparkles, Target, Zap, Clock, CheckCircle2, AlertCircle, MapPin } from 'lucide-react';
-import { AiAdvisorService, AIStrategicInsight } from '../lib/AiAdvisorService';
+import { AiAdvisorService, type AIStrategicInsight } from '../lib/AiAdvisorService';
 import { supabase } from '../lib/supabase';
 
 interface StrategicAdvisorUIProps {

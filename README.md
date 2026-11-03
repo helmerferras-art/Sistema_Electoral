@@ -1,73 +1,56 @@
-# React + TypeScript + Vite
+# C4I Secure Node — Sistema Electoral
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma de gestión territorial de campaña (Chiapas): registro de simpatizantes, estructura de brigadistas, mapa por sección/colonia, Día D, comunicaciones y finanzas.
 
-Currently, two official plugins are available:
+## Componentes
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Carpeta | Qué es |
+|---|---|
+| `src/` | App web/PWA (React 19 + Vite + Leaflet). Se carga por módulos (lazy loading). |
+| `electron/`, `src-server/` | Nodo de escritorio (Electron + SQLite local + SyncEngine). |
+| `android/`, `ios/` | App móvil (Capacitor). |
+| `supabase/functions/` | Edge Functions (alta de miembros del equipo, etc.). |
+| `sql/` | Esquemas, RPCs y parches SQL históricos. **No ejecutar `patch_rls_dev.sql`.** |
+| `scripts/` | Puente SMS, importadores y semillas. `scripts/dev/` = scripts de diagnóstico sueltos. |
+| `docs/` | Documentación funcional y técnica. |
+| `_archivo/` | Logs y volcados viejos (ignorado por git). |
 
-## React Compiler
+## Comandos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run dev             # web en http://localhost:5173
+npm run build           # tsc + build de producción
+npm run electron:dev    # nodo de escritorio en desarrollo
+npm run electron:build  # instalador Windows
+npm run mobile:build    # build + sync Capacitor
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Los scripts de `scripts/dev/` se ejecutan desde la raíz del proyecto (`node scripts/dev/<archivo>`).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Capas cartográficas
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Las capas INE de Chiapas (entidad 07) originales están en `C:\Users\helme\Downloads\Capas\07\07`.
+Versiones ligeras (simplificadas ~10x) en `...\07\07\ligeras\`, incluyendo `por_municipio/secciones/<mun>.json`,
+`por_municipio/colonias/<mun>.json` y `colonia_seccion.csv` (cruce espacial colonia → secciones con % de superficie).
+
+### Cargar capas y secciones (una vez, desde la raíz del proyecto)
+
+```bash
+# 1) Capas ligeras del mapa → bucket map_layers + tabla global_map_layers
+node scripts/dev/subir_capas_ligeras.mjs "C:\Users\helme\Downloads\Capas\07\07\ligeras"
+# 2) Polígonos de secciones → PostGIS (asigna la sección de cada simpatizante por GPS)
+node scripts/dev/cargar_secciones_postgis.mjs "C:\Users\helme\Downloads\Capas\07\07\SECCION.json"
+# 3) Resultados 2024, padrón y cruce colonia→sección (base de las METAS). Prueba primero con --dry-run
+node scripts/dev/cargar_datos_electorales.mjs "C:\Users\helme\Downloads\Subir CSV" --colonias "C:\Users\helme\Downloads\Capas\07\07\ligeras\colonia_seccion.csv"
 ```
+
+### Metas en cascada (pestaña OBJETIVOS)
+
+Meta de votos por sección = votos del ganador 2024 × (1 + margen), ajustada por el crecimiento de la lista nominal
+(o lista nominal × participación histórica × % objetivo). Simpatizantes = % de la meta de votos; contactos =
+simpatizantes × contactos por simpatizante. Parámetros editables por candidato / coord. de campaña. Quien tiene
+territorio asignado recibe la suma de sus secciones; quien no, un reparto de lo que falta de la meta de su superior.
+
+## Variables de entorno
+
+Copiar `.env.example` a `.env`. Nunca subir `.env` ni archivos `credenciales*.md`.

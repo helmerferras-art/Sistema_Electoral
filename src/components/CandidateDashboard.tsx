@@ -76,7 +76,7 @@ export const CandidateDashboard = () => {
 
             const { data: supporters } = await supabase
                 .from('supporters')
-                .select('id, section_id, curp, birth_date')
+                .select('id, section_id, birth_date') // birth_date se deriva de la CURP en la base
                 .in('tenant_id', user?.tenantScope || [])
                 .eq('commitment_level', 5);
 
@@ -184,12 +184,6 @@ export const CandidateDashboard = () => {
                 let age = 0;
                 if (s.birth_date) {
                     age = currentYear - new Date(s.birth_date).getFullYear();
-                } else if (s.curp && s.curp.length >= 10) {
-                    const yearStr = s.curp.substring(4, 6);
-                    let year = parseInt(yearStr);
-                    // Heuristic: CURP year < 24 implies 2000s, else 1900s
-                    year += year < 25 ? 2000 : 1900;
-                    age = currentYear - year;
                 }
 
                 if (age >= 18 && age <= 24) ageGroupsSupporters['18-24']++;

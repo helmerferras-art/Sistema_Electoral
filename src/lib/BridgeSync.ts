@@ -13,6 +13,7 @@ export const BridgeSync = {
      * Procesa todos los usuarios que tienen un código generado pero no enviado.
      */
     async processQueue() {
+        if (document.hidden) return;
         // 1. Verificar si hay hardware listo
         const status = await BridgeService.getStatus();
         const readyDevices = status.devices.filter(d => d.status === 'connected');
@@ -40,21 +41,18 @@ export const BridgeSync = {
         }
 
         // 2. Buscar usuarios con códigos pendientes de envío
-        const { data: pendingUsers, error } = await supabase
-            .from('users')
-            .select('id, phone, temp_code, name')
-            .eq('code_sent', false)
-            .not('temp_code', 'is', null);
+        // RPC segura: solo mandos ven los códigos pendientes, y solo de su propia campaña
+        const { data: pendingUsers, error } = await supabase.rpc('fn_pending_access_codes');
 
         if (error || !pendingUsers || pendingUsers.length === 0) {
             if (error) console.error('[BridgeSync] Error consultando cola:', error);
             return;
         }
 
-        console.log(`[BridgeSync] Puente ONLINE. Despachando ${pendingUsers.length} códigos pendientes:`, pendingUsers.map(u => u.phone));
+        console.log(`[BridgeSync] Puente ONLINE. Despachando ${pendingUsers.length} códigos pendientes:`, pendingUsers.map((u: { phone: string }) => u.phone));
 
         // 3. Despachar envíos
-        for (const user of pendingUsers) {
+        for (const user of pendingUsers as { id: string; phone: string; name: string; temp_code: string }[]) {
             const message = `🛡️ NEMIA C4I: Hola ${user.name.split(' ')[0]}, tu código de acceso táctico es: ${user.temp_code}. Úsalo para activar tu perfil.`;
 
             let success = await BridgeService.sendWhatsApp(user.phone, message);
@@ -66,10 +64,7 @@ export const BridgeSync = {
 
             if (success) {
                 console.log(`[BridgeSync] Código enviado exitosamente a ${user.phone}`);
-                await supabase
-                    .from('users')
-                    .update({ code_sent: true })
-                    .eq('id', user.id);
+                await supabase.rpc('fn_mark_access_code_sent', { p_user_id: user.id });
             } else {
                 console.warn(`[BridgeSync] Fallo crítico al enviar a ${user.phone}. Se reintentará.`);
             }

@@ -49,3 +49,5 @@ ts_error.txt
 tsc_errors.txt
 *_out.txt
 *log.txt
+# Archivo de logs/volcados viejos (local)
+_archivo/

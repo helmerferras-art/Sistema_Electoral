@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { USER_COLUMNS } from '../lib/userColumns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { BridgeService } from '../lib/BridgeService';
@@ -33,7 +34,7 @@ export const AdminManager = () => {
         try {
             const { data: usersData } = await supabase
                 .from('users')
-                .select('*, tenants(name)')
+                .select(`${USER_COLUMNS}, tenants(name)`)
                 .order('created_at', { ascending: false });
 
             const { data: tenantsData } = await supabase
@@ -255,7 +256,7 @@ export const AdminManager = () => {
                             </div>
                         )}
 
-                        {(newRole === 'coordinador_campana' || newRole === 'operador') && (
+                        {newRole === 'coordinador_campana' && (
                             <>
                                 <div className="flex-col">
                                     <label style={{ fontSize: '0.8rem', color: '#888' }}>MUNICIPIO ASIGNADO</label>

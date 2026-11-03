@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { SUPPORTER_COLUMNS, USER_COLUMNS } from '../lib/userColumns';
+import { resendVerification, verificationState, VERIFICATION_BADGE } from '../lib/verification';
 import { getOfflineSupporters } from '../lib/indexedDB';
 import { supabase } from '../lib/supabase';
 import { Trophy, Shield, UserCheck, Flame, PersonStanding, Users, Radio, Smartphone, CheckCircle, MessageCircle, PhoneCall } from 'lucide-react';
@@ -38,13 +40,13 @@ export const BrigadistaDashboard = () => {
             let teamIds: string[] = [user.id];
             if (!['superadmin', 'candidato', 'coordinador_campana'].includes(user.role)) {
                 const { data: teamFetch } = await supabase.rpc('get_team_ids', { root_user_id: user.id });
-                if (teamFetch) teamIds = teamFetch;
+                if (teamFetch) teamIds = teamFetch.map((r: { user_id: string }) => r.user_id);
             }
 
             // 2. Query Supporters for the entire team
             let query = supabase
                 .from('supporters')
-                .select('*')
+                .select(SUPPORTER_COLUMNS)
                 .order('created_at', { ascending: false });
 
             if (!['superadmin', 'candidato', 'coordinador_campana'].includes(user.role)) {
@@ -56,7 +58,7 @@ export const BrigadistaDashboard = () => {
 
             const { data: teamData } = await supabase
                 .from('users')
-                .select('*')
+                .select(USER_COLUMNS)
                 .eq('parent_id', user.id)
                 .order('created_at', { ascending: false });
             if (teamData) setTeamList(teamData);
@@ -193,7 +195,13 @@ export const BrigadistaDashboard = () => {
                                         <p style={{ margin: 0, fontWeight: 'bold' }}>{sup.name}</p>
                                         <div className="flex-row-resp" style={{ gap: '0.5rem', alignItems: 'center' }}>
                                             <CheckCircle size={12} color="var(--secondary)" />
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--secondary)' }}>ENCRIPTADO</span>
+                                            <span style={{ fontSize: '0.75rem', color: VERIFICATION_BADGE[verificationState(sup)].color }}>{VERIFICATION_BADGE[verificationState(sup)].text}</span>
+                                            {['pendiente', 'enviado'].includes(verificationState(sup)) && sup.recruiter_id === user?.id && (
+                                                <button className="squishy-btn mini" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}
+                                                    onClick={() => resendVerification(sup, user?.name).catch(e => alert(e.message))}>
+                                                    Validar
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex-row-resp" style={{ gap: '0.5rem', alignItems: 'center' }}>

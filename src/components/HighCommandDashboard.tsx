@@ -68,7 +68,7 @@ export const HighCommandDashboard = () => {
             // 1. Fetch Total Supporters
             let supportersQuery = supabase
                 .from('supporters')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`);
 
             // Apply territorial filter if user has assigned zones
@@ -84,7 +84,7 @@ export const HighCommandDashboard = () => {
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
             let newThisWeekQuery = supabase
                 .from('supporters')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`)
                 .gte('created_at', oneWeekAgo.toISOString());
 
@@ -97,7 +97,7 @@ export const HighCommandDashboard = () => {
             // 3. Fetch Lvl 5 Commitments
             let lvl5Query = supabase
                 .from('supporters')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .or(`tenant_id.eq.${user?.tenant_id},tenant_id.is.null`)
                 .eq('commitment_level', 5);
 

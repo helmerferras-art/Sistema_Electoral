@@ -1,28 +1,33 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon } from 'lucide-react'
+import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon, Camera } from 'lucide-react'
 import { RegistroForm } from './components/RegistroForm'
-import { MapView } from './components/MapView'
-import { BrigadistaDashboard } from './components/BrigadistaDashboard'
-import { DiaDDashboard } from './components/DiaDDashboard'
-import { HighCommandDashboard } from './components/HighCommandDashboard'
+const MapView = lazy(() => import('./components/MapView').then(m => ({ default: m.MapView })));
+const BrigadistaDashboard = lazy(() => import('./components/BrigadistaDashboard').then(m => ({ default: m.BrigadistaDashboard })));
+const DiaDDashboard = lazy(() => import('./components/DiaDDashboard').then(m => ({ default: m.DiaDDashboard })));
+const HighCommandDashboard = lazy(() => import('./components/HighCommandDashboard').then(m => ({ default: m.HighCommandDashboard })));
 import { OnboardingFlow } from './components/OnboardingFlow'
 import { LoginPage } from './components/LoginPage'
-import { SuperAdminDashboard } from './components/SuperAdminDashboard'
-import SuppliesDashboard from './components/SuppliesDashboard'
-import MySupplies from './components/MySupplies'
-import { CommunicationsDashboard } from './components/CommunicationsDashboard';
-import { DigitalCommunicationsDashboard } from './components/DigitalCommunicationsDashboard';
-import { CandidateDashboard } from './components/CandidateDashboard';
-import { CriticalPath } from './components/CriticalPath';
-import { CandidateLanding } from './components/CandidateLanding';
-import { PetitionsForm } from './components/PetitionsForm';
-import { PublicMapView } from './components/PublicMapView';
+const SuperAdminDashboard = lazy(() => import('./components/SuperAdminDashboard').then(m => ({ default: m.SuperAdminDashboard })));
+const SuppliesDashboard = lazy(() => import('./components/SuppliesDashboard'));
+const MySupplies = lazy(() => import('./components/MySupplies'));
+const CommunicationsDashboard = lazy(() => import('./components/CommunicationsDashboard').then(m => ({ default: m.CommunicationsDashboard })));
+const DigitalCommunicationsDashboard = lazy(() => import('./components/DigitalCommunicationsDashboard').then(m => ({ default: m.DigitalCommunicationsDashboard })));
+const CandidateDashboard = lazy(() => import('./components/CandidateDashboard').then(m => ({ default: m.CandidateDashboard })));
+const CriticalPath = lazy(() => import('./components/CriticalPath').then(m => ({ default: m.CriticalPath })));
+const CandidateLanding = lazy(() => import('./components/CandidateLanding').then(m => ({ default: m.CandidateLanding })));
+const PetitionsForm = lazy(() => import('./components/PetitionsForm').then(m => ({ default: m.PetitionsForm })));
+const VerifyVisit = lazy(() => import('./components/VerifyVisit').then(m => ({ default: m.VerifyVisit })));
+const GoalsCascade = lazy(() => import('./components/GoalsCascade').then(m => ({ default: m.GoalsCascade })));
+const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => ({ default: m.FieldActivity })));
+const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { NotificationProvider, useNotifications } from './lib/NotificationContext'
 import { supabase } from './lib/supabase'
 import { SetupWizard } from './components/SetupWizard'
 import './index.css'
+
+const PageLoader = () => <div className="flex-center" style={{ minHeight: '40vh', color: 'var(--primary)' }}>Cargando módulo...</div>;
 
 // --- Protected Route Wrapper ---
 import { PasswordSetModal } from './components/PasswordSetModal';
@@ -58,6 +63,11 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
 const MainDashboard = () => {
   const [activeTab, setActiveTab] = useState('profile')
   const { user, signOut, isImpersonating, abortImpersonation } = useAuth(); // SaaS User Info
+
+  // El brigadista abre directo en su bitácora de campo
+  useEffect(() => {
+    if (user?.role === 'brigadista') setActiveTab('campo');
+  }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
   const [showNotifMenu, setShowNotifMenu] = useState(false);
 
@@ -273,6 +283,7 @@ const MainDashboard = () => {
 
       {/* Main Content Area */}
       <main className="main-content">
+        <Suspense fallback={<PageLoader />}>
         {activeTab === 'profile' && <RegistroForm />}
         {activeTab === 'map' && <MapView />}
         {activeTab === 'crm' && (
@@ -287,13 +298,18 @@ const MainDashboard = () => {
         {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
-        {activeTab === 'OBJETIVOS' && <CriticalPath />}
+        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><CriticalPath /></>)}
+        {activeTab === 'campo' && <FieldActivity />}
+        </Suspense>
       </main>
 
       {/* Bottom Navigation */}
       <nav className="bottom-nav">
         {[
           { id: 'profile', icon: <Users size={24} />, label: 'MISIÓN' },
+          // Bitácora de campo: quien trabaja territorio y su cadena de mando
+          ...(['brigadista', 'lider', 'coordinador_territorial', 'coordinador', 'coordinador_campana', 'candidato'].includes(user?.role || '')
+            ? [{ id: 'campo', icon: <Camera size={24} />, label: 'CAMPO' }] : []),
           { id: 'map', icon: <MapIcon size={24} />, label: 'RADAR' },
           { id: 'crm', icon: <List size={24} />, label: ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '') ? 'MANDO' : 'SQUAD' },
           { id: 'OBJETIVOS', icon: <Target size={24} />, label: 'OBJETIVOS' },
@@ -402,14 +418,24 @@ const MainDashboard = () => {
 
 
 import { BridgeSync } from './lib/BridgeSync';
+import { startActivitySyncListener } from './lib/activitySync';
+import { isNativeApp } from './lib/location';
 
 // --- App Content (Inside Providers) ---
 function AppContent() {
-  const { updatePassword } = useAuth();
+  const { updatePassword, user } = useAuth();
+
+  // El puente SMS vive en la PC: buscarlo cada 30 s desde un celular solo gasta batería y datos.
+  useEffect(() => {
+    const MANDOS = ['superadmin', 'candidato', 'coordinador_campana', 'coordinador', 'coordinador_territorial', 'coordinador_logistica'];
+    if (!user || isNativeApp() || !MANDOS.includes(user.role)) return;
+    BridgeSync.startWatcher();
+    return () => BridgeSync.stopWatcher();
+  }, [user?.role]);
 
   useEffect(() => {
-    // Iniciar centinela de hardware C4I
-    BridgeSync.startWatcher();
+    // Subir bitácoras de campo guardadas sin señal
+    startActivitySyncListener();
     // Exponer función para el botón de ajustes rápido
     (window as any)._updatePassword = async (p: string) => {
       if (updatePassword) {
@@ -422,8 +448,12 @@ function AppContent() {
 
   return (
     <>
+      <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Validación pública de visitas (la abre la persona contactada desde el WhatsApp del brigadista) */}
+        <Route path="/v/:token" element={<div className="app-container" style={{ padding: '1rem' }}><VerifyVisit /></div>} />
 
         {/* Landing Page Dinámica de Candidato (NEMIA) */}
         <Route path="/:slug" element={<CandidateLanding />} />
@@ -447,6 +477,7 @@ function AppContent() {
           </ProtectedRoute>
         } />
       </Routes>
+      </Suspense>
       <PasswordSetModal />
     </>
   );

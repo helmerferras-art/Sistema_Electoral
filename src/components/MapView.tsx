@@ -152,11 +152,18 @@ export const MapView = () => {
     const { user } = useAuth();
     const [supporters, setSupporters] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const realtimeReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingRealtimeReload = useRef(false);
+    const [sectionCounts, setSectionCounts] = useState<Record<string, number> | null>(null);
 
     const [rawGeoJson, setRawGeoJson] = useState<any>(null);
     const [availableLayers, setAvailableLayers] = useState<any[]>([]);
     const [activeLayerId, setActiveLayerId] = useState<string>('');
-    const [viewMode, setViewMode] = useState<'niebla' | 'heatmap' | 'markers'>('niebla');
+    const [viewMode, setViewMode] = useState<'niebla' | 'heatmap' | 'markers' | 'trabajo'>('niebla');
+    // Mapa de calor del trabajo territorial (bitácora de campo de brigadistas)
+    const [activityDays, setActivityDays] = useState(30);
+    const [activityPoints, setActivityPoints] = useState<[number, number, number][]>([]);
+    const [activityCount, setActivityCount] = useState(0);
     const [selectedRegion, setSelectedRegion] = useState<any>(null);
 
     const [seccionGeoJson, setSeccionGeoJson] = useState<any>(null);
@@ -188,6 +195,9 @@ export const MapView = () => {
 
         const currentLayer = availableLayers.find(l => l.id === activeLayerId);
         const layerType = currentLayer?.layer_type?.toLowerCase() || 'seccion';
+
+        // Conteo de PostGIS solo si todos los simpatizantes visibles ya tienen sección asignada
+        const dbCountsReady = !!sectionCounts && supporters.every((s: any) => !!s.section_id);
 
         // 1. Create a spatial grid index for supporters to avoid O(N*M) lookup
         // We'll use a simple 0.1 degree grid
@@ -256,35 +266,41 @@ export const MapView = () => {
                 feature.properties._edadRangos = h.edad_rangos || {};
             }
 
-            // Optimization: Only check supporters in grid cells that intersect feature bounds
-            try {
-                const fg = L.geoJSON(feature);
-                const bounds = fg.getBounds();
-                const minGx = Math.floor(bounds.getWest() * 10) / 10;
-                const maxGx = Math.floor(bounds.getEast() * 10) / 10;
-                const minGy = Math.floor(bounds.getSouth() * 10) / 10;
-                const maxGy = Math.floor(bounds.getNorth() * 10) / 10;
+            // Capa de secciones: el conteo ya viene calculado por PostGIS (fn_supporters_by_section),
+            // así que no hace falta el point-in-polygon en el navegador.
+            if (layerType === 'seccion' && dbCountsReady && fid != null) {
+                count = sectionCounts[String(fid)] || 0;
+            } else {
+                // Optimization: Only check supporters in grid cells that intersect feature bounds
+                try {
+                    const fg = L.geoJSON(feature);
+                    const bounds = fg.getBounds();
+                    const minGx = Math.floor(bounds.getWest() * 10) / 10;
+                    const maxGx = Math.floor(bounds.getEast() * 10) / 10;
+                    const minGy = Math.floor(bounds.getSouth() * 10) / 10;
+                    const maxGy = Math.floor(bounds.getNorth() * 10) / 10;
 
-                for (let x = minGx; x <= maxGx; x = Number((x + 0.1).toFixed(1))) {
-                    for (let y = minGy; y <= maxGy; y = Number((y + 0.1).toFixed(1))) {
-                        const gkey = `${x}:${y}`;
-                        const cellSupporters = grid[gkey];
-                        if (cellSupporters) {
-                            cellSupporters.forEach(s => {
-                                const pt = point([s.longitude, s.latitude]);
-                                if (booleanPointInPolygon(pt, feature)) {
-                                    count++;
-                                }
-                            });
+                    for (let x = minGx; x <= maxGx; x = Number((x + 0.1).toFixed(1))) {
+                        for (let y = minGy; y <= maxGy; y = Number((y + 0.1).toFixed(1))) {
+                            const gkey = `${x}:${y}`;
+                            const cellSupporters = grid[gkey];
+                            if (cellSupporters) {
+                                cellSupporters.forEach(s => {
+                                    const pt = point([s.longitude, s.latitude]);
+                                    if (booleanPointInPolygon(pt, feature)) {
+                                        count++;
+                                    }
+                                });
+                            }
                         }
                     }
+                } catch (e) {
+                    // Fallback to simpler check if bounds fails
+                    supporters.forEach(s => {
+                        const pt = point([s.longitude, s.latitude]);
+                        if (booleanPointInPolygon(pt, feature)) count++;
+                    });
                 }
-            } catch (e) {
-                // Fallback to simpler check if bounds fails
-                supporters.forEach(s => {
-                    const pt = point([s.longitude, s.latitude]);
-                    if (booleanPointInPolygon(pt, feature)) count++;
-                });
             }
 
             // 3. For Colony/Locality layers, perform a spatial intersection with the Section layer
@@ -335,7 +351,7 @@ export const MapView = () => {
         }
 
         return processed;
-    }, [rawGeoJson, supporters, historicalTargets, activeLayerId, availableLayers, seccionGeoJson, dataUpdateTick]);
+    }, [rawGeoJson, supporters, historicalTargets, activeLayerId, availableLayers, seccionGeoJson, dataUpdateTick, sectionCounts]);
 
     useEffect(() => {
         const pm = localStorage.getItem('radar_poll_mode');
@@ -368,11 +384,27 @@ export const MapView = () => {
                     table: 'supporters',
                     filter: user.tenant_id ? `tenant_id=eq.${user.tenant_id}` : undefined
                 }, () => {
-                    loadSupportersData();
+                    // Debounce: agrupa ráfagas de cambios (Día D) en una sola recarga
+                    if (realtimeReloadTimer.current) clearTimeout(realtimeReloadTimer.current);
+                    realtimeReloadTimer.current = setTimeout(() => {
+                        realtimeReloadTimer.current = null;
+                        if (document.visibilityState === 'visible') loadSupportersData();
+                        else pendingRealtimeReload.current = true;
+                    }, 4000);
                 })
                 .subscribe();
 
+            const onVisible = () => {
+                if (document.visibilityState === 'visible' && pendingRealtimeReload.current) {
+                    pendingRealtimeReload.current = false;
+                    loadSupportersData();
+                }
+            };
+            document.addEventListener('visibilitychange', onVisible);
+
             return () => {
+                if (realtimeReloadTimer.current) clearTimeout(realtimeReloadTimer.current);
+                document.removeEventListener('visibilitychange', onVisible);
                 supabase.removeChannel(channel);
             };
         }
@@ -553,7 +585,8 @@ export const MapView = () => {
                         break;
                     }
                     if (data && data.length > 0) {
-                        targetData = [...targetData, ...data];
+                        targetData.push(...data);
+                        if (data.length < t_limit) break; // última página
                     } else {
                         break;
                     }
@@ -585,7 +618,8 @@ export const MapView = () => {
                         break;
                     }
                     if (chunk && chunk.length > 0) {
-                        demographicData = [...demographicData, ...chunk];
+                        demographicData.push(...chunk);
+                        if (chunk.length < d_limit) break; // última página
                     } else {
                         break;
                     }
@@ -798,28 +832,9 @@ export const MapView = () => {
     const loadMarkersForZone = async (zoneId: string) => {
         setLoading(true);
         try {
-            // 1. Fetch Hierarchy IDs (Pyramidal aggregation)
-            let teamIds: string[] = user ? [user.id] : [];
-
-            if (user && !['superadmin', 'candidato', 'coordinador_campana'].includes(user.role)) {
-                // Get all subordinates (recursive)
-                const { data: teamFetch } = await supabase.rpc('get_team_ids', { root_user_id: user.id });
-                if (teamFetch) teamIds = teamFetch;
-            }
-
-            // 2. Fetch STAFF (Users) in the zone
-            let staffQuery = supabase
-                .from('users')
-                .select('id, name, phone, role, xp, rank_name, assigned_targets, latitude, longitude')
-                .in('tenant_id', user?.tenantScope || [])
-                .not('latitude', 'is', null);
-
-            if (!['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '')) {
-                // Only see my team staff
-                staffQuery = staffQuery.in('id', teamIds);
-            }
-
-            const { data: staffData } = await staffQuery;
+            // 1-2. STAFF: última ubicación conocida. La RPC ya aplica la jerarquía
+            // (mandos ven todo su alcance; los demás, solo su equipo hacia abajo).
+            const { data: staffData } = await supabase.rpc('fn_get_staff_locations');
             setMarkerStaff(staffData || []);
 
             // 3. Fetch SUPPORTERS (Convencidos + Volunteers) via Secure RPC
@@ -871,8 +886,18 @@ export const MapView = () => {
                 return;
             }
 
-            // Normal Supporters Load via Secure RPC
-            const { data: onlineData } = await supabase.rpc('fn_get_map_supporters');
+            // Normal Supporters Load via Secure RPC (+ conteo por sección calculado en PostGIS)
+            const [{ data: onlineData }, { data: bySection, error: bySectionErr }] = await Promise.all([
+                supabase.rpc('fn_get_map_supporters'),
+                supabase.rpc('fn_supporters_by_section')
+            ]);
+            if (!bySectionErr && bySection) {
+                const counts: Record<string, number> = {};
+                (bySection as { section_id: string; total: number }[]).forEach(r => { counts[String(r.section_id)] = Number(r.total); });
+                setSectionCounts(counts);
+            } else {
+                setSectionCounts(null); // sin datos de la base: se usa el conteo en el navegador
+            }
 
             let allData = onlineData || [];
 
@@ -890,6 +915,21 @@ export const MapView = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (viewMode !== 'trabajo') return;
+        let cancelled = false;
+        supabase.rpc('fn_activity_heatmap', { p_days: activityDays }).then(({ data, error }) => {
+            if (cancelled) return;
+            if (error || !data) { setActivityPoints([]); setActivityCount(0); return; }
+            const rows = data as { lat: number; lng: number; weight: number }[];
+            const max = Math.max(1, ...rows.map(r => r.weight));
+            // Intensidad relativa al punto con más contactos; mínimo 0.3 para que toda actividad se vea
+            setActivityPoints(rows.map(r => [r.lat, r.lng, Math.max(0.3, r.weight / max)] as [number, number, number]));
+            setActivityCount(rows.length);
+        });
+        return () => { cancelled = true; };
+    }, [viewMode, activityDays]);
 
     // Prepare heatmap data: [lat, lng, intensity (based on commitment)]
     const heatPoints = supporters.map(s => [
@@ -1140,6 +1180,29 @@ export const MapView = () => {
                     >
                         📍 PUNTOS
                     </button>
+                    <button
+                        className={`squishy-btn ${viewMode === 'trabajo' ? 'primary' : ''}`}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                        onClick={() => setViewMode('trabajo')}
+                        title="Mapa de calor de la bitácora de campo"
+                    >
+                        🧭 TRABAJO
+                    </button>
+                    {viewMode === 'trabajo' && (
+                        <select
+                            className="squishy-input"
+                            style={{ padding: '0.3rem', fontSize: '0.8rem', width: 'auto' }}
+                            value={activityDays}
+                            onChange={(e) => setActivityDays(Number(e.target.value))}
+                            aria-label="Periodo del trabajo territorial"
+                        >
+                            <option value={1}>Hoy</option>
+                            <option value={7}>7 días</option>
+                            <option value={30}>30 días</option>
+                            <option value={90}>90 días</option>
+                        </select>
+                    )}
+                    {viewMode === 'trabajo' && <span style={{ fontSize: '0.8rem', color: '#9aa' }}>{activityCount} actividades</span>}
                 </div>
             </div>
 
@@ -1296,6 +1359,7 @@ export const MapView = () => {
                         )}
 
                         {viewMode === 'heatmap' && <HeatmapLayer points={heatPoints} />}
+                        {viewMode === 'trabajo' && <HeatmapLayer points={activityPoints} />}
 
                         {/* STAFF (STAFF) - MULTI-COLOR PINS */}
                         {viewMode === 'markers' && markerStaff.map((tm) => {

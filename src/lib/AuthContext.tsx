@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { USER_COLUMNS } from './userColumns';
 import { supabase } from './supabase';
-import { BridgeService } from './BridgeService';
 
 type UserData = {
     id: string;
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             const { data, error } = await supabase
                 .from('users')
-                .select('*')
+                .select(USER_COLUMNS)
                 .eq('auth_id', authId)
                 .single();
 
@@ -163,25 +163,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             formattedPhone = '+52' + phone;
         }
 
-        // --- LOGICA C4I: Validación de existencia ---
-        const rawPhone = formattedPhone.replace('+52', '').trim();
-        const { data: userData } = await supabase
-            .from('users')
-            .select('*')
-            .or(`phone.eq.${formattedPhone},phone.eq.${rawPhone}`)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const foundUser = userData && userData.length > 0 ? userData[0] : null;
+        // --- LOGICA C4I: Validación de existencia (RPC segura: no expone datos del usuario) ---
+        const { data: precheck } = await supabase.rpc('fn_login_precheck', { p_phone: formattedPhone });
+        const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
             return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
         }
 
-        if (foundUser.is_first_login && foundUser.temp_code) {
-            const message = `SISTEMA C4I (NEMIA): Tu código táctico es ${foundUser.temp_code}. No lo compartas.`;
-            BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
-            console.log("C4I: Enviando SMS de primer login a", foundUser.phone);
+        if (foundUser.is_first_login) {
+            // El código táctico se envía desde el servidor (cola gateway_commands → puente SMS);
+            // nunca viaja al navegador.
+            const { data: queued } = await supabase.rpc('fn_queue_first_login_code', { p_phone: formattedPhone });
+            if (!queued) console.warn("C4I: No hay puente SMS activo para enviar el código táctico.");
         }
 
         console.log("C4I: Usuario validado. Permitiendo ingreso de credenciales para:", formattedPhone);
@@ -194,15 +188,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             formattedPhone = '+52' + phone;
         }
 
-        const rawPhone = formattedPhone.replace('+52', '');
-        const { data: userData } = await supabase
-            .from('users')
-            .select('*')
-            .or(`phone.eq.${formattedPhone},phone.eq.${rawPhone}`)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const foundUser = userData && userData.length > 0 ? userData[0] : null;
+        const { data: precheck } = await supabase.rpc('fn_login_precheck', { p_phone: formattedPhone });
+        const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
             return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
@@ -220,17 +207,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
         // La contraseña era correcta, pero no dejamos la sesión activa hasta completar el 2FA.
         if (!foundUser.is_first_login && foundUser.two_factor_enabled) {
+            // El servidor genera el código y lo encola por SMS en el Bridge de la campaña (el código nunca pasa por el navegador).
+            // Debe pedirse ANTES de cerrar la sesión: la función identifica al usuario por su sesión.
+            const { data: queued, error: qErr } = await supabase.rpc('fn_issue_2fa_code');
             await supabase.auth.signOut();
-
-            const tactical2FA = Math.floor(100000 + Math.random() * 900000).toString();
-            const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-            await supabase
-                .from('users')
-                .update({ temp_code: tactical2FA, temp_code_expires_at: expiresAt, code_sent: false })
-                .eq('id', foundUser.id);
-
-            const message = `SISTEMA C4I (NEMIA): Tu código de seguridad 2FA temporal es ${tactical2FA}.`;
-            BridgeService.sendSMS(foundUser.phone, message).catch(console.error);
+            if (qErr || !queued) {
+                return { error: { message: 'No se pudo enviar el código de seguridad (¿el Bridge de SMS está encendido?). Intenta de nuevo o pide a tu administrador desactivar temporalmente el 2FA.' } };
+            }
 
             console.log(`C4I 2FA: Desafío emitido vía Bridge para ${foundUser.phone}.`);
             return { error: null, requires2FA: true };
