@@ -53,7 +53,7 @@ export const BridgeSync = {
 
         // 3. Despachar envíos
         for (const user of pendingUsers as { id: string; phone: string; name: string; temp_code: string }[]) {
-            const message = `🛡️ NEMIA C4I: Hola ${user.name.split(' ')[0]}, tu código de acceso táctico es: ${user.temp_code}. Úsalo para activar tu perfil.`;
+            const message = `TLATOANI: Hola ${user.name.split(' ')[0]}, tu código de acceso táctico es: ${user.temp_code}. Úsalo para activar tu perfil.`;
 
             let success = await BridgeService.sendWhatsApp(user.phone, message);
 

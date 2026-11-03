@@ -83,7 +83,7 @@ export const AdminManager = () => {
             loadData();
 
             // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
-            const welcomeMsg = `SISTEMA C4I (NEMIA): Hola ${newName}, tu código de acceso táctico es ${tacticalCode}. Ingresa en nemia.lat/login y no lo compartas.`;
+            const welcomeMsg = `TLATOANI: Hola ${newName}, tu código de acceso táctico es ${tacticalCode}. Ingresa en nemia.lat/login y no lo compartas.`;
             BridgeService.sendSMS(formattedPhone, welcomeMsg).catch(console.error);
             console.log(`[C4I] SMS de bienvenida enviado a ${newName} (${formattedPhone})`);
 
@@ -144,7 +144,7 @@ export const AdminManager = () => {
             alert(`✅ Credenciales restablecidas.\n\nEl nuevo código temporal para ${name} es: ${tacticalCode}\nEntrégalo de forma segura.`);
 
             // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
-            const resetMsg = `SISTEMA C4I (NEMIA): Hola ${name}, tus credenciales han sido restablecidas. Tu nuevo código táctico es ${tacticalCode}. Ingresa en nemia.lat/login`;
+            const resetMsg = `TLATOANI: Hola ${name}, tus credenciales han sido restablecidas. Tu nuevo código táctico es ${tacticalCode}. Ingresa en nemia.lat/login`;
             BridgeService.sendSMS(phone, resetMsg).catch(console.error);
             console.log(`[C4I] SMS de reseteo enviado a ${name} (${phone})`);
 

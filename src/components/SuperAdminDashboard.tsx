@@ -537,7 +537,7 @@ export const SuperAdminDashboard = () => {
 
         // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
         const formattedPhone = newAdminPhone.startsWith('+52') ? newAdminPhone : `+52${newAdminPhone}`;
-        const welcomeMsg = `SISTEMA C4I: Hola Candidato ${newTenantName}, tu clave tactica es ${accountResult.temp_code}. Ingresa en nemia.lat/login`;
+        const welcomeMsg = `TLATOANI: Hola, candidato ${newTenantName}, tu clave tactica es ${accountResult.temp_code}. Ingresa en nemia.lat/login`;
         BridgeService.sendSMS(formattedPhone, welcomeMsg).catch(console.error);
         console.log(`[C4I] SMS de bienvenida enviado a Candidato ${newTenantName} (${formattedPhone})`);
 
