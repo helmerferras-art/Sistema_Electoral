@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon, Camera } from 'lucide-react'
+import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon, Camera, UserCog } from 'lucide-react'
 import { RegistroForm } from './components/RegistroForm'
 const MapView = lazy(() => import('./components/MapView').then(m => ({ default: m.MapView })));
 const BrigadistaDashboard = lazy(() => import('./components/BrigadistaDashboard').then(m => ({ default: m.BrigadistaDashboard })));
@@ -18,6 +18,8 @@ const CriticalPath = lazy(() => import('./components/CriticalPath').then(m => ({
 const CandidateLanding = lazy(() => import('./components/CandidateLanding').then(m => ({ default: m.CandidateLanding })));
 const PetitionsForm = lazy(() => import('./components/PetitionsForm').then(m => ({ default: m.PetitionsForm })));
 const VerifyVisit = lazy(() => import('./components/VerifyVisit').then(m => ({ default: m.VerifyVisit })));
+const DeleteAccountPage = lazy(() => import('./components/DeleteAccountPage').then(m => ({ default: m.DeleteAccountPage })));
+const MyAccount = lazy(() => import('./components/MyAccount').then(m => ({ default: m.MyAccount })));
 const GoalsCascade = lazy(() => import('./components/GoalsCascade').then(m => ({ default: m.GoalsCascade })));
 const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => ({ default: m.FieldActivity })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
@@ -70,6 +72,7 @@ const MainDashboard = () => {
   }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
   const [showNotifMenu, setShowNotifMenu] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
 
   // Legacy Onboarding Logic (We'll integrate this tightly with Auth in the future, for now local is fine MVP)
   const [hasOnboarded, setHasOnboarded] = useState(false)
@@ -262,9 +265,13 @@ const MainDashboard = () => {
                 </div>
               )}
 
-              <button onClick={signOut} style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
+              <button onClick={() => setShowAccount(true)} aria-label="Mi cuenta" title="Mi cuenta" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
+                <UserCog size={24} color="var(--tertiary)" />
+              </button>
+              <button onClick={signOut} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <LogOut size={24} color="var(--secondary)" />
               </button>
+              {showAccount && <Suspense fallback={null}><MyAccount onClose={() => setShowAccount(false)} /></Suspense>}
             </div>
           </div>
         </div>
@@ -453,6 +460,7 @@ function AppContent() {
         <Route path="/login" element={<LoginPage />} />
 
         {/* Validación pública de visitas (la abre la persona contactada desde el WhatsApp del brigadista) */}
+        <Route path="/eliminar-cuenta" element={<div className="app-container" style={{ padding: '1rem' }}><DeleteAccountPage /></div>} />
         <Route path="/v/:token" element={<div className="app-container" style={{ padding: '1rem' }}><VerifyVisit /></div>} />
 
         {/* Landing Page Dinámica de Candidato (NEMIA) */}
