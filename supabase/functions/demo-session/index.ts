@@ -11,7 +11,6 @@ import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supa
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 
 const CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -67,8 +66,9 @@ async function sessionFor(db: SupabaseClient, tenantId: string, role: string) {
 }
 
 async function currentDemoUser(req: Request) {
-    const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: req.headers.get('Authorization') || '' } }, auth: { persistSession: false } });
-    const { data } = await asUser.auth.getUser();
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    if (!token) return null;
+    const { data } = await admin.auth.getUser(token);
     if (!data?.user) return null;
     const { data: me } = await admin.from('users').select('id, tenant_id, tenants!users_tenant_id_fkey(is_sandbox)').eq('auth_id', data.user.id).maybeSingle();
     if (!me || !(me as any).tenants?.is_sandbox) return null;

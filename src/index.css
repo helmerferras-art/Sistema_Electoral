@@ -721,3 +721,5 @@ h4,
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
   border-color: rgba(0, 212, 255, 0.4);
 }
+/* Mapa base oscuro a partir de los mosaicos de OpenStreetMap */
+.tl-dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.4); }

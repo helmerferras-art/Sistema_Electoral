@@ -1,3 +1,4 @@
+import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
@@ -52,10 +53,7 @@ export const PublicMapView = () => {
     return (
         <div style={{ height: '600px', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
             <MapContainer center={[16.75, -93.12]} zoom={13} style={{ height: '100%', width: '100%', background: '#0a0f19' }}>
-                <TileLayer
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                />
+                <TileLayer url={BASE_TILE_URL} attribution={BASE_TILE_ATTRIBUTION} className={BASE_TILE_CLASS} maxZoom={19} />
 
                 {petitions.map(p => (
                     <Marker

@@ -320,7 +320,7 @@ const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats
             </div>
             <div className="tactile-card flex-col flex-center glow-primary" style={{ borderLeft: '4px solid var(--primary)' }}>
                 <p style={{ margin: 0, fontSize: '0.7rem', color: '#888' }}>BRECHA HISTÓRICA</p>
-                <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color: 'var(--primary)' }}>+{stats.brecha.toLocaleString()}</p>
+                <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color: 'var(--primary)' }}>{stats.brecha > 0 ? '+' : ''}{stats.brecha.toLocaleString()}</p>
                 <p style={{ margin: 0, fontSize: '0.6rem', color: '#64748B' }}>vs Ganador Anterior</p>
             </div>
             <div className="tactile-card flex-col flex-center glow-secondary" style={{ borderLeft: '4px solid var(--secondary)' }}>

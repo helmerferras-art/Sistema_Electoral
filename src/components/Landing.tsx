@@ -87,8 +87,8 @@ export const Landing = () => {
                     <div className="tl-hero-visual" aria-hidden="true">
                         <Phone src="/landing/campo.jpg" alt="" className="tl-phone-back" />
                         <Phone src="/landing/mando.jpg" alt="" className="tl-phone-front" />
-                        <div className="tl-float tl-float-a"><strong>+38</strong> simpatizantes hoy</div>
-                        <div className="tl-float tl-float-b"><strong>72%</strong> de la meta en sección 1543</div>
+                        <div className="tl-float tl-float-a"><strong>3,899</strong> personas contactadas</div>
+                        <div className="tl-float tl-float-b"><strong>33%</strong> validados por WhatsApp</div>
                     </div>
                 </div>
             </section>

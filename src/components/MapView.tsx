@@ -1,3 +1,4 @@
+import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -1218,10 +1219,7 @@ export const MapView = () => {
                         style={{ height: '100%', width: '100%', backgroundColor: '#0F1218' }}
                     >
                         {/* Using Carto Dark Matter base map for tactical feel */}
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        />
+                        <TileLayer url={BASE_TILE_URL} attribution={BASE_TILE_ATTRIBUTION} className={BASE_TILE_CLASS} maxZoom={19} />
 
                         {/* Auto-focus camera on filtered geometry */}
                         <AutoFitBounds

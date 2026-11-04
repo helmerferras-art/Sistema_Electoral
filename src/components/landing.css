@@ -57,8 +57,8 @@
 .tl-hero-points { list-style: none; padding: 0; margin: 1.6rem 0 0; display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; font-size: 0.88rem; color: var(--tl-peach); }
 .tl-hero-points li { display: inline-flex; align-items: center; gap: 0.4rem; }
 .tl-hero-visual { position: relative; height: 470px; max-width: 420px; margin: 0 auto; width: 100%; }
-.tl-phone-front { position: absolute; left: 50%; top: 0; transform: translateX(-30%) rotate(3deg); z-index: 2; animation: tl-float 7s ease-in-out infinite; }
-.tl-phone-back { position: absolute; left: 50%; top: 40px; transform: translateX(-85%) rotate(-7deg) scale(0.9); opacity: 0.85; filter: saturate(0.85); }
+.tl-phone.tl-phone-front { position: absolute; left: 50%; top: 0; transform: translateX(-30%) rotate(3deg); z-index: 2; animation: tl-float 7s ease-in-out infinite; }
+.tl-phone.tl-phone-back { position: absolute; left: 50%; top: 40px; transform: translateX(-85%) rotate(-7deg) scale(0.9); opacity: 0.85; filter: saturate(0.85); }
 .tl-float { position: absolute; z-index: 3; background: rgba(255, 255, 255, 0.96); color: var(--tl-navy); border-radius: 14px; padding: 0.55rem 0.8rem; font-size: 0.78rem; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3); white-space: nowrap; }
 .tl-float strong { color: var(--tl-orange); font-family: Oswald, sans-serif; font-size: 1.05rem; margin-right: 0.25rem; }
 .tl-float-a { left: 0; top: 70px; animation: tl-float 6s ease-in-out infinite 0.5s; }
