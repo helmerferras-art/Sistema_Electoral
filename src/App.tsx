@@ -75,6 +75,36 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   return <>{children}</>;
 };
 
+const MANDO_ROLES = ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'];
+
+const ROLE_LABEL: Record<string, string> = {
+  superadmin: 'Administración', candidato: 'Candidato(a)', coordinador_campana: 'Coordinación de campaña',
+  coordinador: 'Coordinación', coordinador_territorial: 'Coordinación territorial', lider: 'Líder', brigadista: 'Brigadista',
+  comunicacion: 'Comunicación', comunicacion_digital: 'Comunicación digital', coordinador_logistica: 'Logística',
+};
+
+/** Pestañas con nombres sencillos. Cada perfil ve solo lo que usa, en el orden en que lo usa. */
+const navTabs = (role: string, diaDActive: boolean) => {
+  const mando = MANDO_ROLES.includes(role);
+  const T = {
+    crm: { id: 'crm', icon: <List size={22} />, label: mando ? 'Tablero' : 'Equipo' },
+    campo: { id: 'campo', icon: <Camera size={22} />, label: 'Campo' },
+    profile: { id: 'profile', icon: <Users size={22} />, label: 'Registrar' },
+    map: { id: 'map', icon: <MapIcon size={22} />, label: 'Mapa' },
+    metas: { id: 'OBJETIVOS', icon: <Target size={22} />, label: 'Metas' },
+    material: { id: 'suministros', icon: <Archive size={22} />, label: 'Material' },
+    diad: { id: 'dia-d', icon: <ActivityIcon size={22} />, label: 'Día D' },
+    admin: { id: 'admin', icon: <ShieldAlert size={22} />, label: 'Admin' },
+  };
+  const diad = diaDActive || mando ? [T.diad] : [];
+  if (role === 'brigadista') return [T.campo, T.profile, T.metas, T.map, ...(diaDActive ? [T.diad] : [T.material])];
+  if (role === 'lider') return [T.campo, T.profile, T.crm, T.metas, T.map, ...(diaDActive ? [T.diad] : [])];
+  if (role === 'coordinador_logistica') return [T.material, T.crm, T.map, ...diad];
+  if (role === 'comunicacion' || role === 'comunicacion_digital') return [T.crm, T.metas, T.map, ...diad];
+  if (role === 'coordinador') return [T.crm, T.campo, T.profile, T.map, T.metas, T.material, ...diad];
+  return [T.crm, T.campo, T.profile, T.map, T.metas, T.material, ...diad, ...(role === 'superadmin' ? [T.admin] : [])];
+};
+
 // --- Main Brigadista/Lider Dashboard (The PWA Core) ---
 const MainDashboard = () => {
   const [activeTab, setActiveTab] = useState('profile')
@@ -82,7 +112,10 @@ const MainDashboard = () => {
 
   // El brigadista abre directo en su bitácora de campo
   useEffect(() => {
-    if (user?.role === 'brigadista') setActiveTab('campo');
+    const r = user?.role || '';
+    if (['brigadista', 'lider'].includes(r)) setActiveTab('campo');
+    else if (MANDO_ROLES.includes(r) || ['comunicacion', 'comunicacion_digital'].includes(r)) setActiveTab('crm');
+    else if (r === 'coordinador_logistica') setActiveTab('suministros');
   }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
   const plan = useMyPlan(!!user);
@@ -128,7 +161,8 @@ const MainDashboard = () => {
   const loadAgentContext = () => {
     if (user) {
       // If user has not completed onboarding, force it
-      setHasOnboarded(!user.is_first_login);
+      // Bienvenida + aviso de privacidad una sola vez; la contraseña se pide después (PasswordSetModal)
+      setHasOnboarded(!!user.privacy_version);
       setAgentContext({
         name: user.name,
         xp: user.xp || 0,
@@ -186,31 +220,18 @@ const MainDashboard = () => {
         top: 0
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 'var(--header-height)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-            <div className="pulsate" style={{
-              backgroundColor: 'rgba(255, 90, 54, 0.1)',
-              border: '2px solid var(--primary)',
-              width: '40px',
-              height: '40px',
-              minWidth: '40px',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: '900',
-              fontFamily: 'Oswald, sans-serif',
-              color: 'var(--primary)'
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
+            <div aria-hidden="true" style={{
+              width: 42, height: 42, minWidth: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem'
             }}>
-              <span>LV</span> {Math.floor(Number(user?.xp || agentContext.xp || 0) / 500) + 1}
+              {(user?.name || agentContext.name || '?').trim().charAt(0).toUpperCase()}
             </div>
-
-            <div className="flex-col">
-              <div style={{ fontSize: 'clamp(1.1rem, 3.5vw, 1.5rem)', fontWeight: '800', color: 'var(--tertiary)', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.1, textShadow: '0 0 10px rgba(0, 212, 255, 0.3)' }}>
-                {user?.rank_name || agentContext.rank}
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                Hola, {(user?.name || agentContext.name || '').split(' ')[0]}
               </div>
-              <div className="hide-mobile" style={{ fontSize: '0.85rem', color: '#E2E8F0', fontWeight: '500', fontFamily: 'Inter, sans-serif', letterSpacing: '0.05em', marginTop: '2px' }}>
-                <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>AGENTE:</span> {user?.name || agentContext.name}
-              </div>
+              <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{ROLE_LABEL[user?.role || ''] || 'Equipo'}</div>
             </div>
           </div>
 
@@ -226,7 +247,7 @@ const MainDashboard = () => {
             }}>
               <Star size={16} color="var(--tertiary)" />
               <span className="tactical-font" style={{ fontSize: '1.1rem', color: 'var(--tertiary)' }}>
-                {user?.xp || agentContext.xp || 0} <span className="hide-mobile"><span>XP</span></span>
+                {user?.xp || agentContext.xp || 0} <span style={{ fontSize: '0.7rem' }}>pts</span>
               </span>
             </div>
 
@@ -284,7 +305,10 @@ const MainDashboard = () => {
               <button onClick={() => setShowAccount(true)} aria-label="Mi cuenta" title="Mi cuenta" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <UserCog size={24} color="var(--tertiary)" />
               </button>
-              <button onClick={plan?.sandbox ? () => endDemo() : signOut} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
+              <button onClick={() => {
+                if (plan?.sandbox) { if (confirm('¿Salir de la demo? Se borrará todo lo que hiciste.')) endDemo(); }
+                else if (confirm('¿Cerrar sesión?')) signOut();
+              }} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <LogOut size={24} color="var(--secondary)" />
               </button>
               {showAccount && <Suspense fallback={null}><MyAccount onClose={() => setShowAccount(false)} /></Suspense>}
@@ -292,16 +316,6 @@ const MainDashboard = () => {
           </div>
         </div>
 
-        {/* Progress Bar - Always Visible but Sleek */}
-        <div style={{ backgroundColor: 'rgba(255,255,255,0.1)', height: '4px', borderRadius: '2px', overflow: 'hidden', marginTop: '0.2rem' }}>
-          <div style={{
-            background: 'linear-gradient(90deg, var(--primary) 0%, #FF8A66 100%)',
-            height: '100%',
-            width: `${agentContext.levelProgression}%`,
-            transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-            boxShadow: '0 0 10px var(--primary)'
-          }}></div>
-        </div>
       </header>
 
       {/* Main Content Area */}
@@ -328,92 +342,20 @@ const MainDashboard = () => {
         </Suspense>
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="bottom-nav">
-        {[
-          { id: 'profile', icon: <Users size={24} />, label: 'MISIÓN' },
-          // Bitácora de campo: quien trabaja territorio y su cadena de mando
-          ...(['brigadista', 'lider', 'coordinador_territorial', 'coordinador', 'coordinador_campana', 'candidato'].includes(user?.role || '')
-            ? [{ id: 'campo', icon: <Camera size={24} />, label: 'CAMPO' }] : []),
-          { id: 'map', icon: <MapIcon size={24} />, label: 'RADAR' },
-          { id: 'crm', icon: <List size={24} />, label: ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '') ? 'MANDO' : 'SQUAD' },
-          { id: 'OBJETIVOS', icon: <Target size={24} />, label: 'OBJETIVOS' },
-          { id: 'suministros', icon: <Archive size={24} />, label: 'LOGÍSTICA' }
-        ].map(tab => (
+      {/* Navegación inferior: siempre con texto, y solo lo que le sirve a cada perfil */}
+      <nav className="bottom-nav" aria-label="Secciones">
+        {navTabs(user?.role || '', diaDActive).map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: activeTab === tab.id ? 'var(--primary)' : '#64748B',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-              fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', fontSize: '0.7rem'
-            }}
+            onClick={() => tab.id === 'admin' ? (window.location.href = '/superadmin') : setActiveTab(tab.id)}
+            aria-current={activeTab === tab.id ? 'page' : undefined}
+            className={`nav-tab ${activeTab === tab.id ? 'on' : ''}`}
           >
             {tab.icon}
-            <span className="hide-mobile">{tab.label}</span>
+            <span>{tab.label}</span>
           </button>
         ))}
-
-        {/* Dynamic Dia D Tab */}
-        {(diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && (
-          <button
-            onClick={() => setActiveTab('dia-d')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: activeTab === 'dia-d' ? 'var(--primary)' : diaDActive ? '#FF8A66' : '#64748B',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-              fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', fontSize: '0.7rem'
-            }}
-          >
-            <ActivityIcon size={24} className={diaDActive ? 'pulsate' : ''} />
-            <span className="hide-mobile">DÍA D</span>
-          </button>
-        )}
-
-        {/* MODO DIOS ACCESS (Only for Superadmins) */}
-        {user?.role === 'superadmin' && (
-          <button
-            onClick={() => window.location.href = '/superadmin'}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--primary)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-              fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', fontSize: '0.7rem',
-              filter: 'drop-shadow(0 0 5px rgba(255,90,54,0.5))'
-            }}
-          >
-            <ShieldAlert size={24} />
-            <span className="hide-mobile">MODO DIOS</span>
-          </button>
-        )}
-
-        {/* AJUSTES DE PERFIL (Para todos los usuarios logueados) */}
-        {user && (
-          <button
-            onClick={() => {
-              const pass = prompt("Establecer nueva contraseña permanente:");
-              if (pass && pass.length >= 6) {
-                (window as any)._updatePassword(pass);
-              } else if (pass) {
-                alert("Mínimo 6 caracteres reglamentarios.");
-              }
-            }}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#64748B',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-              fontFamily: 'Oswald, sans-serif', textTransform: 'uppercase', fontSize: '0.7rem'
-            }}
-          >
-            <Settings size={24} />
-            <span className="hide-mobile">AJUSTES</span>
-          </button>
-        )}
       </nav>
-
-
-
 
       {/* TOAST NOTIFICATION RENDERER */}
       <div style={{

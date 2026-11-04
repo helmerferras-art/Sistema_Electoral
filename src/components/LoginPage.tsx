@@ -60,7 +60,7 @@ export const LoginPage = () => {
 
         if (verify2Error) {
             setLoading(false);
-            setError(verify2Error.message || 'Código 2FA táctico incorrecto.');
+            setError(verify2Error.message || 'El código no es correcto. Revisa el mensaje e inténtalo de nuevo.');
         } else {
             navigate('/');
         }
@@ -78,7 +78,7 @@ export const LoginPage = () => {
                     </div>
                     <h1 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, letterSpacing: '0.1em' }}>TLATOANI</h1>
                     <p style={{ color: 'var(--tertiary)', fontFamily: 'Inter, sans-serif', marginTop: '0.5rem', letterSpacing: '0.2em', fontSize: '0.8rem' }}>
-                        ACCESO RESTRINGIDO
+                        Entra con tu número de celular
                     </p>
                 </div>
 
@@ -92,9 +92,7 @@ export const LoginPage = () => {
                     {step === 'PHONE' ? (
                         <form onSubmit={handleSendOtp} className="flex-col gap-2">
                             <p style={{ color: '#94A3B8', fontSize: '0.9rem', textAlign: 'center' }}>
-                                <span>Ingresa tu número celular </span>
-                                <strong style={{ color: 'var(--primary)' }}>PREVIAMENTE REGISTRADO</strong>
-                                <span> para recibir tu código táctico de acceso.</span>
+                                <span>Escribe el celular con el que te registró tu equipo.</span>
                             </p>
 
                             <div style={{ position: 'relative' }}>
@@ -102,10 +100,11 @@ export const LoginPage = () => {
                                 <input
                                     type="tel"
                                     className="squishy-input"
-                                    placeholder="[ TU NÚMERO CELULAR ]"
+                                    placeholder="Ej. 961 123 4567"
+                                    inputMode="numeric"
                                     value={phone}
-                                    onChange={(e) => setPhone(e.target.value)}
-                                    style={{ paddingLeft: '3rem', textAlign: 'left', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.1em' }}
+                                    onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, '').slice(-10))}
+                                    style={{ paddingLeft: '3rem', textAlign: 'left', fontSize: '1.2rem', letterSpacing: '0.05em' }}
                                     required
                                     autoComplete="tel"
                                 />
@@ -122,7 +121,7 @@ export const LoginPage = () => {
                                 ) : (
                                     <>
                                         <Shield size={20} />
-                                        <span>INGRESAR AL SISTEMA</span>
+                                        <span>Continuar</span>
                                     </>
                                 )}
                             </button>
@@ -130,10 +129,9 @@ export const LoginPage = () => {
                     ) : step === 'OTP' ? (
                         <form onSubmit={handleVerifyOtp} className="flex-col gap-2">
                             <p style={{ color: '#94A3B8', fontSize: '0.9rem', textAlign: 'center' }}>
-                                <span>Ingresa tu </span>
-                                <strong>Código Táctico</strong>
-                                <span> (si es tu primer acceso) o tu </span>
-                                <strong>Contraseña Permanente</strong>.
+                                <span>Si es tu primera vez, escribe el </span>
+                                <strong>código que te mandaron por mensaje</strong>
+                                <span>. Si ya tienes contraseña, escríbela.</span>
                             </p>
 
                             <div style={{ position: 'relative' }}>
@@ -141,7 +139,7 @@ export const LoginPage = () => {
                                 <input
                                     type="password"
                                     className="squishy-input"
-                                    placeholder="[ CÓDIGO O CONTRASEÑA ]"
+                                    placeholder="Código o contraseña"
                                     value={token}
                                     onChange={(e) => setToken(e.target.value)}
                                     style={{ paddingLeft: '3rem', textAlign: 'center', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.2em', fontSize: '1.2rem' }}
@@ -159,7 +157,7 @@ export const LoginPage = () => {
                                 {loading ? (
                                     <Loader2 className="spin" size={20} />
                                 ) : (
-                                    <span>DESBLOQUEAR ACCESO</span>
+                                    <span>Entrar</span>
                                 )}
                             </button>
 
@@ -175,13 +173,12 @@ export const LoginPage = () => {
                         <form onSubmit={handleVerify2FA} className="flex-col gap-2">
                             <div style={{ textAlign: 'center', padding: '0.5rem', border: '1px dashed var(--primary)', borderRadius: '8px', marginBottom: '0.5rem' }}>
                                 <Shield size={24} color="var(--primary)" style={{ marginBottom: '0.5rem' }} />
-                                <p style={{ color: 'var(--primary)', fontSize: '0.9rem', fontWeight: 'bold', margin: 0 }}>DESAFÍO 2FA ACTIVADO</p>
+                                <p style={{ color: 'var(--primary)', fontSize: '0.9rem', fontWeight: 'bold', margin: 0 }}>Un paso más para cuidar tu cuenta</p>
                             </div>
                             <p style={{ color: '#94A3B8', fontSize: '0.9rem', textAlign: 'center' }}>
-                                <span>Se ha enviado un </span>
-                                <strong style={{ color: 'var(--tertiary)' }}>Código de Verificación Táctico</strong>
-                                <span> a tu dispositivo vía WhatsApp/SMS. </span>
-                                <strong>Ingrésalo para continuar.</strong>
+                                <span>Te mandamos un </span>
+                                <strong style={{ color: 'var(--tertiary)' }}>código de 6 números</strong>
+                                <span> por mensaje. Escríbelo aquí.</span>
                             </p>
 
                             <div style={{ position: 'relative' }}>
@@ -189,7 +186,8 @@ export const LoginPage = () => {
                                 <input
                                     type="text"
                                     className="squishy-input"
-                                    placeholder="[ CÓDIGO 2FA ]"
+                                    placeholder="000000"
+                                    inputMode="numeric"
                                     value={twoFactorToken}
                                     onChange={(e) => setTwoFactorToken(e.target.value)}
                                     style={{ paddingLeft: '3rem', textAlign: 'center', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.3em', fontSize: '1.5rem', color: 'var(--primary)' }}
@@ -207,7 +205,7 @@ export const LoginPage = () => {
                                 {loading ? (
                                     <Loader2 className="spin" size={20} />
                                 ) : (
-                                    <span>CONFIRMAR IDENTIDAD</span>
+                                    <span>Confirmar</span>
                                 )}
                             </button>
 
@@ -239,7 +237,7 @@ export const LoginPage = () => {
 
             <div style={{ position: 'fixed', bottom: '1rem', color: '#475569', fontSize: '0.8rem', fontFamily: 'Oswald, sans-serif', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={{ width: '8px', height: '8px', backgroundColor: 'var(--tertiary)', borderRadius: '50%', animation: 'pulse 2s infinite' }}></span>
-                CONEXIÓN SEGURA P2P
+                Conexión segura
             </div>
         </div>
     );

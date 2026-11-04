@@ -105,7 +105,7 @@ export const BrigadistaDashboard = () => {
                         onClick={() => setActiveSubTab('reclutar')}
                         style={{ background: 'transparent', color: activeSubTab === 'reclutar' ? 'var(--tertiary)' : '#64748B', whiteSpace: 'nowrap' }}
                     >
-                        <Users size={18} /> RECLUTAR
+                        <Users size={18} /> Agregar a mi equipo
                     </button>
                 )}
                 <button

@@ -16,6 +16,7 @@ type UserData = {
     longitude?: number;
     is_first_login?: boolean;
     two_factor_enabled?: boolean;
+    privacy_version?: string | null;
     tenantScope: string[];
 };
 
@@ -172,7 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
-            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
+            return { error: { message: 'Ese número no está registrado. Pide a tu coordinador o líder que te dé de alta.' } };
         }
 
         if (foundUser.is_first_login) {
@@ -196,7 +197,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
-            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
+            return { error: { message: 'Ese número no está registrado. Pide a tu coordinador o líder que te dé de alta.' } };
         }
 
         // token = código táctico (primer login) o contraseña permanente (login normal).
@@ -205,7 +206,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: token });
 
         if (signInErr || !signInData.session) {
-            return { error: { message: foundUser.is_first_login ? 'Código táctico incorrecto.' : 'Contraseña incorrecta.' } };
+            return { error: { message: foundUser.is_first_login ? 'El código no es correcto. Revisa el mensaje que te llegó.' : 'Contraseña incorrecta.' } };
         }
 
         // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---

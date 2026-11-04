@@ -407,7 +407,7 @@ export const HighCommandDashboard = () => {
     };
 
     if (loading) {
-        return <div className="flex-center" style={{ padding: '2rem', color: 'var(--primary)', fontFamily: 'Oswald' }}>INICIALIZANDO C4I...</div>;
+        return <div className="flex-center" style={{ padding: '2rem', color: 'var(--primary)', fontFamily: 'Oswald' }}>Cargando…</div>;
     }
 
     return (
@@ -439,7 +439,7 @@ export const HighCommandDashboard = () => {
                         </div>
                         <div>
                             <h1 style={{ margin: 0, fontSize: '1.8rem', color: 'white', textShadow: diaDActive ? '0 0 10px #EF4444' : 'none' }}>
-                                {diaDActive ? 'DÍA D: COMANDO DE ASALTO' : 'C4I STRATEGIC'}
+                                {diaDActive ? 'DÍA D EN CURSO' : 'TABLERO DE CAMPAÑA'}
                             </h1>
                             <p className="tactical-font" style={{ margin: 0, color: diaDActive ? '#EF4444' : 'var(--tertiary)', fontSize: '0.8rem' }}>ACCESO: {user?.role}</p>
                         </div>
@@ -447,7 +447,7 @@ export const HighCommandDashboard = () => {
                     </div>
                     {['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '') && (
                         <button onClick={() => setIsAddingUser(true)} className="squishy-btn primary">
-                            <UserPlus size={18} /> RECLUTAR
+                            <UserPlus size={18} /> Agregar persona
                         </button>
                     )}
                 </div>
@@ -776,7 +776,7 @@ export const HighCommandDashboard = () => {
                                     <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.1)', color: '#64748B' }}>
                                         <th style={{ padding: '0.5rem' }}>OPERADOR</th>
                                         <th style={{ padding: '0.5rem' }}>INVERSIÓN</th>
-                                        <th style={{ padding: '0.5rem' }}>RECLUTAS</th>
+                                        <th style={{ padding: '0.5rem' }}>REGISTROS</th>
                                         <th style={{ padding: '0.5rem' }}>ROI (CPV)</th>
                                     </tr>
                                 </thead>
@@ -820,7 +820,7 @@ export const HighCommandDashboard = () => {
                 <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '1rem' }}>
                     <div className="tactile-card" style={{ width: '100%', maxWidth: '450px', border: '1px solid var(--primary)' }}>
                         <div className="flex-row-resp" style={{ justifyContent: 'space-between', marginBottom: '1rem' }}>
-                            <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)' }}>// RECLUTAR OPERADOR</h3>
+                            <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)' }}>Agregar persona al equipo</h3>
                             <X size={24} style={{ cursor: 'pointer' }} onClick={() => { setIsAddingUser(false); setSelectedSectionsForNewUser([]); }} />
                         </div>
                         <form onSubmit={handleAddUser} className="flex-col gap-4">
@@ -860,7 +860,7 @@ export const HighCommandDashboard = () => {
                                 {(!user?.assigned_territory?.zone_ids || user.assigned_territory.zone_ids.length === 0) && !['superadmin', 'candidato'].includes(user?.role || '') ? (
                                     <div style={{ padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #EF4444', borderRadius: '8px', textAlign: 'center' }}>
                                         <p style={{ margin: 0, color: '#EF4444', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                                            BLOQUEO TÁCTICO: No tienes un área asignada. Debes solicitar a tu superior que te asigne secciones antes de poder reclutar.
+                                            Aún no tienes secciones asignadas. Pide a tu coordinador que te las asigne para poder agregar gente.
                                         </p>
                                     </div>
                                 ) : (
@@ -905,7 +905,7 @@ export const HighCommandDashboard = () => {
                                 style={{ width: '100%', padding: '1.2rem', marginTop: '1rem', fontSize: '1.2rem' }}
                                 disabled={isSubmittingUser || (selectedSectionsForNewUser.length === 0 && !['superadmin', 'candidato'].includes(user?.role || ''))}
                             >
-                                {isSubmittingUser ? 'RECLUTANDO...' : 'CONFIRMAR REGISTRO'}
+                                {isSubmittingUser ? 'Guardando…' : 'Agregar'}
                             </button>
                         </form>
                     </div>
