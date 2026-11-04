@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { PollingStations } from './PollingStations';
 import { AlertCircle, Camera, Upload, ShieldAlert, Zap } from 'lucide-react';
 
 export const DiaDDashboard = () => {
@@ -114,6 +115,7 @@ export const DiaDDashboard = () => {
             animation: isPanicActive ? 'red-panic-flash 0.5s infinite' : 'none',
             paddingBottom: '5rem'
         }}>
+            <PollingStations />
             <style>{`
                 @keyframes red-panic-flash {
                     0% { background-color: transparent; }

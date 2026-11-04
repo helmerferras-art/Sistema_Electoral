@@ -25,6 +25,9 @@ const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => 
 const EventsModule = lazy(() => import('./components/EventsModule').then(m => ({ default: m.EventsModule })));
 const PublicEvent = lazy(() => import('./components/PublicEvent').then(m => ({ default: m.PublicEvent })));
 const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ default: m.LegalPage })));
+const PublicJoin = lazy(() => import('./components/PublicJoin').then(m => ({ default: m.PublicJoin })));
+const ReferralNetwork = lazy(() => import('./components/ReferralNetwork').then(m => ({ default: m.ReferralNetwork })));
+const WalkZones = lazy(() => import('./components/WalkZones').then(m => ({ default: m.WalkZones })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { NotificationProvider, useNotifications } from './lib/NotificationContext'
@@ -308,8 +311,8 @@ const MainDashboard = () => {
         {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
-        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><EventsModule /><CriticalPath /></>)}
-        {activeTab === 'campo' && <FieldActivity />}
+        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><EventsModule /><ReferralNetwork /><CriticalPath /></>)}
+        {activeTab === 'campo' && (<><WalkZones /><FieldActivity /></>)}
         </Suspense>
       </main>
 
@@ -467,6 +470,7 @@ function AppContent() {
         <Route path="/v/:token" element={<div className="app-container" style={{ padding: '1rem' }}><VerifyVisit /></div>} />
         <Route path="/privacidad" element={<div className="app-container" style={{ padding: '1rem' }}><LegalPage kind="privacidad" /></div>} />
         <Route path="/terminos" element={<div className="app-container" style={{ padding: '1rem' }}><LegalPage kind="terminos" /></div>} />
+        <Route path="/u/:code" element={<div className="app-container" style={{ padding: '1rem' }}><PublicJoin /></div>} />
         <Route path="/e/:token" element={<div className="app-container" style={{ padding: '1rem' }}><PublicEvent /></div>} />
 
         {/* Landing Page Dinámica de Candidato (NEMIA) */}

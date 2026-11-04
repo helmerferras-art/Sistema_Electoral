@@ -10,6 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getPositionOnce, locationErrorText } from '../lib/location';
 import { loadActiveGuion, visibleQuestions, pruneAnswers, type Poll } from '../lib/engagement';
 import { TrainingCenter } from './TrainingCenter';
+import { logKnock } from './WalkZones';
 
 export const RegistroForm = () => {
     const { user } = useAuth();
@@ -191,6 +192,8 @@ export const RegistroForm = () => {
             };
 
             await saveOfflineSupporter(supporterData);
+            // Si el brigadista está recorriendo una zona, la puerta cuenta como "registrado"
+            if (user) logKnock('registrado').catch(() => { });
 
             // Última ubicación conocida del brigadista (para el mapa de su coordinador). No bloquea el registro.
             if (user && navigator.onLine && lat && lng) {
