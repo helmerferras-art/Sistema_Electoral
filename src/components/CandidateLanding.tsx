@@ -51,7 +51,7 @@ export const CandidateLanding = () => {
     if (loading) {
         return (
             <div className="flex-center flex-col" style={{ height: '100vh', background: 'var(--bg-color)' }}>
-                <div className="pulsate" style={{ fontSize: '2rem', color: 'var(--primary)', fontFamily: 'Oswald' }}>NEMIA</div>
+                <div className="pulsate" style={{ fontSize: '2rem', color: 'var(--primary)', fontFamily: 'Oswald' }}>TLATOANI</div>
                 <p style={{ color: '#888' }}>Cargando plataforma social...</p>
             </div>
         );
@@ -62,8 +62,8 @@ export const CandidateLanding = () => {
             <div className="flex-center flex-col" style={{ height: '100vh', background: 'var(--bg-color)', padding: '2rem', textAlign: 'center' }}>
                 <AlertTriangle size={64} color="var(--primary)" />
                 <h1 style={{ fontFamily: 'Oswald', color: 'white' }}>PLATAFORMA NO ENCONTRADA</h1>
-                <p style={{ color: '#888' }}>El enlace que seguiste no pertenece a ningún candidato activo en NEMIA.</p>
-                <button onClick={() => navigate('/login')} className="squishy-btn primary" style={{ marginTop: '1rem' }}>IR AL PORTAL NEMIA</button>
+                <p style={{ color: '#888' }}>El enlace que seguiste no pertenece a ningún candidato activo en Tlatoani.</p>
+                <button onClick={() => navigate('/login')} className="squishy-btn primary" style={{ marginTop: '1rem' }}>IR AL PORTAL TLATOANI</button>
             </div>
         );
     }
@@ -83,7 +83,7 @@ export const CandidateLanding = () => {
                     fontFamily: 'Oswald',
                     letterSpacing: '0.2em',
                     marginBottom: '1rem'
-                }}>BIENVENIDO A NEMIA</div>
+                }}>BIENVENIDO A TLATOANI</div>
 
                 <h1 style={{ fontFamily: 'Oswald', fontSize: '3rem', margin: '0 0 0.5rem 0', textTransform: 'uppercase' }}>
                     {candidate?.name || tenant.name}

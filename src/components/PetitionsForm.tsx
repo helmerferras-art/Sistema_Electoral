@@ -109,7 +109,7 @@ export const PetitionsForm = () => {
             <div className="flex-center flex-col" style={{ height: '80vh', textAlign: 'center', padding: '2rem' }}>
                 <div style={{ color: 'var(--secondary)', marginBottom: '1.5rem' }}><CheckCircle size={80} /></div>
                 <h2 style={{ fontFamily: 'Oswald', color: 'white' }}>¡REPORTE RECIBIDO!</h2>
-                <p style={{ color: '#94A3B8', marginBottom: '2rem' }}>Gracias por participar. Tu demanda ha sido registrada en el sistema NEMIA y el equipo del candidato comenzará la gestión ante las autoridades correspondientes.</p>
+                <p style={{ color: '#94A3B8', marginBottom: '2rem' }}>Gracias por participar. Tu demanda ha sido registrada en Tlatoani y el equipo del candidato comenzará la gestión ante las autoridades correspondientes.</p>
                 <button onClick={() => navigate(-1)} className="squishy-btn primary">VOLVER AL INICIO</button>
             </div>
         );
@@ -125,7 +125,7 @@ export const PetitionsForm = () => {
             </button>
 
             <h1 style={{ fontFamily: 'Oswald', color: 'white', marginBottom: '0.5rem' }}>NUEVA GESTIÓN SOCIAL</h1>
-            <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '2rem' }}>Reporta necesidades de tu comunidad para que NEMIA las canalice a los niveles de gobierno correctos.</p>
+            <p style={{ color: '#64748B', fontSize: '0.9rem', marginBottom: '2rem' }}>Reporta necesidades de tu comunidad para que Tlatoani las canalice a los niveles de gobierno correctos.</p>
 
             <form onSubmit={handleSubmit} className="flex-col gap-4">
                 <div className="flex-col">

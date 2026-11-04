@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getDeviceId } from '../lib/verification';
+import { InviteShare } from './InviteShare';
 
 type Info = {
     estado: 'pendiente' | 'confirmado' | 'baja' | 'no_encontrado';
-    persona?: string; brigadista?: string; campana?: string; aviso_url?: string | null;
+    persona?: string; brigadista?: string; campana?: string; aviso_url?: string | null; aviso_version?: string; invita_codigo?: string | null;
     titulo?: string | null; mensaje?: string | null; media_url?: string | null; media_tipo?: 'imagen' | 'video' | null;
     redes?: Record<string, string> | null;
 };
@@ -44,7 +45,11 @@ export const VerifyVisit = () => {
         });
         const estado = (data as any)?.estado;
         if (estado === 'falta_telefono') setError('Escribe tu número de celular a 10 dígitos.');
-        else if (estado === 'confirmado') setInfo(prev => prev && { ...prev, estado: 'confirmado' });
+        else if (estado === 'confirmado') {
+            // Vuelve a leer para recibir el enlace personal de invitación
+            const { data: fresh } = await supabase.rpc('fn_verification_info', { p_token: token });
+            setInfo(prev => (fresh as Info) || (prev && { ...prev, estado: 'confirmado' }));
+        }
         setSending(false);
     };
 
@@ -92,7 +97,7 @@ export const VerifyVisit = () => {
                     {sending ? 'Un momento...' : 'Continuar'}
                 </button>
                 <p style={{ fontSize: '0.75rem', color: '#9aa', margin: 0 }}>
-                    Al continuar aceptas que {info.campana || 'el equipo'} guarde tu nombre y celular para mantenerte informado.{' '}
+                    Al continuar das tu consentimiento expreso para que {info.campana || 'el equipo'} guarde tu nombre, tu celular y tu simpatía por este proyecto para mantenerte informado (aviso versión {info.aviso_version || '1.0'}).{' '}
                     <button onClick={() => setShowNotice(!showNotice)} style={linkBtn}>Aviso de privacidad</button>
                 </p>
                 {showNotice && <Notice info={info} />}
@@ -120,6 +125,8 @@ export const VerifyVisit = () => {
             <p style={{ margin: 0, whiteSpace: 'pre-line' }}>
                 {info.mensaje || `Gracias por tomarte el tiempo de platicar con ${info.brigadista || 'nuestro equipo'}. Tu opinión nos importa.`}
             </p>
+
+            {info.invita_codigo && <InviteShare code={info.invita_codigo} campaign={info.campana} />}
 
             {redes.length > 0 && (
                 <div className="flex-col" style={{ gap: '0.4rem', marginTop: '0.4rem' }}>

@@ -153,7 +153,7 @@ export const PetitionsManager = () => {
                     <div className="flex-col gap-4">
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
                             <label style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase' }}>Reportado por</label>
-                            <div style={{ color: 'white', fontWeight: 'bold' }}>{selectedPetition.is_anonymous ? 'Ciudadano Anónimo' : (selectedPetition.reporter?.name || 'Usuario NEMIA')}</div>
+                            <div style={{ color: 'white', fontWeight: 'bold' }}>{selectedPetition.is_anonymous ? 'Ciudadano Anónimo' : (selectedPetition.reporter?.name || 'Usuario Tlatoani')}</div>
                             {selectedPetition.reporter?.phone && !selectedPetition.is_anonymous && (
                                 <a href={`https://wa.me/${selectedPetition.reporter.phone}`} target="_blank" className="flex-center" style={{ marginTop: '0.5rem', background: '#25D366', color: 'white', padding: '0.5rem', borderRadius: '4px', textDecoration: 'none', fontSize: '0.8rem', gap: '0.5rem' }}>
                                     <MessageCircle size={16} /> ENVIAR ESTATUS POR WHATSAPP

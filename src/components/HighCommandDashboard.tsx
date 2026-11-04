@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { ShieldAlert, Target, Activity as ActivityIcon, HeartPulse, Eye, Shield, Zap, DollarSign, Trophy, UserPlus, X, MessageCircle, PhoneCall, Users, Map as MapIcon, Brain } from 'lucide-react';
 import { C4IPollManager } from './C4IPollManager';
+import { SectionBrief } from './SectionBrief';
 import { C4IFinanceManager } from './C4IFinanceManager';
 import { PetitionsManager } from './PetitionsManager';
 import { AlliancesManager } from './AlliancesManager';
@@ -631,6 +632,7 @@ export const HighCommandDashboard = () => {
                             </div>
                         </div>
 
+                        <div style={{ gridColumn: 'span 2' }}><SectionBrief /></div>
                         <div className="tactile-card glow-tertiary" style={{ gridColumn: 'span 2', borderTop: '2px solid var(--tertiary)' }}>
                             <C4IPollManager />
                         </div>
