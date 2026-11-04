@@ -247,7 +247,7 @@ export const CriticalPath = () => {
 
                     {tasks.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748B' }}>
-                            No hay misiones programadas en la ruta crítica. Configura la agenda para movilizar al equipo.
+                            Todavía no hay actividades en el calendario.
                         </div>
                     )}
                 </div>

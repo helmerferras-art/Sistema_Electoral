@@ -220,7 +220,7 @@ const MainDashboard = () => {
         top: 0
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 'var(--header-height)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: '1 1 auto' }}>
             <div aria-hidden="true" style={{
               width: 42, height: 42, minWidth: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem'
@@ -235,20 +235,13 @@ const MainDashboard = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.5rem, 2vw, 1.5rem)' }}>
-            <div style={{
-              backgroundColor: 'rgba(0, 212, 255, 0.1)',
-              padding: '0.3rem 0.6rem',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              border: '1px solid var(--tertiary)',
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(0.2rem, 1.5vw, 1.2rem)', flex: '0 0 auto' }}>
+            <div title="Tus puntos" style={{
+              backgroundColor: 'rgba(0, 212, 255, 0.1)', padding: '0.2rem 0.45rem', borderRadius: 999,
+              display: 'flex', alignItems: 'center', gap: '0.25rem', border: '1px solid var(--tertiary)', whiteSpace: 'nowrap',
             }}>
-              <Star size={16} color="var(--tertiary)" />
-              <span className="tactical-font" style={{ fontSize: '1.1rem', color: 'var(--tertiary)' }}>
-                {user?.xp || agentContext.xp || 0} <span style={{ fontSize: '0.7rem' }}>pts</span>
-              </span>
+              <Star size={14} color="var(--tertiary)" />
+              <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--tertiary)' }}>{user?.xp || agentContext.xp || 0}</span>
             </div>
 
             <div style={{ position: 'relative', display: 'flex', gap: '0.5rem' }}>

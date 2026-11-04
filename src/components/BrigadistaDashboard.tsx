@@ -172,7 +172,7 @@ export const BrigadistaDashboard = () => {
                                 <div key={idx} className="tactile-card flex-row-resp" style={{ justifyContent: 'space-between', borderLeft: '4px solid var(--primary)' }}>
                                     <div>
                                         <p style={{ margin: 0, fontWeight: 'bold' }}>{sup.name}</p>
-                                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--primary)' }}>PENDIENTE DE SYNC</p>
+                                        <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--primary)' }}>SIN ENVIAR TODAVÍA</p>
                                     </div>
                                     <div style={{ color: 'var(--accent)' }}>{'⭐'.repeat(sup.commitment_level)}</div>
                                 </div>

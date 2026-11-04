@@ -39,7 +39,7 @@ export const PlanBar = ({ plan, role }: { plan: MyPlan | null; role?: string }) 
                             setBusy(true); setError('');
                             try { await switchDemoRole(e.target.value); } catch (err: any) { setError(err.message); setBusy(false); }
                         }}
-                        style={{ background: '#0F1218', color: '#fff', border: '1px solid #E8743B', borderRadius: 8, padding: '0.25rem 0.4rem', fontSize: '0.78rem' }}
+                        style={{ background: '#0F1218', color: '#fff', border: '1px solid #E8743B', borderRadius: 8, padding: '0.25rem 0.3rem', fontSize: '0.78rem', maxWidth: 140 }}
                     >
                         {DEMO_ROLES.map(r => <option key={r.role} value={r.role}>{r.label}</option>)}
                     </select>

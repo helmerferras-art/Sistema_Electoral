@@ -450,7 +450,7 @@ export const RegistroForm = () => {
                     padding: '1rem', backdropFilter: 'blur(5px)'
                 }}>
                     <div className="tactile-card" style={{
-                        maxWidth: '400px', width: '100%', position: 'relative',
+                        maxWidth: '400px', width: '100%', position: 'relative', height: 'auto', maxHeight: '92vh', overflowY: 'auto',
                         border: '2px solid var(--primary)', animation: 'fadeInScale 0.3s ease-out'
                     }}>
                         <button
@@ -473,7 +473,7 @@ export const RegistroForm = () => {
                                 ¡Registro guardado!
                             </h2>
                             <p style={{ color: 'var(--tertiary)', fontWeight: 'bold' }}>
-                                Ganas hasta {xpGained} puntos cuando la persona confirme
+                                Ganas puntos cuando la persona confirme la visita
                             </p>
                         </div>
 
@@ -519,7 +519,7 @@ export const RegistroForm = () => {
                         <button
                             className="squishy-btn"
                             onClick={() => setShowQR(false)}
-                            style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', backgroundColor: 'transparent', border: '1px solid #64748B', color: '#64748B' }}
+                            style={{ width: '100%', marginTop: '1rem', padding: '0.9rem', backgroundColor: 'transparent', border: '1px solid #CBD5E1', color: '#fff' }}
                         >
                             Listo, registrar a otra persona
                         </button>

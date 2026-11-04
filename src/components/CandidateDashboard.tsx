@@ -255,7 +255,7 @@ export const CandidateDashboard = () => {
 
             {/* Navigation Tabs */}
             {/* Todas las opciones a la vista (antes había que deslizar de lado para descubrirlas) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(104px, 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
                 <TabButton active={activeTab === 'pulso'} onClick={() => setActiveTab('pulso')} icon={<Activity size={18} />} label="Resumen" />
                 <TabButton active={activeTab === 'monitoreo'} onClick={() => setActiveTab('monitoreo')} icon={<Globe size={18} />} label="Redes" />
                 <TabButton active={activeTab === 'activismo'} onClick={() => setActiveTab('activismo')} icon={<Users size={18} />} label="Equipo" />
