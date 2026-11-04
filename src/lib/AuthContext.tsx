@@ -32,6 +32,8 @@ type AuthContextType = {
     impersonateUser: (targetUser: any) => Promise<void>;
     abortImpersonation: () => Promise<void>;
     isImpersonating: boolean;
+    /** Hay sesión (p. ej. Google) pero todavía no existe su perfil en una campaña */
+    profileMissing: boolean;
 };
 
 const toSyntheticEmail = (phone: string) => {
@@ -46,6 +48,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [session, setSession] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [isImpersonating, setIsImpersonating] = useState(false);
+    const [profileMissing, setProfileMissing] = useState(false);
 
     useEffect(() => {
         // Bypass persistence check for non-production environments if explicitly set
@@ -116,8 +119,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .eq('auth_id', authId)
                 .single();
 
+            setProfileMissing(!data && error?.code === 'PGRST116');
             if (error) {
-                console.error("Error fetching user profile:", error);
+                if (error.code !== 'PGRST116') console.error("Error fetching user profile:", error);
             } else if (data) {
                 // Fetch tenant scope (alliances structure)
                 let tenantScope = [data.tenant_id];
@@ -326,7 +330,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <AuthContext.Provider value={{
             user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, signOut, updatePassword,
-            impersonateUser, abortImpersonation, isImpersonating, tenantScope: user?.tenantScope || []
+            impersonateUser, abortImpersonation, isImpersonating, profileMissing, tenantScope: user?.tenantScope || []
         }}>
 
             {!loading && children}

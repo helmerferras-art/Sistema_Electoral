@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Fingerprint, Lock, Loader2 } from 'lucide-react';
+import { GoogleButton } from './SignupPage';
 
 export const LoginPage = () => {
     const { signInWithOtp, verifyOtp, verifyTwoFactor } = useAuth();
@@ -72,7 +73,7 @@ export const LoginPage = () => {
                     <div style={{ display: 'inline-flex', padding: '1rem', borderRadius: '50%', backgroundColor: 'rgba(0,0,0,0.5)', border: '2px solid var(--primary)', boxShadow: '0 0 20px rgba(255,90,54,0.3)', marginBottom: '1rem' }}>
                         <Shield size={48} color="var(--primary)" />
                     </div>
-                    <h1 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, letterSpacing: '0.1em' }}>SISTEMA LEGION</h1>
+                    <h1 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, letterSpacing: '0.1em' }}>TLATOANI</h1>
                     <p style={{ color: 'var(--tertiary)', fontFamily: 'Inter, sans-serif', marginTop: '0.5rem', letterSpacing: '0.2em', fontSize: '0.8rem' }}>
                         ACCESO RESTRINGIDO
                     </p>
@@ -219,6 +220,18 @@ export const LoginPage = () => {
 
                 </div>
 
+                {step === 'PHONE' && (
+                    <div className="tl-landing" style={{ background: 'transparent', minHeight: 0, color: 'inherit', marginTop: '0.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#64748B', fontSize: '0.8rem', margin: '0.4rem 0 0.8rem' }}>
+                            <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} /> o <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+                        </div>
+                        <GoogleButton label="Entrar con Google" next="/" />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '0.85rem' }}>
+                            <a href="/demo" style={{ color: 'var(--tertiary)' }}>Probar la demo</a>
+                            <a href="/registro" style={{ color: 'var(--primary)' }}>Crear cuenta gratis</a>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div style={{ position: 'fixed', bottom: '1rem', color: '#475569', fontSize: '0.8rem', fontFamily: 'Oswald, sans-serif', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

@@ -28,11 +28,17 @@ const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ defau
 const PublicJoin = lazy(() => import('./components/PublicJoin').then(m => ({ default: m.PublicJoin })));
 const ReferralNetwork = lazy(() => import('./components/ReferralNetwork').then(m => ({ default: m.ReferralNetwork })));
 const WalkZones = lazy(() => import('./components/WalkZones').then(m => ({ default: m.WalkZones })));
+const Landing = lazy(() => import('./components/Landing').then(m => ({ default: m.Landing })));
+const DemoPage = lazy(() => import('./components/DemoLauncher').then(m => ({ default: m.DemoPage })));
+const SignupPage = lazy(() => import('./components/SignupPage').then(m => ({ default: m.SignupPage })));
+const QuotePage = lazy(() => import('./components/QuotePage').then(m => ({ default: m.QuotePage })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { NotificationProvider, useNotifications } from './lib/NotificationContext'
 import { supabase } from './lib/supabase'
 import { SetupWizard } from './components/SetupWizard'
+import { PlanBar } from './components/PlanBar'
+import { useMyPlan, endDemo } from './lib/demo'
 import './index.css'
 
 const PageLoader = () => <div className="flex-center" style={{ minHeight: '40vh', color: 'var(--primary)' }}>Cargando módulo...</div>;
@@ -42,10 +48,12 @@ import { PasswordSetModal } from './components/PasswordSetModal';
 import { Settings } from 'lucide-react';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string | string[] }) => {
-  const { session, user, loading } = useAuth();
+  const { session, user, loading, profileMissing } = useAuth();
 
   if (loading) return <div className="flex-center" style={{ height: '100vh', backgroundColor: 'var(--bg-color)', color: 'var(--primary)' }}>Cargando Sistemas...</div>;
   if (!session) return <Navigate to="/login" replace />;
+  // Entró con Google pero aún no crea su campaña
+  if (!user && profileMissing) return <Navigate to="/registro" replace />;
 
   // Basic RBAC
   if (requiredRole) {
@@ -77,6 +85,7 @@ const MainDashboard = () => {
     if (user?.role === 'brigadista') setActiveTab('campo');
   }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
+  const plan = useMyPlan(!!user);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
 
@@ -164,6 +173,7 @@ const MainDashboard = () => {
           </button>
         </div>
       )}
+      <PlanBar plan={plan} role={user?.role} />
       {/* HUD (Heads-Up Display) - Optimized for Mobile */}
       <header className="hud-header" style={{
         backgroundColor: 'rgba(15, 18, 24, 0.95)',
@@ -274,7 +284,7 @@ const MainDashboard = () => {
               <button onClick={() => setShowAccount(true)} aria-label="Mi cuenta" title="Mi cuenta" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <UserCog size={24} color="var(--tertiary)" />
               </button>
-              <button onClick={signOut} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
+              <button onClick={plan?.sandbox ? endDemo : signOut} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <LogOut size={24} color="var(--secondary)" />
               </button>
               {showAccount && <Suspense fallback={null}><MyAccount onClose={() => setShowAccount(false)} /></Suspense>}
@@ -306,6 +316,8 @@ const MainDashboard = () => {
               ? <HighCommandDashboard />
               : user?.role === 'comunicacion_digital'
                 ? <DigitalCommunicationsDashboard />
+                : user?.role === 'comunicacion'
+                ? <CommunicationsDashboard />
                 : <BrigadistaDashboard />
         )}
         {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
@@ -434,6 +446,13 @@ import { BridgeSync } from './lib/BridgeSync';
 import { startActivitySyncListener } from './lib/activitySync';
 import { isNativeApp } from './lib/location';
 
+// Visitantes ven la página de entrada; con sesión, la app
+const HomeGate = () => {
+  const { session } = useAuth();
+  if (!session) return <Landing />;
+  return <ProtectedRoute><MainDashboard /></ProtectedRoute>;
+};
+
 // --- App Content (Inside Providers) ---
 function AppContent() {
   const { updatePassword, user } = useAuth();
@@ -472,6 +491,12 @@ function AppContent() {
         <Route path="/terminos" element={<div className="app-container" style={{ padding: '1rem' }}><LegalPage kind="terminos" /></div>} />
         <Route path="/u/:code" element={<div className="app-container" style={{ padding: '1rem' }}><PublicJoin /></div>} />
         <Route path="/e/:token" element={<div className="app-container" style={{ padding: '1rem' }}><PublicEvent /></div>} />
+
+        {/* Entrada pública: demo privada, cuenta gratis con Google y cotización */}
+        <Route path="/" element={<HomeGate />} />
+        <Route path="/demo" element={<DemoPage />} />
+        <Route path="/registro" element={<SignupPage />} />
+        <Route path="/cotizacion" element={<QuotePage />} />
 
         {/* Landing Page Dinámica de Candidato (NEMIA) */}
         <Route path="/:slug" element={<CandidateLanding />} />
