@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlaskConical, LogOut, Repeat, Sparkles } from 'lucide-react';
+import { FlaskConical, LogOut, Sparkles } from 'lucide-react';
 import { DEMO_ROLES, FREE_LEGEND, endDemo, switchDemoRole, useDemoHeartbeat, type MyPlan } from '../lib/demo';
 
 /**
@@ -15,8 +15,8 @@ export const PlanBar = ({ plan, role }: { plan: MyPlan | null; role?: string }) 
 
     const bar: React.CSSProperties = {
         background: 'linear-gradient(90deg, #16324F 0%, #1f4469 100%)', color: '#F3C9AE',
-        padding: '0.5rem 0.8rem', fontSize: '0.8rem', display: 'flex', flexWrap: 'wrap',
-        alignItems: 'center', justifyContent: 'center', gap: '0.5rem 0.9rem', borderBottom: '2px solid #E8743B',
+        padding: '0.4rem 0.7rem', fontSize: '0.8rem', display: 'flex', flexWrap: 'wrap',
+        alignItems: 'center', justifyContent: 'center', gap: '0.4rem 0.7rem', borderBottom: '2px solid #E8743B',
     };
     const btn: React.CSSProperties = {
         background: '#E8743B', color: '#fff', border: 'none', borderRadius: 999, padding: '0.35rem 0.8rem',
@@ -26,11 +26,11 @@ export const PlanBar = ({ plan, role }: { plan: MyPlan | null; role?: string }) 
     if (plan.sandbox) {
         return (
             <div style={bar} role="status">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <FlaskConical size={15} /> <strong style={{ color: '#fff' }}>Demo privada</strong> · datos ficticios. Lo que agregues se borra al salir o tras 30 min sin uso.
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} title="Datos ficticios. Lo que agregues se borra al salir o tras 30 min sin uso.">
+                    <FlaskConical size={15} /> <strong style={{ color: '#fff' }}>Demo</strong>
                 </span>
                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Repeat size={14} />
+                    Ver como
                     <select
                         aria-label="Ver la demo como"
                         disabled={busy}
@@ -41,11 +41,11 @@ export const PlanBar = ({ plan, role }: { plan: MyPlan | null; role?: string }) 
                         }}
                         style={{ background: '#0F1218', color: '#fff', border: '1px solid #E8743B', borderRadius: 8, padding: '0.25rem 0.4rem', fontSize: '0.78rem' }}
                     >
-                        {DEMO_ROLES.map(r => <option key={r.role} value={r.role}>Ver como: {r.label}</option>)}
+                        {DEMO_ROLES.map(r => <option key={r.role} value={r.role}>{r.label}</option>)}
                     </select>
                 </label>
-                <button style={btn} disabled={busy} onClick={async () => { setBusy(true); await endDemo(); }}>
-                    <LogOut size={14} /> Salir y borrar
+                <button style={btn} disabled={busy} onClick={async () => { if (!confirm('¿Salir de la demo? Se borrará todo lo que hiciste.')) return; setBusy(true); await endDemo(); }}>
+                    <LogOut size={14} /> Salir
                 </button>
                 {error && <span style={{ color: '#fca5a5', width: '100%', textAlign: 'center' }}>{error}</span>}
             </div>
