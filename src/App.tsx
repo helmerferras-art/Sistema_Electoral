@@ -284,7 +284,7 @@ const MainDashboard = () => {
               <button onClick={() => setShowAccount(true)} aria-label="Mi cuenta" title="Mi cuenta" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <UserCog size={24} color="var(--tertiary)" />
               </button>
-              <button onClick={plan?.sandbox ? endDemo : signOut} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
+              <button onClick={plan?.sandbox ? () => endDemo() : signOut} aria-label="Cerrar sesión" style={{ background: 'transparent', border: 'none', cursor: 'pointer', minWidth: 'var(--touch-target)', height: 'var(--touch-target)' }}>
                 <LogOut size={24} color="var(--secondary)" />
               </button>
               {showAccount && <Suspense fallback={null}><MyAccount onClose={() => setShowAccount(false)} /></Suspense>}

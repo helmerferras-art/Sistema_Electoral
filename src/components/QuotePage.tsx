@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { CARGOS, ESTADOS } from './SignupPage';
+import { useLeaveDemo } from '../lib/demo';
 import './landing.css';
 
 const MODULES = ['Estructura y brigadas', 'Mapa y secciones', 'Guiones y sondeos', 'Eventos', 'Zonas casa por casa', 'Día D y casillas', 'Finanzas y fiscalización', 'Mensajería', 'IA', 'App móvil con marca propia'];
@@ -9,6 +10,7 @@ const SIZES = ['Hasta 50 personas', '50 a 300', '300 a 1,000', 'Más de 1,000'];
 
 /** /cotizacion · Solicitud de proyecto a la medida. */
 export const QuotePage = () => {
+    const leavingDemo = useLeaveDemo('/cotizacion');
     const [f, setF] = useState({ name: '', phone: '', email: '', cargo: 'presidencia_municipal', estado: 'Chiapas', territory: '', size: SIZES[1], date: '', message: '' });
     const [mods, setMods] = useState<string[]>([]);
     const [busy, setBusy] = useState(false);
@@ -37,6 +39,7 @@ export const QuotePage = () => {
         setDone(true);
     };
 
+    if (leavingDemo) return null;
     return (
         <div className="tl-landing tl-page">
             <header className="tl-nav"><a href="/" className="tl-brand">TLATOANI</a><a href="/demo" className="tl-navlink">Ver demo</a></header>

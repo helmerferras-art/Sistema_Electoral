@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
-import { FREE_LEGEND } from '../lib/demo';
+import { FREE_LEGEND, useLeaveDemo } from '../lib/demo';
 import { PLATFORM_TERMS_VERSION } from '../lib/engagement';
 import './landing.css';
 
@@ -62,6 +62,7 @@ const ERRORS: Record<string, string> = {
 /** /registro · Crear cuenta gratis (Plan Arranque) con Google y completar los datos de la campaña. */
 export const SignupPage = () => {
     const { session, user } = useAuth();
+    const leavingDemo = useLeaveDemo('/registro');
     const meta = session?.user?.user_metadata || {};
     const [f, setF] = useState({ name: meta.full_name || meta.name || '', phone: '', cargo: 'presidencia_municipal', estado: 'Chiapas', municipio: '', campaign: '' });
     const [accept, setAccept] = useState(false);
@@ -69,6 +70,7 @@ export const SignupPage = () => {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
 
+    if (leavingDemo) return null;
     if (session && user) return <Navigate to="/" replace />;
     const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
 

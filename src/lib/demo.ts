@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from './supabase';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { supabase, isDemoMode, markDemoActivity, DEMO_MODE_KEY, DEMO_SUPABASE_URL, DEMO_SUPABASE_KEY } from './supabase';
 
 /** Leyenda obligatoria del plan gratuito y de la demo. */
 export const FREE_LEGEND = 'Versión de demostración gratuita. No constituye aportación a ninguna campaña electoral.';
@@ -20,8 +21,15 @@ export const DEMO_ROLES = [
     { role: 'coordinador_logistica', label: 'Logística', what: 'Inventario, entregas y suministros.' },
 ] as const;
 
+/** Cliente de la base de demo (aparte de producción). Dentro de la demo es el mismo `supabase` de la app. */
+let demoDb: SupabaseClient | null = null;
+const demoClient = () => {
+    if (isDemoMode()) return supabase;
+    return (demoDb ??= createClient(DEMO_SUPABASE_URL, DEMO_SUPABASE_KEY));
+};
+
 const callDemo = async (body: Record<string, unknown>) => {
-    const { data, error } = await supabase.functions.invoke('demo-session', { body });
+    const { data, error } = await demoClient().functions.invoke('demo-session', { body });
     if (error) {
         let msg = 'No se pudo abrir la demo. Intenta de nuevo.';
         try { const j = await (error as any).context?.json?.(); if (j?.error) msg = j.error; } catch { /* sin cuerpo */ }
@@ -34,14 +42,17 @@ const callDemo = async (body: Record<string, unknown>) => {
 const enterWith = async (token_hash: string) => {
     // El contexto guardado de la sesión anterior impediría que se cargue el nuevo perfil
     localStorage.removeItem('gamefi_agent_context');
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: 'magiclink' });
+    const { error } = await demoClient().auth.verifyOtp({ token_hash, type: 'magiclink' });
     if (error) throw new Error('No se pudo abrir la sesión de la demo.');
+    // A partir de aquí la app se conecta a la base de demo
+    markDemoActivity();
     window.location.href = '/';
 };
 
 /** Crea una demo privada (sólo para este visitante) y entra con el perfil elegido. */
 export const startDemo = async (campaign: number, role: string) => {
-    await supabase.auth.signOut().catch(() => undefined);
+    // Cierra cualquier demo anterior; la sesión de producción (si la hay) no se toca
+    if (isDemoMode()) await demoClient().auth.signOut().catch(() => undefined);
     const r = await callDemo({ action: 'start', campaign, role });
     await enterWith(r.token_hash!);
 };
@@ -53,11 +64,12 @@ export const switchDemoRole = async (role: string) => {
 };
 
 /** Borra la demo (datos, cuentas y archivos) y cierra sesión. */
-export const endDemo = async () => {
+export const endDemo = async (redirect = '/?demo=fin') => {
     try { await callDemo({ action: 'end' }); } catch { /* si ya expiró, no hay nada que borrar */ }
-    await supabase.auth.signOut().catch(() => undefined);
+    await demoClient().auth.signOut().catch(() => undefined);
     localStorage.removeItem('gamefi_agent_context');
-    window.location.href = '/?demo=fin';
+    localStorage.removeItem(DEMO_MODE_KEY);
+    window.location.href = redirect;
 };
 
 export type MyPlan = {
@@ -86,6 +98,7 @@ export const useDemoHeartbeat = (active: boolean) => {
         let lastActivity = Date.now();
         const touch = () => {
             lastActivity = Date.now();
+            markDemoActivity();
             if (Date.now() - lastSent < 60_000) return;
             lastSent = Date.now();
             supabase.rpc('fn_demo_touch');
@@ -97,4 +110,10 @@ export const useDemoHeartbeat = (active: boolean) => {
         const id = window.setInterval(() => { if (Date.now() - lastActivity > 30 * 60_000) endDemo(); }, 60_000);
         return () => { events.forEach(e => window.removeEventListener(e, touch)); window.clearInterval(id); };
     }, [active]);
+};
+
+/** Páginas de producción (login, registro, cotización): si quedó una demo abierta, se cierra antes. */
+export const useLeaveDemo = (redirectTo: string) => {
+    useEffect(() => { if (isDemoMode()) endDemo(redirectTo); }, [redirectTo]);
+    return isDemoMode();
 };

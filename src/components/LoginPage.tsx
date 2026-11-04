@@ -3,10 +3,12 @@ import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Fingerprint, Lock, Loader2 } from 'lucide-react';
 import { GoogleButton } from './SignupPage';
+import { useLeaveDemo } from '../lib/demo';
 
 export const LoginPage = () => {
     const { signInWithOtp, verifyOtp, verifyTwoFactor } = useAuth();
     const navigate = useNavigate();
+    const leavingDemo = useLeaveDemo('/login');
 
     const [phone, setPhone] = useState('');
     const [token, setToken] = useState('');
@@ -65,6 +67,7 @@ export const LoginPage = () => {
     };
 
 
+    if (leavingDemo) return null;
     return (
         <div className="flex-center flex-col" style={{ minHeight: '100vh', background: 'var(--bg-color)', padding: '1rem', width: '100%' }}>
             <div className="tactile-card flex-col gap-2" style={{ maxWidth: '400px', width: '100%', border: '1px solid var(--primary)', background: 'radial-gradient(circle at top, rgba(255, 90, 54, 0.1) 0%, rgba(15, 18, 24, 0.95) 100%)' }}>
