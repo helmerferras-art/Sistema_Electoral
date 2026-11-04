@@ -8,6 +8,8 @@ import { WhatsAppQR } from './WhatsAppQR';
 import { newVerificationToken, getDeviceId, sendVerificationWhatsApp, verificationLink } from '../lib/verification';
 import { QRCodeSVG } from 'qrcode.react';
 import { getPositionOnce, locationErrorText } from '../lib/location';
+import { loadActiveGuion, visibleQuestions, pruneAnswers, type Poll } from '../lib/engagement';
+import { TrainingCenter } from './TrainingCenter';
 
 export const RegistroForm = () => {
     const { user } = useAuth();
@@ -38,6 +40,22 @@ export const RegistroForm = () => {
     const [lastRegistered, setLastRegistered] = useState<{ name: string; phone: string; token: string } | null>(null);
     const [validationSent, setValidationSent] = useState(false);
     const [showValidationQR, setShowValidationQR] = useState(false);
+    // Guion de visita con encuesta (se guarda en el teléfono para usarse sin señal)
+    const [guion, setGuion] = useState<Poll | null>(null);
+    const [answers, setAnswers] = useState<Record<string, string>>({});
+    const [showScript, setShowScript] = useState(true);
+    // La campaña puede exigir la capacitación antes de registrar
+    const [trainingBlocked, setTrainingBlocked] = useState(false);
+
+    useEffect(() => {
+        if (!user?.tenant_id) return;
+        loadActiveGuion(user.tenant_id).then(setGuion).catch(() => setGuion(null));
+    }, [user?.tenant_id]);
+
+    const answer = (qid: string, oid: string) => {
+        if (!guion) return;
+        setAnswers(prev => pruneAnswers(guion, { ...prev, [qid]: oid }));
+    };
 
     useEffect(() => {
         if (livesHere || !isLoggedIn || coloniaQuery.trim().length < 3) { setColoniaOptions(prev => (prev.length ? [] : prev)); return; }
@@ -150,6 +168,7 @@ export const RegistroForm = () => {
                 setStatusMessage('Guardando...');
             }
 
+            const surveyAnswers = guion ? pruneAnswers(guion, answers) : {};
             const supporterData = {
                 name: formData.name,
                 phone: formData.phone,
@@ -166,7 +185,9 @@ export const RegistroForm = () => {
                 longitude: lng,
                 commitment_level: formData.commitment_level,
                 tenant_id: tenantId,
-                recruiter_id: user?.id || null
+                recruiter_id: user?.id || null,
+                // Respuestas del guion: el servidor las desglosa y las ubica en la sección
+                survey: guion && Object.keys(surveyAnswers).length ? { poll_id: guion.id, answers: surveyAnswers } : null
             };
 
             await saveOfflineSupporter(supporterData);
@@ -199,18 +220,8 @@ export const RegistroForm = () => {
                 }
             }
 
-            let earnedXp = 50;
-            if (formData.commitment_level === 5) earnedXp += 50;
-            if (formData.latitude) earnedXp += 20;
-
-            const savedAgent = localStorage.getItem('gamefi_agent_context');
-            if (savedAgent) {
-                const agent = JSON.parse(savedAgent);
-                agent.xp += earnedXp;
-                localStorage.setItem('gamefi_agent_context', JSON.stringify(agent));
-                window.dispatchEvent(new Event('storage'));
-            }
-
+            // Los puntos los otorga el servidor cuando la persona valida la visita (50, +20 sin alertas, +10 con guion)
+            const earnedXp = 50 + 20 + (supporterData.survey ? 10 : 0);
             setXpGained(user ? earnedXp : null);
             if (user && verificationToken) {
                 setLastRegistered({ name: formData.name, phone: formData.phone, token: verificationToken });
@@ -222,7 +233,7 @@ export const RegistroForm = () => {
             if (!user) {
                 setStatusMessage('✅ ¡Gracias por sumarte! Un representante validará tu registro pronto.');
             } else {
-                setStatusMessage(`✅ Recluta Confirmado. +${earnedXp} XP`);
+                setStatusMessage('✅ Registro guardado. Suma puntos cuando la persona valide la visita.');
             }
 
             setFormData({
@@ -233,7 +244,7 @@ export const RegistroForm = () => {
                 longitude: null,
                 commitment_level: 1
             });
-            setColonia(null); setColoniaQuery(''); setLivesHere(true); setWantsToJoin(false);
+            setColonia(null); setColoniaQuery(''); setLivesHere(true); setWantsToJoin(false); setAnswers({});
             updateOfflineCount();
 
             setTimeout(() => {
@@ -261,8 +272,23 @@ export const RegistroForm = () => {
         setTimeout(() => setStatusMessage(''), 3000);
     };
 
+    if (user && trainingBlocked) {
+        return (
+            <div>
+                <div className="tactile-card" style={{ border: '1px solid var(--primary)', marginBottom: '1rem' }}>
+                    <h3 style={{ marginTop: 0, fontFamily: 'Oswald' }}>Antes de registrar</h3>
+                    <p style={{ margin: 0, color: '#94A3B8' }}>Tu campaña pide aprobar la capacitación. Son módulos de 3 minutos con un examen corto.</p>
+                </div>
+                <TrainingCenter startOpen onChange={setTrainingBlocked} />
+            </div>
+        );
+    }
+
+    const shownQuestions = guion ? visibleQuestions(guion, answers) : [];
+
     return (
         <div style={{ position: 'relative' }}>
+            {user && <TrainingCenter onChange={setTrainingBlocked} />}
             {xpGained !== null && (
                 <div style={{
                     position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%, -50%)',
@@ -271,7 +297,7 @@ export const RegistroForm = () => {
                     boxShadow: '0 10px 25px rgba(255,230,109,0.5)', zIndex: 100,
                     animation: 'floatUp 2s ease-out forwards', display: 'flex', alignItems: 'center', gap: '0.5rem'
                 }}>
-                    <Trophy size={32} /> +{xpGained} XP
+                    <Trophy size={32} /> ¡Guardado!
                 </div>
             )}
 
@@ -319,6 +345,43 @@ export const RegistroForm = () => {
                             {'⭐'.repeat(formData.commitment_level)}
                         </div>
                     </div>
+
+                    {user && guion && (
+                        <div style={{ padding: '0.7rem', backgroundColor: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.25)', borderRadius: '8px', marginTop: '0.5rem' }}>
+                            <button type="button" onClick={() => setShowScript(!showScript)}
+                                style={{ display: 'flex', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', color: 'var(--tertiary)', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.05em', cursor: 'pointer', padding: 0 }}>
+                                <span>GUION DE VISITA · {guion.title}</span>
+                                <span>{Object.keys(answers).length}/{shownQuestions.length}</span>
+                            </button>
+                            {showScript && (
+                                <div className="flex-col" style={{ gap: '0.6rem', marginTop: '0.6rem' }}>
+                                    {guion.script_intro && (
+                                        <div style={{ fontSize: '0.88rem', fontStyle: 'italic', whiteSpace: 'pre-line', borderLeft: '3px solid var(--tertiary)', paddingLeft: '0.6rem' }}>{guion.script_intro}</div>
+                                    )}
+                                    {shownQuestions.map((q, i) => (
+                                        <div key={q.id}>
+                                            <div style={{ fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.3rem' }}>{i + 1}. {q.question_text}</div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                                                {q.poll_options.map(o => (
+                                                    <button type="button" key={o.id} onClick={() => answer(q.id, o.id)}
+                                                        style={{ padding: '0.45rem 0.7rem', borderRadius: 16, cursor: 'pointer', fontSize: '0.82rem',
+                                                            border: answers[q.id] === o.id ? '1px solid var(--tertiary)' : '1px solid rgba(255,255,255,0.15)',
+                                                            background: answers[q.id] === o.id ? 'rgba(0,212,255,0.18)' : 'transparent',
+                                                            color: answers[q.id] === o.id ? 'var(--tertiary)' : 'inherit' }}>
+                                                        {o.option_text}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {guion.script_closing && (
+                                        <div style={{ fontSize: '0.88rem', fontStyle: 'italic', whiteSpace: 'pre-line', borderLeft: '3px solid var(--tertiary)', paddingLeft: '0.6rem' }}>{guion.script_closing}</div>
+                                    )}
+                                    <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>Las respuestas son opcionales. Si la persona no quiere contestar, sigue con el registro.</div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {user && (
                         <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginTop: '0.5rem', cursor: 'pointer' }}>
@@ -415,7 +478,7 @@ export const RegistroForm = () => {
                                 ¡REGISTRO EXITOSO!
                             </h2>
                             <p style={{ color: 'var(--tertiary)', fontWeight: 'bold' }}>
-                                +{xpGained} XP GANADOS
+                                Hasta +{xpGained} puntos cuando valide la visita
                             </p>
                         </div>
 

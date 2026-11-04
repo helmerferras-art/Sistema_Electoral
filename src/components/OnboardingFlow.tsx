@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Shield, Target, WifiOff, ChevronRight, Play, Camera } from 'lucide-react';
-import { ScannerINE } from './ScannerINE';
+import { Shield, Target, WifiOff, ChevronRight, Play } from 'lucide-react';
+import { PLATFORM_TERMS_VERSION } from '../lib/engagement';
+import { PUBLIC_URL } from '../lib/verification';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
@@ -12,19 +13,10 @@ export const OnboardingFlow = ({ onComplete }: Props) => {
     const { user } = useAuth();
     const [step, setStep] = useState(0);
     const [agentName, setAgentName] = useState('');
-    const [showScanner, setShowScanner] = useState(false);
+    const [acceptPrivacy, setAcceptPrivacy] = useState(false);
+    const [acceptTerms, setAcceptTerms] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Detailed Profile Data
-    const [profileData, setProfileData] = useState({
-        name: '',
-        curp: '',
-        clave_elector: '',
-        domicilio: '',
-        seccion: '',
-        vigencia: '',
-        photo_url: null as string | null
-    });
 
     // Step 0: Loading Screen
     useEffect(() => {
@@ -161,146 +153,54 @@ export const OnboardingFlow = ({ onComplete }: Props) => {
         );
     }
 
-    const handleScanComplete = (extractedData: any) => {
-        setProfileData(prev => ({
-            ...prev,
-            name: extractedData.nombre || prev.name,
-            domicilio: extractedData.domicilio || prev.domicilio,
-            clave_elector: extractedData.clave_elector || prev.clave_elector,
-            curp: extractedData.curp || prev.curp,
-            seccion: extractedData.seccion || prev.seccion,
-            vigencia: extractedData.vigencia || prev.vigencia,
-            photo_url: extractedData.foto || prev.photo_url
-        }));
-        if (extractedData.nombre) setAgentName(extractedData.nombre);
-        setShowScanner(false);
-    };
-
     const handleFinalSubmit = async () => {
         setIsSaving(true);
         try {
-            // Update the user profile in the database
+            // Aceptación expresa del aviso de privacidad, términos y código de conducta (queda la versión y la fecha)
+            const { data: accepted, error: termsError } = await supabase.rpc('fn_accept_user_terms', { p_version: PLATFORM_TERMS_VERSION });
+            if (termsError || !accepted) throw termsError || new Error('No se registró la aceptación');
             const { error } = await supabase
                 .from('users')
-                .update({
-                    name: profileData.name || agentName,
-                    curp: profileData.curp,
-                    id_card_key: profileData.clave_elector, // Map based on your schema
-                    address: profileData.domicilio,
-                    seccion_id: profileData.seccion,
-                    is_first_login: false,
-                    photo_url: profileData.photo_url,
-                    rank_name: 'Agente Verificado'
-                })
+                .update({ name: (agentName || user?.name || '').trim(), is_first_login: false })
                 .eq('id', user?.id);
-
             if (error) throw error;
             onComplete();
         } catch (err) {
             console.error("Error saving profile:", err);
-            alert("Error al guardar perfil. Intente de nuevo.");
+            alert("No se pudo guardar. Intenta de nuevo.");
         } finally {
             setIsSaving(false);
         }
     };
 
-    // MISSION TUTORIAL / DATA COLLECTION
+    // ACEPTACIÓN DEL AVISO, TÉRMINOS Y CÓDIGO DE CONDUCTA
     if (step === 3) {
+        const ready = acceptPrivacy && acceptTerms && (agentName || user?.name || '').trim().length >= 3;
         return (
-            <div className="flex-center flex-col" style={{ height: '100vh', padding: '1.5rem', backgroundColor: 'var(--bg-color)', backgroundImage: 'radial-gradient(circle at center, rgba(0, 212, 255, 0.05) 0%, transparent 60%)', overflowY: 'auto' }}>
-                {showScanner && (
-                    <ScannerINE
-                        onScanComplete={handleScanComplete}
-                        onCancel={() => setShowScanner(false)}
-                    />
-                )}
-
-                <div className="tactile-card" style={{ maxWidth: '450px', width: '100%', border: '1px solid var(--tertiary)', boxShadow: '0 0 20px rgba(0, 212, 255, 0.2)', marginTop: 'auto', marginBottom: 'auto' }}>
-                    <div style={{ backgroundColor: 'rgba(0,212,255,0.1)', border: '1px solid var(--tertiary)', color: 'var(--tertiary)', padding: '0.4rem 1rem', borderRadius: '4px', display: 'inline-block', marginBottom: '1rem', fontWeight: 'bold', fontFamily: 'Oswald, sans-serif', letterSpacing: '0.1em' }}>
-                        ORDEN DE REGISTRO COMPLETO
-                    </div>
-
-                    <h2 style={{ marginBottom: '1rem', color: 'var(--text-color)', fontSize: '1.4rem' }}>IDENTIFICACIÓN DE LA LEGIÓN</h2>
-
-                    <p style={{ marginBottom: '1.5rem', color: '#94A3B8', fontSize: '0.85rem' }}>
-                        "Un agente sin rostro no puede liderar el territorio. Escanea tu identificación o completa tus datos manualmente para habilitar tu acceso al radar."
+            <div className="flex-center flex-col" style={{ minHeight: '100vh', padding: '1.5rem', backgroundColor: 'var(--bg-color)', overflowY: 'auto' }}>
+                <div className="tactile-card flex-col gap-2" style={{ maxWidth: '450px', width: '100%', border: '1px solid var(--tertiary)', marginTop: 'auto', marginBottom: 'auto' }}>
+                    <h2 style={{ margin: 0, color: 'var(--text-color)', fontSize: '1.3rem' }}>Antes de empezar</h2>
+                    <p style={{ margin: 0, color: '#94A3B8', fontSize: '0.85rem' }}>
+                        Tlatoani solo guarda tu nombre, tu celular, la ubicación cuando registras una actividad y las evidencias que tú adjuntes.
+                        No te pediremos CURP, credencial para votar ni domicilio.
                     </p>
-
-                    <div className="flex-col gap-3">
-                        {!profileData.photo_url ? (
-                            <button
-                                type="button"
-                                onClick={() => setShowScanner(true)}
-                                className="squishy-btn primary"
-                                style={{ padding: '1.5rem', border: '2px dashed var(--primary)', background: 'rgba(255,90,54,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}
-                            >
-                                <Camera size={32} />
-                                <div style={{ fontFamily: 'Oswald', fontSize: '1rem' }}>AUTO-ESCANEO TÁCTICO (INE)</div>
-                            </button>
-                        ) : (
-                            <div style={{ position: 'relative' }}>
-                                <img src={profileData.photo_url} style={{ width: '100%', borderRadius: '8px', border: '1px solid var(--primary)' }} alt="Profile Preview" />
-                                <button
-                                    onClick={() => setShowScanner(true)}
-                                    style={{ position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', padding: '5px', color: 'white' }}
-                                >
-                                    <Camera size={16} />
-                                </button>
-                            </div>
-                        )}
-
-                        <div className="flex-col gap-2" style={{ textAlign: 'left' }}>
-                            <div className="flex-col">
-                                <label style={{ fontSize: '0.65rem', color: '#64748B', marginBottom: '2px', marginLeft: '5px' }}>NOMBRE</label>
-                                <input
-                                    value={profileData.name || agentName}
-                                    onChange={e => { setProfileData({ ...profileData, name: e.target.value }); setAgentName(e.target.value); }}
-                                    className="squishy-input"
-                                    placeholder="Nombre del Agente"
-                                />
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                                <div className="flex-col">
-                                    <label style={{ fontSize: '0.65rem', color: '#64748B', marginBottom: '2px', marginLeft: '5px' }}>CURP / CLAVE</label>
-                                    <input
-                                        value={profileData.curp || profileData.clave_elector}
-                                        onChange={e => setProfileData({ ...profileData, curp: e.target.value })}
-                                        className="squishy-input"
-                                        placeholder="Identificación"
-                                    />
-                                </div>
-                                <div className="flex-col">
-                                    <label style={{ fontSize: '0.65rem', color: '#64748B', marginBottom: '2px', marginLeft: '5px' }}>SECCIÓN</label>
-                                    <input
-                                        value={profileData.seccion}
-                                        onChange={e => setProfileData({ ...profileData, seccion: e.target.value })}
-                                        className="squishy-input"
-                                        placeholder="0000"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex-col">
-                                <label style={{ fontSize: '0.65rem', color: '#64748B', marginBottom: '2px', marginLeft: '5px' }}>DOMICILIO</label>
-                                <input
-                                    value={profileData.domicilio}
-                                    onChange={e => setProfileData({ ...profileData, domicilio: e.target.value })}
-                                    className="squishy-input"
-                                    placeholder="Dirección completa"
-                                />
-                            </div>
-                        </div>
-
-                        <button
-                            className="squishy-btn primary"
-                            style={{ width: '100%', fontSize: '1.1rem', padding: '1rem', marginTop: '0.5rem' }}
-                            onClick={handleFinalSubmit}
-                            disabled={isSaving || (!agentName && !profileData.name)}
-                        >
-                            {isSaving ? 'ENCRIPTANDO...' : 'SINCRO CON COMANDO CENTRAL'}
-                        </button>
+                    <div className="flex-col">
+                        <label style={{ fontSize: '0.65rem', color: '#64748B', marginBottom: '2px', marginLeft: '5px' }}>TU NOMBRE COMPLETO</label>
+                        <input value={agentName || user?.name || ''} onChange={e => setAgentName(e.target.value)} className="squishy-input" placeholder="Nombre" />
                     </div>
+                    <label style={checkRow}>
+                        <input type="checkbox" checked={acceptPrivacy} onChange={e => setAcceptPrivacy(e.target.checked)} style={{ marginTop: 3 }} />
+                        <span><strong>Otorgo mi consentimiento expreso</strong> para el tratamiento de mis datos personales, incluidos los que pueden revelar mi opinión política por formar parte de este equipo, conforme al{' '}
+                            <a href={`${PUBLIC_URL}/privacidad`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tertiary)' }}>aviso de privacidad</a> (versión {PLATFORM_TERMS_VERSION}).</span>
+                    </label>
+                    <label style={checkRow}>
+                        <input type="checkbox" checked={acceptTerms} onChange={e => setAcceptTerms(e.target.checked)} style={{ marginTop: 3 }} />
+                        <span>Acepto los{' '}
+                            <a href={`${PUBLIC_URL}/terminos`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tertiary)' }}>términos de uso</a> y me comprometo a cumplir el código de conducta: no condicionar apoyos, no registrar menores ni personas sin su permiso, y no compartir listas.</span>
+                    </label>
+                    <button className="squishy-btn primary" style={{ width: '100%', fontSize: '1.05rem', padding: '1rem' }} onClick={handleFinalSubmit} disabled={isSaving || !ready}>
+                        {isSaving ? 'Guardando...' : 'Aceptar y entrar'}
+                    </button>
                 </div>
             </div>
         );
@@ -308,3 +208,5 @@ export const OnboardingFlow = ({ onComplete }: Props) => {
 
     return null;
 };
+
+const checkRow: React.CSSProperties = { display: 'flex', gap: '0.6rem', alignItems: 'flex-start', fontSize: '0.82rem', cursor: 'pointer', lineHeight: 1.4 };

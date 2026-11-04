@@ -5,7 +5,7 @@ import { getDeviceId } from '../lib/verification';
 
 type Info = {
     estado: 'pendiente' | 'confirmado' | 'baja' | 'no_encontrado';
-    persona?: string; brigadista?: string; campana?: string; aviso_url?: string | null;
+    persona?: string; brigadista?: string; campana?: string; aviso_url?: string | null; aviso_version?: string;
     titulo?: string | null; mensaje?: string | null; media_url?: string | null; media_tipo?: 'imagen' | 'video' | null;
     redes?: Record<string, string> | null;
 };
@@ -92,7 +92,7 @@ export const VerifyVisit = () => {
                     {sending ? 'Un momento...' : 'Continuar'}
                 </button>
                 <p style={{ fontSize: '0.75rem', color: '#9aa', margin: 0 }}>
-                    Al continuar aceptas que {info.campana || 'el equipo'} guarde tu nombre y celular para mantenerte informado.{' '}
+                    Al continuar das tu consentimiento expreso para que {info.campana || 'el equipo'} guarde tu nombre, tu celular y tu simpatía por este proyecto para mantenerte informado (aviso versión {info.aviso_version || '1.0'}).{' '}
                     <button onClick={() => setShowNotice(!showNotice)} style={linkBtn}>Aviso de privacidad</button>
                 </p>
                 {showNotice && <Notice info={info} />}

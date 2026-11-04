@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { C4IPollManager } from './C4IPollManager';
+import { MessageSquareText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { C4IFinanceManager } from './C4IFinanceManager';
@@ -18,7 +20,7 @@ import {
 
 export const CandidateDashboard = () => {
     const { user } = useAuth();
-    const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'finanzas' | 'predicciones' | 'seguridad' | 'estructura' | 'alianzas' | 'asesor_ai'>('pulso');
+    const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'finanzas' | 'predicciones' | 'seguridad' | 'estructura' | 'alianzas' | 'asesor_ai' | 'guiones'>('pulso');
 
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
@@ -259,6 +261,7 @@ export const CandidateDashboard = () => {
                 <TabButton active={activeTab === 'predicciones'} onClick={() => setActiveTab('predicciones')} icon={<BrainCircuit size={18} />} label="Futuro" />
                 <TabButton active={activeTab === 'seguridad'} onClick={() => setActiveTab('seguridad')} icon={<ShieldCheck size={18} />} label="Seguridad" />
                 <TabButton active={activeTab === 'estructura'} onClick={() => setActiveTab('estructura')} icon={<UserPlus size={18} />} label="Estructura" />
+                <TabButton active={activeTab === 'guiones'} onClick={() => setActiveTab('guiones')} icon={<MessageSquareText size={18} />} label="Guiones" />
                 <TabButton active={activeTab === 'alianzas'} onClick={() => setActiveTab('alianzas')} icon={<Handshake size={18} />} label="Coaliciones" />
                 <TabButton active={activeTab === 'asesor_ai'} onClick={() => setActiveTab('asesor_ai')} icon={<BrainCircuit size={18} />} label="Asesor AI" />
             </div>
@@ -274,6 +277,7 @@ export const CandidateDashboard = () => {
                 {activeTab === 'seguridad' && <SecuritySettings />}
                 {activeTab === 'estructura' && <AdminManager />}
                 {activeTab === 'alianzas' && <AlliancesManager />}
+                {activeTab === 'guiones' && <div className="tactile-card"><C4IPollManager /></div>}
                 {activeTab === 'asesor_ai' && <AIAdvisorModule tenantId={user?.tenant_id || ''} municipality={tenantInfo?.geographic_scope || ''} />}
             </div>
 

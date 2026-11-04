@@ -22,6 +22,9 @@ const DeleteAccountPage = lazy(() => import('./components/DeleteAccountPage').th
 const MyAccount = lazy(() => import('./components/MyAccount').then(m => ({ default: m.MyAccount })));
 const GoalsCascade = lazy(() => import('./components/GoalsCascade').then(m => ({ default: m.GoalsCascade })));
 const FieldActivity = lazy(() => import('./components/FieldActivity').then(m => ({ default: m.FieldActivity })));
+const EventsModule = lazy(() => import('./components/EventsModule').then(m => ({ default: m.EventsModule })));
+const PublicEvent = lazy(() => import('./components/PublicEvent').then(m => ({ default: m.PublicEvent })));
+const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ default: m.LegalPage })));
 const PublicMapView = lazy(() => import('./components/PublicMapView').then(m => ({ default: m.PublicMapView })));
 import { AuthProvider, useAuth } from './lib/AuthContext'
 import { NotificationProvider, useNotifications } from './lib/NotificationContext'
@@ -305,7 +308,7 @@ const MainDashboard = () => {
         {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
-        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><CriticalPath /></>)}
+        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><EventsModule /><CriticalPath /></>)}
         {activeTab === 'campo' && <FieldActivity />}
         </Suspense>
       </main>
@@ -462,6 +465,9 @@ function AppContent() {
         {/* Validación pública de visitas (la abre la persona contactada desde el WhatsApp del brigadista) */}
         <Route path="/eliminar-cuenta" element={<div className="app-container" style={{ padding: '1rem' }}><DeleteAccountPage /></div>} />
         <Route path="/v/:token" element={<div className="app-container" style={{ padding: '1rem' }}><VerifyVisit /></div>} />
+        <Route path="/privacidad" element={<div className="app-container" style={{ padding: '1rem' }}><LegalPage kind="privacidad" /></div>} />
+        <Route path="/terminos" element={<div className="app-container" style={{ padding: '1rem' }}><LegalPage kind="terminos" /></div>} />
+        <Route path="/e/:token" element={<div className="app-container" style={{ padding: '1rem' }}><PublicEvent /></div>} />
 
         {/* Landing Page Dinámica de Candidato (NEMIA) */}
         <Route path="/:slug" element={<CandidateLanding />} />
