@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { askAI } from './aiProxy';
 
 export interface AISuggestedTask {
     title: string;
@@ -28,9 +29,9 @@ export class AiAdvisorService {
         topic: 'cobertura' | 'presencia' | 'intencion' | 'actividades';
         tenantId: string;
     }): Promise<AIStrategicInsight> {
-        // 1. Obtener Configuración de IA Global
-        const { data: aiConfigs } = await supabase.from('ai_config').select('*').eq('is_active', true);
-        if (!aiConfigs || aiConfigs.length === 0) throw new Error('No hay configuración de IA activa.');
+        // 1. ¿Hay IA disponible? (las llaves solo las conoce el servidor)
+        const { data: aiStatus } = await supabase.rpc('fn_ai_status');
+        if (!(aiStatus as any)?.disponible) throw new Error('No hay configuración de IA activa.');
 
         // ==========================================
         // NIVEL 1: BANCO GLOBAL DE ESTRATEGIAS (CACHÉ)
@@ -170,34 +171,20 @@ export class AiAdvisorService {
         let usedProvider = '';
         let success = false;
 
-        for (const config of aiConfigs) {
-            try {
-                console.log(`🤖 Intentando generar insight con ${config.provider}...`);
-                mockResponse = await this.callAIProxy(config.provider, config.api_key, prompt);
-                usedProvider = config.provider;
-                success = true;
-                break; // Si tiene éxito, salimos del bucle
-            } catch (error: any) {
-                console.warn(`⚠️ Error con ${config.provider}: ${error.message}. Intentando siguiente (Si hay)...`);
-
-                // Registrar la alerta en Modo Dios
-                try {
-                    await supabase.from('system_alerts').insert({
-                        source: `Asesor Estratégico AI (${config.provider.toUpperCase()})`,
-                        message: `Fallo en el consumo de la API: ${error.message}. Verifica límites de cuota (HTTP 429) o credenciales.`
-                    });
-                } catch (alertError) {
-                    console.error('[AiAdvisorService] No se pudo guardar la alerta del sistema. ¿Ya ejecutaste setup_ai_advisor.sql?', alertError);
-                }
-                // Continuar con el siguiente proveedor
-            }
+        try {
+            const res = await askAI('advisor', { prompt });
+            mockResponse = res.content || '';
+            usedProvider = res.provider;
+            success = !!mockResponse;
+        } catch (error: any) {
+            console.warn(`⚠️ La IA no respondió: ${error.message}`);
         }
 
         if (!success) {
             // Todos fallaron. Activar modo de emergencia devolviendo un JSON de aviso
             mockResponse = JSON.stringify({
                 topic: "Error Crítico de Conexión IA",
-                insight_text: "Ningún proveedor de Inteligencia Artificial (" + aiConfigs.map(c => c.provider).join(', ') + ") pudo procesar la solicitud. Las alertas han sido enviadas al Alto Mando (Modo Dios).",
+                insight_text: "Ningún proveedor de Inteligencia Artificial pudo procesar la solicitud o se alcanzó el tope diario. El detalle queda en la bitácora de uso de IA.",
                 suggested_tasks: [
                     {
                         title: "Revisión Urgente de APIs",
@@ -307,131 +294,5 @@ export class AiAdvisorService {
             insight_text,
             suggested_tasks
         };
-    }
-
-    private static async callAIProxy(provider: string, apiKey: string, prompt: string): Promise<string> {
-        console.log(`[AI Proxy] Usando ${provider} con prompt de ${prompt.length} caracteres.`);
-        if (!apiKey) {
-            console.warn('No API Key provided for', provider);
-            throw new Error(`No hay API Key configurada para ${provider.toUpperCase()}`);
-        }
-
-        const systemMessage = `Eres un estratega político y asesor gubernamental experto en el territorio, demografía, economía y usos y costumbres de Chiapas, México.
-
-REGLAS DE ORO PARA TUS ESTRATEGIAS:
-1. CONTEXTO SOCIOECONÓMICO: Antes de sugerir una táctica, DEBES analizar mentalmente el nivel de marginación, acceso a internet, telefonía y alfabetización del municipio (ej. San Juan Chamula, Chenalhó, etc). 
-2. PROHIBIDO TECNOLOGÍA INVIABLE: NUNCA sugieras "Crear una App", "Portales Web", o "Campañas en Redes Sociales masivas" si el municipio es rural, de alta marginación o con población predominantemente indígena. En esos casos, enfócate en perifoneo, asambleas ejidales, radios comunitarias, traductores de lenguas originarias (Tzotzil, Tzeltal, Chol) y brigadeo físico.
-3. CONTEXTO CULTURAL: Respeta la estructura de usos y costumbres (Sistemas Normativos Indígenas). Considera a los agentes municipales, patronatos y autoridades tradicionales como el vehículo central de la estrategia.
-
-FORMATO DE RESPUESTA:
-Debes responder ESTRICTAMENTE con un texto en formato JSON válido, sin delimitadores markdown ni explicaciones adicionales.`;
-
-        try {
-            const providerName = provider.toLowerCase();
-
-            if (providerName === 'openai' || providerName === 'groq' || providerName === 'openrouter') {
-                let url = '';
-                let model = '';
-
-                if (providerName === 'openai') {
-                    url = 'https://api.openai.com/v1/chat/completions';
-                    model = 'gpt-4o-mini';
-                } else if (providerName === 'groq') {
-                    url = 'https://api.groq.com/openai/v1/chat/completions';
-                    model = 'llama-3.3-70b-versatile'; // Actualizado al modelo vigente
-                } else if (providerName === 'openrouter') {
-                    url = 'https://openrouter.ai/api/v1/chat/completions';
-                    model = 'google/gemini-2.5-flash'; // Flash es extremadamente rápido y barato en OpenRouter
-                }
-
-                // Headers especiales para OpenRouter
-                const headers: Record<string, string> = {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                };
-
-                if (providerName === 'openrouter') {
-                    headers['HTTP-Referer'] = 'https://c4i-electoral-sistema.mx';
-                    headers['X-Title'] = 'Centinela C4I';
-                }
-
-                const payload: any = {
-                    model: model,
-                    messages: [
-                        { role: 'system', content: systemMessage },
-                        { role: 'user', content: prompt }
-                    ],
-                    temperature: 0.7
-                };
-
-                // No todos los modelos de OpenRouter soportan json_object nativo, pero Gemini/OpenAI/Groq sí.
-                if (providerName !== 'openrouter') {
-                    payload.response_format = { type: "json_object" };
-                }
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errBody = await response.text();
-                    console.error(`[AI Proxy] ❌ HTTP Error ${response.status} de ${providerName}. Respuesta bruta del servidor:`, errBody);
-                    throw new Error(`Error HTTP ${response.status} de API ${providerName}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log(`[AI Proxy] ✅ Respuesta exitosa obtenida de ${providerName}`);
-
-                // Extraer el contenido
-                let content = data.choices[0].message.content;
-
-                // Si OpenRouter devuelve markdown de JSON, lo limpiamos para evitar que JSON.parse falle luego
-                if (content.startsWith('```json')) {
-                    content = content.replace(/^```json\n/, '').replace(/\n```$/, '');
-                }
-
-                return content;
-
-            } else if (providerName === 'gemini') {
-                // gemini-1.5-flash-latest es el recomendado ahora en reemplazo de gemini-1.5-pro
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
-                console.log(`[AI Proxy] Llamando a Gemini: ${url.replace(/key=.*$/, 'key=***')}`);
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{ text: systemMessage + "\n\n" + prompt }]
-                        }],
-                        generationConfig: {
-                            temperature: 0.7,
-                            responseMimeType: "application/json"
-                        }
-                    })
-                });
-
-                if (!response.ok) {
-                    const errBody = await response.text();
-                    console.error(`[AI Proxy] ❌ HTTP Error ${response.status} de Gemini. Respuesta bruta del servidor:`, errBody);
-                    throw new Error(`Error HTTP ${response.status} de API Gemini: ${errBody}`);
-                }
-
-                const data = await response.json();
-                console.log(`[AI Proxy] ✅ Respuesta exitosa obtenida de Gemini`);
-                return data.candidates[0].content.parts[0].text;
-            } else {
-                throw new Error('Proveedor IA no soportado: ' + provider);
-            }
-
-        } catch (error: any) {
-            console.error('Error llamando a LLM:', error);
-            // El error debe propagarse para que el bloque de Fallback intente el siguiente proveedor
-            throw error;
-        }
     }
 }

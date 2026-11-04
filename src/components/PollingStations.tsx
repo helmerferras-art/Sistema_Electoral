@@ -3,6 +3,8 @@ import { Vote, Camera, CheckCircle, AlertTriangle, MapPin, Plus, Trash2 } from '
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { getPositionOnce, locationErrorText } from '../lib/location';
+import { askAI, imageToDataUrl } from '../lib/aiProxy';
+import { Sparkles } from 'lucide-react';
 
 type Station = { id: string; section_id: string; tipo: string; address: string | null; lista_nominal: number | null };
 type Watcher = { id: string; station_id: string; user_id: string; role: string; checked_in_at: string | null; users?: { name: string } | null };
@@ -292,6 +294,31 @@ const TallyForm = ({ station, options, existing, tenantId, onClose }: { station:
     const [photo, setPhoto] = useState<File | null>(null);
     const [sending, setSending] = useState(false);
     const [result, setResult] = useState<string[] | null>(null);
+    const [reading, setReading] = useState(false);
+    const [aiNote, setAiNote] = useState('');
+
+    // La IA lee la foto y propone las cifras; el representante las revisa contra el acta antes de enviar
+    const readWithAI = async () => {
+        if (!photo) return;
+        setReading(true); setAiNote('');
+        try {
+            const image = await imageToDataUrl(photo);
+            const res = await askAI<any>('acta', { image, options: options.map(o => o.name) });
+            const d = res.data;
+            if (!d || d.legible === false) { setAiNote('La IA no pudo leer el acta. Captura las cifras a mano.'); return; }
+            const str = (v: unknown) => (typeof v === 'number' && v >= 0 ? String(Math.round(v)) : '');
+            const next: Record<string, string> = { ...votes };
+            let missing = 0;
+            options.forEach(o => { const v = str(d.votos?.[o.name]); if (v === '') missing++; next[o.id] = v || next[o.id]; });
+            setVotes(next);
+            if (str(d.nulos)) setNulos(str(d.nulos));
+            if (str(d.no_registrados)) setNoReg(str(d.no_registrados));
+            if (str(d.total)) setTotal(str(d.total));
+            setAiNote(`Cifras propuestas por la IA${missing ? ` (${missing} no se leyeron)` : ''}. Revisa cada una contra el acta antes de enviar.${d.notas ? ' ' + d.notas : ''}`);
+        } catch (e: any) {
+            setAiNote('No se pudo usar la IA: ' + e.message);
+        } finally { setReading(false); }
+    };
     const n = (v: string) => Math.max(0, parseInt(v || '0', 10) || 0);
     const sum = Object.values(votes).reduce((a, v) => a + n(v), 0) + n(nulos) + n(noReg);
 
@@ -318,7 +345,17 @@ const TallyForm = ({ station, options, existing, tenantId, onClose }: { station:
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 2000, overflowY: 'auto', padding: '1rem' }}>
             <div className="tactile-card flex-col gap-1" style={{ maxWidth: 460, margin: '0 auto' }}>
                 <h3 style={{ margin: 0, fontFamily: 'Oswald' }}>Acta · casilla {label(station)}</h3>
-                <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>Copia las cifras tal como aparecen en el acta de escrutinio y toma una foto legible.</div>
+                <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>Toma una foto legible del acta y copia las cifras tal como aparecen (o deja que la IA las proponga y revísalas).</div>
+                <label className="squishy-btn" style={{ textAlign: 'center', cursor: 'pointer', marginTop: '0.3rem' }}>
+                    <Camera size={14} /> {photo ? photo.name : existing?.photo_path ? 'Cambiar foto del acta' : 'Foto del acta'}
+                    <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => setPhoto(e.target.files?.[0] || null)} />
+                </label>
+                {photo && (
+                    <button type="button" className="squishy-btn" disabled={reading} onClick={readWithAI} style={{ display: 'flex', justifyContent: 'center', gap: '0.3rem', alignItems: 'center' }}>
+                        <Sparkles size={14} /> {reading ? 'Leyendo el acta...' : 'Llenar cifras con IA'}
+                    </button>
+                )}
+                {aiNote && <div style={{ fontSize: '0.78rem', color: '#F59E0B' }}>{aiNote}</div>}
                 {options.map(o => (
                     <div key={o.id} style={rowS}><span style={{ flex: 1 }}>{o.name}</span>
                         <input className="squishy-input" style={numS} inputMode="numeric" value={votes[o.id]} onChange={e => setVotes({ ...votes, [o.id]: e.target.value.replace(/\D/g, '') })} /></div>
@@ -327,10 +364,6 @@ const TallyForm = ({ station, options, existing, tenantId, onClose }: { station:
                 <div style={rowS}><span style={{ flex: 1 }}>Votos nulos</span><input className="squishy-input" style={numS} inputMode="numeric" value={nulos} onChange={e => setNulos(e.target.value.replace(/\D/g, ''))} /></div>
                 <div style={rowS}><span style={{ flex: 1, fontWeight: 700 }}>Total del acta</span><input className="squishy-input" style={numS} inputMode="numeric" placeholder={String(sum)} value={total} onChange={e => setTotal(e.target.value.replace(/\D/g, ''))} /></div>
                 {total !== '' && n(total) !== sum && <div style={{ fontSize: '0.8rem', color: '#F59E0B' }}>La suma de tus cifras es {sum}; revisa antes de enviar.</div>}
-                <label className="squishy-btn" style={{ textAlign: 'center', cursor: 'pointer', marginTop: '0.3rem' }}>
-                    <Camera size={14} /> {photo ? photo.name : existing?.photo_path ? 'Cambiar foto del acta' : 'Foto del acta'}
-                    <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={e => setPhoto(e.target.files?.[0] || null)} />
-                </label>
                 <textarea className="squishy-input" rows={2} placeholder="Incidentes (opcional)" value={incidents} onChange={e => setIncidents(e.target.value)} />
                 {result ? (
                     <>

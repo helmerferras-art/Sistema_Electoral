@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { C4IPollManager } from './C4IPollManager';
+import { SectionBrief } from './SectionBrief';
 import { MessageSquareText } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
@@ -278,6 +279,7 @@ export const CandidateDashboard = () => {
                 {activeTab === 'estructura' && <AdminManager />}
                 {activeTab === 'alianzas' && <AlliancesManager />}
                 {activeTab === 'guiones' && <div className="tactile-card"><C4IPollManager /></div>}
+                {activeTab === 'asesor_ai' && <SectionBrief />}
                 {activeTab === 'asesor_ai' && <AIAdvisorModule tenantId={user?.tenant_id || ''} municipality={tenantInfo?.geographic_scope || ''} />}
             </div>
 
