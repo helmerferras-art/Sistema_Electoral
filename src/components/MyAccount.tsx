@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Trash2, ExternalLink } from 'lucide-react';
+import { X, Trash2, ExternalLink, KeyRound } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -8,7 +8,11 @@ import { supabase } from '../lib/supabase';
  * (requisito de Google Play y App Store). Disponible para todos los perfiles.
  */
 export const MyAccount = ({ onClose }: { onClose: () => void }) => {
-    const { user, signOut } = useAuth();
+    const { user, signOut, session, updatePassword } = useAuth();
+    const [pwd, setPwd] = useState('');
+    const [pwdMsg, setPwdMsg] = useState('');
+    // Solo quien entra con celular y contraseña (no con Google ni en la demo) puede cambiarla aquí
+    const usesPhoneLogin = String(session?.user?.email || '').endsWith('@c4i.local');
     const [step, setStep] = useState<'info' | 'confirm'>('info');
     const [phrase, setPhrase] = useState('');
     const [busy, setBusy] = useState(false);
@@ -43,6 +47,21 @@ export const MyAccount = ({ onClose }: { onClose: () => void }) => {
                     <div><b style={{ color: 'white' }}>{user?.name}</b></div>
                     <div>{user?.phone} · {user?.role?.replace('_', ' ')}</div>
                 </div>
+                {usesPhoneLogin && (
+                    <form className="flex-col gap-1" onSubmit={async e => {
+                        e.preventDefault(); setPwdMsg('');
+                        if (pwd.length < 6) { setPwdMsg('Mínimo 6 letras o números.'); return; }
+                        const { error } = await updatePassword(pwd);
+                        setPwdMsg(error ? `❌ ${error.message}` : '✅ Contraseña cambiada.'); if (!error) setPwd('');
+                    }}>
+                        <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}><KeyRound size={14} /> Cambiar mi contraseña</label>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <input type="password" className="squishy-input" value={pwd} onChange={e => setPwd(e.target.value)} placeholder="Nueva contraseña" autoComplete="new-password" style={{ flex: 1 }} />
+                            <button className="squishy-btn primary" style={{ padding: '0 0.9rem' }}>Guardar</button>
+                        </div>
+                        {pwdMsg && <div style={{ fontSize: '0.82rem' }}>{pwdMsg}</div>}
+                    </form>
+                )}
                 <a href="/eliminar-cuenta" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tertiary)', fontSize: '0.8rem', display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}>
                     Qué datos se borran y cómo se protegen <ExternalLink size={12} />
                 </a>
