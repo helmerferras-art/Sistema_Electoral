@@ -78,7 +78,7 @@ export default function MySupplies() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
                 <PackageOpen size={32} color="#F59E0B" />
                 <div>
-                    <h2 style={{ margin: 0, fontFamily: 'Oswald', fontSize: '2rem', letterSpacing: '0.05em' }}>MIS SUMINISTROS</h2>
+                    <h2 style={{ margin: 0, fontFamily: 'Oswald', fontSize: '2rem', letterSpacing: '0.05em' }}>MI MATERIAL</h2>
                     <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>Recursos asignados que requieren validación en campo</p>
                 </div>
             </div>

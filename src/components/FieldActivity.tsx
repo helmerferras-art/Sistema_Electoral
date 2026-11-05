@@ -335,8 +335,8 @@ export const FieldActivity = () => {
                     )}
                 </div>
 
-                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', fontSize: '0.8rem', color: '#bbb' }}>
-                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ marginTop: '0.2rem' }} />
+                <label style={{ display: 'flex', gap: '0.6rem', alignItems: 'flex-start', fontSize: '0.88rem', color: '#ccc', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} style={{ width: 22, height: 22, flex: '0 0 auto', accentColor: 'var(--primary)' }} />
                     Las personas que aparecen en fotos o audios aceptaron ser fotografiadas o grabadas.
                 </label>
 
@@ -368,13 +368,16 @@ export const FieldActivity = () => {
             {/* Mis últimas actividades */}
             {recent.length > 0 && (
                 <div className="tactile-card flex-col gap-1">
-                    <h4 style={{ margin: 0, fontFamily: 'Oswald, sans-serif' }}>MIS ÚLTIMAS ACTIVIDADES</h4>
+                    <h4 style={{ margin: 0, fontFamily: 'Oswald, sans-serif' }}>LO QUE HE REGISTRADO</h4>
                     {recent.map(r => (
-                        <div key={r.id} onClick={() => openEvidence(r)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', padding: '0.35rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
-                            <span>{TYPE_LABEL[r.activity_type] || r.activity_type}{r.geo_section_id ? ` · Secc. ${r.geo_section_id}` : ''}</span>
-                            <span style={{ color: '#9aa' }}>
-                                👥{r.contacts_count} ✅{r.convinced_count} 📎{r.activity_evidence?.[0]?.count ?? 0} · {new Date(r.occurred_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                        <div key={r.id} onClick={() => openEvidence(r)} style={{ fontSize: '0.9rem', padding: '0.5rem 0', borderBottom: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                                <strong>{TYPE_LABEL[r.activity_type] || r.activity_type}{r.geo_section_id ? ` · Secc. ${r.geo_section_id}` : ''}</strong>
+                                <span style={{ color: '#9aa', whiteSpace: 'nowrap' }}>{new Date(r.occurred_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div style={{ color: '#9aa', fontSize: '0.82rem' }}>
+                                {r.contacts_count} contactados · {r.convinced_count} convencidos{(r.activity_evidence?.[0]?.count ?? 0) > 0 ? ` · ${r.activity_evidence[0].count} fotos/audios` : ''}
+                            </div>
                         </div>
                     ))}
                 </div>

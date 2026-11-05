@@ -1,3 +1,4 @@
+import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -489,7 +490,7 @@ export const TerritoryAssignmentModal: React.FC<TerritoryAssignmentModalProps> =
                             style={{ height: '100%', width: '100%', background: '#05080f' }}
                             attributionControl={false}
                         >
-                            <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+                            <TileLayer url={BASE_TILE_URL} attribution={BASE_TILE_ATTRIBUTION} className={BASE_TILE_CLASS} maxZoom={19} />
                             <GeoJSON
                                 key={`${activeLayerId}-${selectedZones.length}`}
                                 data={geoJsonData}

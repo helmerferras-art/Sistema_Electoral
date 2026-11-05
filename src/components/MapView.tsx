@@ -1,3 +1,4 @@
+import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -1075,14 +1076,14 @@ export const MapView = () => {
 
     return (
         <div className="tactile-card flex-col gap-1" style={{ padding: '1rem', height: 'clamp(500px, 80vh, 800px)', border: '1px solid rgba(0, 212, 255, 0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, fontSize: '1.4rem' }}>
-                    <span style={{ color: 'var(--tertiary)' }}>//</span> {pollMode ? `MAPA DE CALOR: ENCUESTA` : 'RADAR ESTRATÉGICO'}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                <h2 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, fontSize: '1.25rem' }}>
+                    {pollMode ? 'MAPA DE LA ENCUESTA' : 'MAPA'}
                     <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', marginLeft: '10px', boxShadow: '0 0 5px #10B981', verticalAlign: 'middle' }}></span>
                 </h2>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    {/* Tactical Filter Bar */}
-                    <div style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '1rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+                    {/* Filtros: en el celular se acomodan en varias líneas en lugar de salirse de la pantalla */}
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                         {!(tenantConfig?.position?.toLowerCase().includes('presidente') || tenantConfig?.position?.toLowerCase().includes('presidencia_municipal')) && (
                             <select
                                 className="squishy-input mini"
@@ -1101,7 +1102,7 @@ export const MapView = () => {
                                     setSelectedSec('');
                                 }}
                             >
-                                <option value="">MUNICIPIO...</option>
+                                <option value="">Municipio</option>
                                 {processedGeoJson && Array.from(new Set(processedGeoJson.features.map((f: any) => f.properties?.municipio))).filter(Boolean).sort().map((m: any) => (
                                     <option key={m} value={m}>{m}</option>
                                 ))}
@@ -1125,7 +1126,7 @@ export const MapView = () => {
                             }}
                             disabled={!(tenantConfig?.position?.toLowerCase().includes('presidente') || tenantConfig?.position?.toLowerCase().includes('presidencia_municipal')) && !selectedMun}
                         >
-                            <option value="">SECCIÓN...</option>
+                            <option value="">Sección</option>
                             {availableSecs.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
@@ -1164,7 +1165,7 @@ export const MapView = () => {
                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                         onClick={() => setViewMode('niebla')}
                     >
-                        🌫️ NIEBLA
+                        🗺️ AVANCE
                     </button>
                     <button
                         className={`squishy-btn ${viewMode === 'heatmap' ? 'primary' : ''}`}
@@ -1208,7 +1209,7 @@ export const MapView = () => {
 
             {loading ? (
                 <div className="flex-center" style={{ flex: 1, height: '100%', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: 'rgba(0,0,0,0.5)' }}>
-                    <h3 style={{ fontFamily: 'Oswald, sans-serif', letterSpacing: '0.1em', animation: 'pulse 1.5s infinite', color: 'var(--tertiary)' }}>&gt; SINCRONIZANDO SATÉLITE...</h3>
+                    <h3 style={{ fontFamily: 'Oswald, sans-serif', letterSpacing: '0.1em', animation: 'pulse 1.5s infinite', color: 'var(--tertiary)' }}>Cargando mapa…</h3>
                 </div>
             ) : (
                 <div style={{ flex: 1, minHeight: '400px', borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--tertiary)', boxShadow: '0 0 15px rgba(0, 212, 255, 0.2)', position: 'relative' }}>
@@ -1218,10 +1219,7 @@ export const MapView = () => {
                         style={{ height: '100%', width: '100%', backgroundColor: '#0F1218' }}
                     >
                         {/* Using Carto Dark Matter base map for tactical feel */}
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        />
+                        <TileLayer url={BASE_TILE_URL} attribution={BASE_TILE_ATTRIBUTION} className={BASE_TILE_CLASS} maxZoom={19} />
 
                         {/* Auto-focus camera on filtered geometry */}
                         <AutoFitBounds
@@ -1521,7 +1519,7 @@ export const MapView = () => {
                         }}>
                             <div style={{ padding: '1.2rem', borderBottom: '1px solid rgba(0, 212, 255, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0, 212, 255, 0.05)' }}>
                                 <div>
-                                    <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>REPORTE TÁCTICO - {String(selectedRegion.type).toUpperCase()}</div>
+                                    <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>DETALLE · {String(selectedRegion.type).toUpperCase()}</div>
                                     <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)', fontSize: '1.4rem' }}>{selectedRegion.name}</h3>
                                 </div>
                                 <button onClick={() => {

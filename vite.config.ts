@@ -37,6 +37,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // El PDF de la guía y las imágenes de la página de entrada se piden al servidor, no a la app guardada
+        navigateFallbackDenylist: [/\.pdf$/, /^\/landing\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,

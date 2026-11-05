@@ -16,6 +16,7 @@ type UserData = {
     longitude?: number;
     is_first_login?: boolean;
     two_factor_enabled?: boolean;
+    privacy_version?: string | null;
     tenantScope: string[];
 };
 
@@ -32,6 +33,8 @@ type AuthContextType = {
     impersonateUser: (targetUser: any) => Promise<void>;
     abortImpersonation: () => Promise<void>;
     isImpersonating: boolean;
+    /** Hay sesión (p. ej. Google) pero todavía no existe su perfil en una campaña */
+    profileMissing: boolean;
 };
 
 const toSyntheticEmail = (phone: string) => {
@@ -46,6 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [session, setSession] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [isImpersonating, setIsImpersonating] = useState(false);
+    const [profileMissing, setProfileMissing] = useState(false);
 
     useEffect(() => {
         // Bypass persistence check for non-production environments if explicitly set
@@ -116,8 +120,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .eq('auth_id', authId)
                 .single();
 
+            setProfileMissing(!data && error?.code === 'PGRST116');
             if (error) {
-                console.error("Error fetching user profile:", error);
+                if (error.code !== 'PGRST116') console.error("Error fetching user profile:", error);
             } else if (data) {
                 // Fetch tenant scope (alliances structure)
                 let tenantScope = [data.tenant_id];
@@ -168,7 +173,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
-            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
+            return { error: { message: 'Ese número no está registrado. Pide a tu coordinador o líder que te dé de alta.' } };
         }
 
         if (foundUser.is_first_login) {
@@ -192,7 +197,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
-            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
+            return { error: { message: 'Ese número no está registrado. Pide a tu coordinador o líder que te dé de alta.' } };
         }
 
         // token = código táctico (primer login) o contraseña permanente (login normal).
@@ -201,7 +206,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: token });
 
         if (signInErr || !signInData.session) {
-            return { error: { message: foundUser.is_first_login ? 'Código táctico incorrecto.' : 'Contraseña incorrecta.' } };
+            return { error: { message: foundUser.is_first_login ? 'El código no es correcto. Revisa el mensaje que te llegó.' : 'Contraseña incorrecta.' } };
         }
 
         // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
@@ -326,7 +331,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <AuthContext.Provider value={{
             user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, signOut, updatePassword,
-            impersonateUser, abortImpersonation, isImpersonating, tenantScope: user?.tenantScope || []
+            impersonateUser, abortImpersonation, isImpersonating, profileMissing, tenantScope: user?.tenantScope || []
         }}>
 
             {!loading && children}

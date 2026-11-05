@@ -115,11 +115,11 @@ export const CriticalPath = () => {
             <div className="tactile-card" style={{ border: '1px solid var(--tertiary)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h2 style={{ fontFamily: 'Oswald', color: 'white', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Calendar color="var(--tertiary)" /> RUTA CRÍTICA (QUEST LOG)
+                        <Calendar color="var(--tertiary)" /> CALENDARIO DE ACTIVIDADES
                     </h2>
                     {isAdmin && !showForm && (
                         <button className="primary-btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }} onClick={() => setShowForm(true)}>
-                            <Plus size={16} /> NUEVA MISIÓN
+                            <Plus size={16} /> Nueva actividad
                         </button>
                     )}
                 </div>
@@ -130,7 +130,7 @@ export const CriticalPath = () => {
                         <button type="button" onClick={() => setShowForm(false)} style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#888', cursor: 'pointer' }}>
                             <X size={20} />
                         </button>
-                        <h3 style={{ margin: '0 0 1rem 0', color: 'var(--tertiary)', fontFamily: 'Oswald', fontSize: '1.1rem' }}>INSTRUIR NUEVA MISIÓN TÁCTICA</h3>
+                        <h3 style={{ margin: '0 0 1rem 0', color: 'var(--tertiary)', fontFamily: 'Oswald', fontSize: '1.1rem' }}>Nueva actividad</h3>
 
                         <input
                             type="text" required placeholder="Título de la Misión (Ej: Taller de Defensa del Voto)" className="squishy-input"
@@ -160,7 +160,7 @@ export const CriticalPath = () => {
                             />
                         </div>
                         <button type="submit" className="primary-btn" disabled={isSaving} style={{ marginTop: '0.5rem', width: '100%' }}>
-                            {isSaving ? 'GUARDANDO MANDO...' : 'AUTORIZAR MISIÓN E INYECTAR A LA BASE'}
+                            {isSaving ? 'Guardando…' : 'Guardar actividad'}
                         </button>
                     </form>
                 )}
@@ -247,7 +247,7 @@ export const CriticalPath = () => {
 
                     {tasks.length === 0 && (
                         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: '#64748B' }}>
-                            No hay misiones programadas en la ruta crítica. Configura la agenda para movilizar al equipo.
+                            Todavía no hay actividades en el calendario.
                         </div>
                     )}
                 </div>

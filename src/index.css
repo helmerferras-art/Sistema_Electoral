@@ -721,3 +721,15 @@ h4,
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
   border-color: rgba(0, 212, 255, 0.4);
 }
+/* Mapa base oscuro a partir de los mosaicos de OpenStreetMap */
+.tl-dark-tiles { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.4); }
+
+/* Pestañas inferiores: siempre con texto para quien apenas aprende a usar el celular */
+.bottom-nav .nav-tab {
+  flex: 1 1 0; min-width: 0; background: none; border: none; cursor: pointer; color: #8A97A8;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0.25rem 0.1rem;
+  font-family: Inter, sans-serif; font-size: 0.68rem; font-weight: 600; border-radius: 10px;
+}
+.bottom-nav .nav-tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.bottom-nav .nav-tab.on { color: var(--primary); background: rgba(255, 90, 54, 0.12); }
+@media (min-width: 768px) { .bottom-nav .nav-tab { flex: 0 0 auto; width: 64px; } }
