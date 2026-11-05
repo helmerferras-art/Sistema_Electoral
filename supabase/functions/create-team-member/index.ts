@@ -37,6 +37,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const { name, phone, role: targetRole, tenant_id: bodyTenantId, parent_id: bodyParentId, assigned_territory, two_factor_enabled } = body;
+    // Correo de respaldo opcional: si el SMS no llega, el código de acceso se puede mandar ahí
+    const backupEmail = typeof body.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email.trim()) ? body.email.trim().toLowerCase() : null;
 
     if (!name || !phone || !targetRole) {
         return json({ error: 'Faltan campos requeridos: name, phone, role' }, 400);
@@ -110,7 +112,11 @@ Deno.serve(async (req: Request) => {
 
     const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
     const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : `+52${cleanPhone}`;
-    const email = toSyntheticEmail(cleanPhone);
+    const email = backupEmail || toSyntheticEmail(cleanPhone);
+    if (backupEmail) {
+        const { data: taken } = await admin.from('users').select('id, phone').ilike('email', backupEmail).limit(1);
+        if (taken?.length && taken[0].phone !== formattedPhone) return json({ error: 'Ese correo ya está en uso por otra cuenta.' }, 409);
+    }
     const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Re-registro: si ya existe un usuario con este teléfono, refrescar en vez de duplicar
@@ -145,6 +151,7 @@ Deno.serve(async (req: Request) => {
                 code_sent: false,
                 two_factor_enabled: !!two_factor_enabled,
                 ...(assigned_territory ? { assigned_territory } : {}),
+                ...(backupEmail ? { email: backupEmail } : {}),
             })
             .eq('id', existingUser.id)
             .select()
@@ -153,7 +160,10 @@ Deno.serve(async (req: Request) => {
         if (updateErr) return json({ error: updateErr.message }, updateErr.code === 'P0402' ? 402 : 500);
 
         if (existingUser.auth_id) {
-            await admin.auth.admin.updateUserById(existingUser.auth_id, { password: tacticalCode });
+            await admin.auth.admin.updateUserById(existingUser.auth_id, {
+                password: tacticalCode, phone: formattedPhone, phone_confirm: true,
+                ...(backupEmail ? { email: backupEmail, email_confirm: true } : {}),
+            });
         }
 
         return json({ success: true, user: updated, temp_code: tacticalCode });
@@ -163,11 +173,15 @@ Deno.serve(async (req: Request) => {
         email,
         password: tacticalCode,
         email_confirm: true,
+        // El celular también queda en Auth: así se entra con celular + contraseña aunque el correo cambie
+        phone: formattedPhone,
+        phone_confirm: true,
         user_metadata: { phone: formattedPhone, role: targetRole },
     });
 
     if (createErr) {
-        return json({ error: createErr.message }, 409);
+        const msg = /phone/i.test(createErr.message) ? 'Ese celular ya tiene una cuenta.' : /email/i.test(createErr.message) ? 'Ese correo ya está en uso por otra cuenta.' : createErr.message;
+        return json({ error: msg }, 409);
     }
 
     const { data: newUser, error: insertErr } = await admin
@@ -185,6 +199,7 @@ Deno.serve(async (req: Request) => {
             code_sent: false,
             two_factor_enabled: !!two_factor_enabled,
             ...(assigned_territory ? { assigned_territory } : {}),
+            ...(backupEmail ? { email: backupEmail } : {}),
         }])
         .select()
         .single();

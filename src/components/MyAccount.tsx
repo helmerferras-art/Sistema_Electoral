@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Trash2, ExternalLink, KeyRound } from 'lucide-react';
+import { X, Trash2, ExternalLink, KeyRound, Mail } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
 
@@ -11,8 +11,11 @@ export const MyAccount = ({ onClose }: { onClose: () => void }) => {
     const { user, signOut, session, updatePassword } = useAuth();
     const [pwd, setPwd] = useState('');
     const [pwdMsg, setPwdMsg] = useState('');
-    // Solo quien entra con celular y contraseña (no con Google ni en la demo) puede cambiarla aquí
-    const usesPhoneLogin = String(session?.user?.email || '').endsWith('@c4i.local');
+    // En la demo no hay contraseña ni correo que cambiar
+    const usesPhoneLogin = !String(session?.user?.email || '').endsWith('@demo.tlatoani.app');
+    const [email, setEmail] = useState(user?.email || '');
+    const [savedEmail, setSavedEmail] = useState(user?.email || '');
+    const [mailMsg, setMailMsg] = useState('');
     const [step, setStep] = useState<'info' | 'confirm'>('info');
     const [phrase, setPhrase] = useState('');
     const [busy, setBusy] = useState(false);
@@ -47,6 +50,25 @@ export const MyAccount = ({ onClose }: { onClose: () => void }) => {
                     <div><b style={{ color: 'white' }}>{user?.name}</b></div>
                     <div>{user?.phone} · {user?.role?.replace('_', ' ')}</div>
                 </div>
+                {usesPhoneLogin && (
+                    <form className="flex-col gap-1" onSubmit={async e => {
+                        e.preventDefault(); setMailMsg('');
+                        const { data, error } = await supabase.functions.invoke('account-email', { body: { action: 'link', email } });
+                        if (error || !data?.ok) {
+                            let m = 'No se pudo guardar el correo.';
+                            try { const j = await (error as any)?.context?.json?.(); if (j?.error) m = j.error; } catch { /* sin cuerpo */ }
+                            setMailMsg(`❌ ${m}`);
+                        } else { setSavedEmail(email.trim().toLowerCase()); setMailMsg('✅ Listo. Si un mensaje no te llega al celular, podrás recibir el código en este correo.'); }
+                    }}>
+                        <label style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}><Mail size={14} /> Correo de respaldo</label>
+                        <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>Si el código no te llega al celular, te lo mandamos aquí. Revisa que esté bien escrito.</div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                            <input type="email" className="squishy-input" value={email} onChange={e => setEmail(e.target.value)} placeholder="tucorreo@gmail.com" autoComplete="email" style={{ flex: 1 }} />
+                            <button className="squishy-btn primary" style={{ padding: '0 0.9rem' }} disabled={!email.trim() || email.trim().toLowerCase() === savedEmail}>Guardar</button>
+                        </div>
+                        {mailMsg && <div style={{ fontSize: '0.82rem' }}>{mailMsg}</div>}
+                    </form>
+                )}
                 {usesPhoneLogin && (
                     <form className="flex-col gap-1" onSubmit={async e => {
                         e.preventDefault(); setPwdMsg('');

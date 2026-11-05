@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, BarChart3, Brain, CalendarDays, Check, Download, DoorOpen, Lock, Map, ShieldCheck, Smartphone, Users, Vote, WifiOff, Wallet } from 'lucide-react';
 import { DemoLauncher } from './DemoLauncher';
-import { GoogleButton } from './SignupPage';
 import { FREE_LEGEND, DEMO_ROLES } from '../lib/demo';
 import './landing.css';
 
@@ -166,7 +165,7 @@ export const Landing = () => {
                                 <li><Check size={16} /> 1 guion, 1 sondeo, 3 eventos al mes, 10 zonas</li>
                                 <li><Check size={16} /> 3 consultas de IA al día</li>
                             </ul>
-                            <GoogleButton label="Crear cuenta con Google" />
+                            <a className="tl-btn tl-btn-primary tl-btn-wide" href="/registro">Crear cuenta gratis</a>
                             <p className="tl-legend">{FREE_LEGEND}</p>
                         </div>
                         <div className="tl-plan tl-plan-dark tl-reveal">

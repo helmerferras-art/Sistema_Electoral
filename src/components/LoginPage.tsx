@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Fingerprint, Lock, Loader2 } from 'lucide-react';
-import { GoogleButton } from './SignupPage';
+import { Shield, Fingerprint, Lock, Loader2, Mail } from 'lucide-react';
 import { useLeaveDemo } from '../lib/demo';
 
 export const LoginPage = () => {
-    const { signInWithOtp, verifyOtp, verifyTwoFactor } = useAuth();
+    const { signInWithOtp, verifyOtp, verifyTwoFactor, sendEmailCode, verifyEmailCode } = useAuth();
     const navigate = useNavigate();
     const leavingDemo = useLeaveDemo('/login');
 
@@ -16,6 +15,25 @@ export const LoginPage = () => {
     const [step, setStep] = useState<'PHONE' | 'OTP' | '2FA'>('PHONE');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    // Respaldo por correo: solo si la cuenta ya tiene un correo vinculado
+    const [mailState, setMailState] = useState<'idle' | 'sending' | 'sent' | 'none' | 'wait'>('idle');
+    const [mailHint, setMailHint] = useState('');
+    const [mailCode, setMailCode] = useState('');
+
+    const askEmailCode = async () => {
+        setError(''); setMailState('sending');
+        const r = await sendEmailCode(phone);
+        if (r.sent) { setMailHint(r.hint || ''); setMailState('sent'); }
+        else setMailState(r.reason === 'espera' ? 'wait' : 'none');
+    };
+
+    const handleEmailCode = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(''); setLoading(true);
+        const { error: mErr } = await verifyEmailCode(phone, mailCode);
+        setLoading(false);
+        if (mErr) setError(mErr.message); else navigate('/');
+    };
 
 
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -163,13 +181,43 @@ export const LoginPage = () => {
 
                             <button
                                 type="button"
-                                onClick={() => setStep('PHONE')}
+                                onClick={() => { setStep('PHONE'); setMailState('idle'); setMailCode(''); }}
                                 style={{ background: 'transparent', border: 'none', color: '#64748B', textDecoration: 'underline', marginTop: '1rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}
                             >
                                 <span>Usar otro número</span>
                             </button>
                         </form>
-                    ) : (
+                    ) : null}
+                    {step === 'OTP' && (
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.9rem', marginTop: '0.4rem' }}>
+                            {mailState === 'idle' || mailState === 'sending' ? (
+                                <button type="button" className="squishy-btn" style={{ width: '100%', padding: '0.8rem' }} disabled={mailState === 'sending'} onClick={askEmailCode}>
+                                    <Mail size={18} /> {mailState === 'sending' ? 'Enviando…' : '¿No te llegó el código? Recíbelo por correo'}
+                                </button>
+                            ) : mailState === 'sent' ? (
+                                <form onSubmit={handleEmailCode} className="flex-col gap-2">
+                                    <p style={{ color: '#CBD5E1', fontSize: '0.92rem', textAlign: 'center', margin: 0 }}>
+                                        Te mandamos un código de 6 números a <strong>{mailHint}</strong>. Revisa también la carpeta de spam.
+                                    </p>
+                                    <input className="squishy-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000"
+                                        value={mailCode} onChange={e => setMailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.4rem' }} />
+                                    <button type="submit" className="squishy-btn primary" disabled={loading || mailCode.length < 6}>
+                                        {loading ? <Loader2 className="spin" size={20} /> : 'Entrar con el código del correo'}
+                                    </button>
+                                    <button type="button" onClick={askEmailCode} style={{ background: 'none', border: 'none', color: '#64748B', textDecoration: 'underline', cursor: 'pointer' }}>Mandar otro código</button>
+                                </form>
+                            ) : mailState === 'wait' ? (
+                                <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>Ya te mandamos un código hace poco. Espera un minuto y vuelve a intentarlo.</p>
+                            ) : (
+                                <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>
+                                    Tu cuenta todavía no tiene correo de respaldo. Pide tu código a la persona que te registró (lo ve en su app).
+                                    Cuando entres, agrega tu correo en <strong>Mi cuenta</strong> para la próxima vez.
+                                </p>
+                            )}
+                        </div>
+                    )}
+                    {step === '2FA' && (
                         <form onSubmit={handleVerify2FA} className="flex-col gap-2">
                             <div style={{ textAlign: 'center', padding: '0.5rem', border: '1px dashed var(--primary)', borderRadius: '8px', marginBottom: '0.5rem' }}>
                                 <Shield size={24} color="var(--primary)" style={{ marginBottom: '0.5rem' }} />
@@ -223,10 +271,6 @@ export const LoginPage = () => {
 
                 {step === 'PHONE' && (
                     <div className="tl-landing" style={{ background: 'transparent', minHeight: 0, color: 'inherit', marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#64748B', fontSize: '0.8rem', margin: '0.4rem 0 0.8rem' }}>
-                            <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} /> o <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-                        </div>
-                        <GoogleButton label="Entrar con Google" next="/" />
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem', fontSize: '0.85rem' }}>
                             <a href="/demo" style={{ color: 'var(--tertiary)' }}>Probar la demo</a>
                             <a href="/registro" style={{ color: 'var(--primary)' }}>Crear cuenta gratis</a>

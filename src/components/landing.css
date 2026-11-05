@@ -204,3 +204,5 @@
 .tl-landing .tl-h2 { color: var(--tl-navy); }
 .tl-landing .tl-section-dark .tl-h2 { color: #fff; }
 .tl-landing p, .tl-landing ul, .tl-landing ol { margin-top: 0; }
+.tl-landing .tl-code { font: inherit; font-size: 1.8rem; letter-spacing: 0.4em; text-align: center; padding: 0.7rem; border: 1.5px solid var(--tl-line); border-radius: 14px; background: #fff; color: var(--tl-ink); width: 100%; }
+.tl-landing .tl-code:focus { outline: none; border-color: var(--tl-orange); box-shadow: 0 0 0 3px rgba(232, 116, 59, 0.18); }

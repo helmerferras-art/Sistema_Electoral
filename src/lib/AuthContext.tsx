@@ -17,6 +17,7 @@ type UserData = {
     is_first_login?: boolean;
     two_factor_enabled?: boolean;
     privacy_version?: string | null;
+    email?: string | null;
     tenantScope: string[];
 };
 
@@ -28,6 +29,8 @@ type AuthContextType = {
     signInWithOtp: (phone: string) => Promise<{ error: any }>;
     verifyOtp: (phone: string, token: string) => Promise<{ error: any; requires2FA?: boolean }>;
     verifyTwoFactor: (phone: string, code: string) => Promise<{ error: any }>;
+    sendEmailCode: (phone: string) => Promise<{ sent: boolean; hint?: string; reason?: string }>;
+    verifyEmailCode: (phone: string, code: string) => Promise<{ error: any }>;
     signOut: () => Promise<void>;
     updatePassword: (newPassword: string) => Promise<{ error: any }>;
     impersonateUser: (targetUser: any) => Promise<void>;
@@ -202,8 +205,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // token = código táctico (primer login) o contraseña permanente (login normal).
         // En ambos casos es, literalmente, la contraseña actual de auth.users para este usuario.
-        const email = toSyntheticEmail(foundUser.phone);
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: token });
+        // Primero con el celular (cuentas con celular en Auth, incluidas las que tienen correo de respaldo);
+        // si no, con el correo interno de las cuentas antiguas.
+        const digits = String(foundUser.phone || '').replace(/\D/g, '').slice(-10);
+        let { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ phone: `+52${digits}`, password: token });
+        if (signInErr || !signInData.session) {
+            ({ data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: toSyntheticEmail(foundUser.phone), password: token }));
+        }
 
         if (signInErr || !signInData.session) {
             return { error: { message: foundUser.is_first_login ? 'El código no es correcto. Revisa el mensaje que te llegó.' : 'Contraseña incorrecta.' } };
@@ -254,6 +262,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (e) {
             return { error: { message: 'Fallo de conexión al verificar 2FA.' } };
         }
+    };
+
+    /** Código de respaldo por correo (solo si la cuenta ya tiene un correo vinculado). */
+    const sendEmailCode = async (phone: string) => {
+        const { data } = await supabase.functions.invoke('account-email', { body: { action: 'send', phone } });
+        return (data || { sent: false }) as { sent: boolean; hint?: string; reason?: string };
+    };
+
+    const verifyEmailCode = async (phone: string, code: string) => {
+        const { data, error } = await supabase.functions.invoke('account-email', { body: { action: 'verify', phone, code } });
+        if (error || !data?.access_token) {
+            let msg = 'El código no es correcto o ya venció. Pide otro.';
+            try { const j = await (error as any)?.context?.json?.(); if (j?.error) msg = j.error; } catch { /* sin cuerpo */ }
+            return { error: { message: msg } };
+        }
+        localStorage.removeItem('gamefi_agent_context');
+        const { error: sErr } = await supabase.auth.setSession({ access_token: data.access_token, refresh_token: data.refresh_token });
+        return { error: sErr ? { message: 'No se pudo abrir la sesión.' } : null };
     };
 
     const signOut = async () => {
@@ -330,7 +356,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <AuthContext.Provider value={{
-            user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, signOut, updatePassword,
+            user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, sendEmailCode, verifyEmailCode, signOut, updatePassword,
             impersonateUser, abortImpersonation, isImpersonating, profileMissing, tenantScope: user?.tenantScope || []
         }}>
 
