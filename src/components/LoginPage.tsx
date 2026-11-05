@@ -1,40 +1,28 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Fingerprint, Lock, Loader2, Mail } from 'lucide-react';
+import { Shield, Fingerprint, Lock, Loader2, MessageSquare } from 'lucide-react';
 import { useLeaveDemo } from '../lib/demo';
 
 export const LoginPage = () => {
-    const { signInWithOtp, verifyOtp, verifyTwoFactor, sendEmailCode, verifyEmailCode } = useAuth();
+    const { signInWithOtp, verifyOtp, verifyTwoFactor } = useAuth();
     const navigate = useNavigate();
     const leavingDemo = useLeaveDemo('/login');
 
-    const [phone, setPhone] = useState('');
+    const [phone, setPhone] = useState(() => new URLSearchParams(window.location.search).get('tel')?.replace(/\D/g, '').slice(-10) || '');
     const [token, setToken] = useState('');
     const [twoFactorToken, setTwoFactorToken] = useState('');
     const [step, setStep] = useState<'PHONE' | 'OTP' | '2FA'>('PHONE');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    // Respaldo por correo: solo si la cuenta ya tiene un correo vinculado
-    const [mailState, setMailState] = useState<'idle' | 'sending' | 'sent' | 'none' | 'wait'>('idle');
-    const [mailHint, setMailHint] = useState('');
-    const [mailCode, setMailCode] = useState('');
-
-    const askEmailCode = async () => {
-        setError(''); setMailState('sending');
-        const r = await sendEmailCode(phone);
-        if (r.sent) { setMailHint(r.hint || ''); setMailState('sent'); }
-        else setMailState(r.reason === 'espera' ? 'wait' : 'none');
-    };
-
-    const handleEmailCode = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(''); setLoading(true);
-        const { error: mErr } = await verifyEmailCode(phone, mailCode);
+    // Reenviar el SMS (el servidor evita duplicados en 2 minutos)
+    const [resent, setResent] = useState(false);
+    const resendSms = async () => {
+        setError(''); setResent(false); setLoading(true);
+        const { error: rErr } = await signInWithOtp(phone);
         setLoading(false);
-        if (mErr) setError(mErr.message); else navigate('/');
+        if (rErr) setError(rErr.message); else setResent(true);
     };
-
 
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -181,7 +169,7 @@ export const LoginPage = () => {
 
                             <button
                                 type="button"
-                                onClick={() => { setStep('PHONE'); setMailState('idle'); setMailCode(''); }}
+                                onClick={() => { setStep('PHONE'); setResent(false); }}
                                 style={{ background: 'transparent', border: 'none', color: '#64748B', textDecoration: 'underline', marginTop: '1rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}
                             >
                                 <span>Usar otro número</span>
@@ -189,32 +177,14 @@ export const LoginPage = () => {
                         </form>
                     ) : null}
                     {step === 'OTP' && (
-                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.9rem', marginTop: '0.4rem' }}>
-                            {mailState === 'idle' || mailState === 'sending' ? (
-                                <button type="button" className="squishy-btn" style={{ width: '100%', padding: '0.8rem' }} disabled={mailState === 'sending'} onClick={askEmailCode}>
-                                    <Mail size={18} /> {mailState === 'sending' ? 'Enviando…' : '¿No te llegó el código? Recíbelo por correo'}
-                                </button>
-                            ) : mailState === 'sent' ? (
-                                <form onSubmit={handleEmailCode} className="flex-col gap-2">
-                                    <p style={{ color: '#CBD5E1', fontSize: '0.92rem', textAlign: 'center', margin: 0 }}>
-                                        Te mandamos un código de 6 números a <strong>{mailHint}</strong>. Revisa también la carpeta de spam.
-                                    </p>
-                                    <input className="squishy-input" inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="000000"
-                                        value={mailCode} onChange={e => setMailCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                        style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.4rem' }} />
-                                    <button type="submit" className="squishy-btn primary" disabled={loading || mailCode.length < 6}>
-                                        {loading ? <Loader2 className="spin" size={20} /> : 'Entrar con el código del correo'}
-                                    </button>
-                                    <button type="button" onClick={askEmailCode} style={{ background: 'none', border: 'none', color: '#64748B', textDecoration: 'underline', cursor: 'pointer' }}>Mandar otro código</button>
-                                </form>
-                            ) : mailState === 'wait' ? (
-                                <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>Ya te mandamos un código hace poco. Espera un minuto y vuelve a intentarlo.</p>
-                            ) : (
-                                <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>
-                                    Tu cuenta todavía no tiene correo de respaldo. Pide tu código a la persona que te registró (lo ve en su app).
-                                    Cuando entres, agrega tu correo en <strong>Mi cuenta</strong> para la próxima vez.
-                                </p>
-                            )}
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.9rem', marginTop: '0.4rem' }} className="flex-col gap-2">
+                            <button type="button" className="squishy-btn" style={{ width: '100%', padding: '0.8rem' }} disabled={loading} onClick={resendSms}>
+                                <MessageSquare size={18} /> ¿No te llegó el código? Enviar otro SMS
+                            </button>
+                            {resent && <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>Listo. El mensaje puede tardar unos minutos.</p>}
+                            <p style={{ color: '#94A3B8', fontSize: '0.85rem', textAlign: 'center', margin: 0 }}>
+                                Si sigue sin llegar, pide tu código a la persona que te registró: lo ve en su app.
+                            </p>
                         </div>
                     )}
                     {step === '2FA' && (

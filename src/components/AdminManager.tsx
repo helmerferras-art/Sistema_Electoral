@@ -19,7 +19,6 @@ export const AdminManager = () => {
     // Form states
     const [newName, setNewName] = useState('');
     const [newPhone, setNewPhone] = useState('');
-    const [newEmail, setNewEmail] = useState('');
     const [newRole, setNewRole] = useState('candidato');
     const [newTenantId, setNewTenantId] = useState('');
     const [targetMunicipality, setTargetMunicipality] = useState('');
@@ -66,7 +65,6 @@ export const AdminManager = () => {
                 body: {
                     name: newName,
                     phone: newPhone,
-                    email: newEmail.trim() || undefined,
                     role: newRole,
                     tenant_id: newTenantId || null,
                     two_factor_enabled: newRole === 'superadmin'
@@ -82,7 +80,6 @@ export const AdminManager = () => {
             setMessage(`✅ Usuario creado: ${newName}. Código táctico inicial: ${tacticalCode}`);
             setNewName('');
             setNewPhone('');
-            setNewEmail('');
             loadData();
 
             // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
@@ -228,16 +225,6 @@ export const AdminManager = () => {
                                 onChange={e => setNewPhone(e.target.value)}
                                 placeholder="961..."
                                 required
-                            />
-                        </div>
-                        <div className="flex-col">
-                            <label style={{ fontSize: '0.8rem', color: '#888' }}>CORREO (OPCIONAL)</label>
-                            <input
-                                type="email"
-                                className="squishy-input"
-                                value={newEmail}
-                                onChange={e => setNewEmail(e.target.value)}
-                                placeholder="Por si el código no le llega por SMS"
                             />
                         </div>
                         <div className="flex-col">

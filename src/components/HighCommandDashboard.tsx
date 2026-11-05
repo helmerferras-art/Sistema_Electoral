@@ -51,7 +51,7 @@ export const HighCommandDashboard = () => {
     const [isAddingUser, setIsAddingUser] = useState(false);
     const [isAssigningTerritory, setIsAssigningTerritory] = useState(false);
     const [selectedUserForTerritory, setSelectedUserForTerritory] = useState<any>(null);
-    const [newUserForm, setNewUserForm] = useState({ name: '', phone: '', email: '', role: 'coordinador_territorial' });
+    const [newUserForm, setNewUserForm] = useState({ name: '', phone: '', role: 'coordinador_territorial' });
     const [isSubmittingUser, setIsSubmittingUser] = useState(false);
     const [selectedSectionsForNewUser, setSelectedSectionsForNewUser] = useState<string[]>([]);
 
@@ -361,7 +361,6 @@ export const HighCommandDashboard = () => {
                 body: {
                     name: newUserForm.name,
                     phone: newUserForm.phone,
-                    email: newUserForm.email.trim() || undefined,
                     role: newUserForm.role,
                     assigned_territory: {
                         layer_type: 'seccion',
@@ -376,7 +375,7 @@ export const HighCommandDashboard = () => {
 
             alert(`¡Operador ${accountResult.user.name} reclutado exitosamente con su zona asignada!`);
             setIsAddingUser(false);
-            setNewUserForm({ name: '', phone: '', email: '', role: 'coordinador_territorial' });
+            setNewUserForm({ name: '', phone: '', role: 'coordinador_territorial' });
             setSelectedSectionsForNewUser([]);
             fetchMetrics();
         } catch (error: any) {
@@ -840,14 +839,6 @@ export const HighCommandDashboard = () => {
                                 inputMode="numeric"
                                 maxLength={10}
                                 required
-                            />
-                            <input
-                                type="email"
-                                placeholder="Correo (opcional, por si no le llega el SMS)"
-                                value={newUserForm.email}
-                                onChange={e => setNewUserForm({ ...newUserForm, email: e.target.value })}
-                                className="squishy-input"
-                                autoComplete="off"
                             />
                             <select
                                 value={newUserForm.role}
