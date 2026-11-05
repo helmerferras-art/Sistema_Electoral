@@ -3,6 +3,7 @@ import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Fingerprint, Lock, Loader2, MessageSquare } from 'lucide-react';
 import { useLeaveDemo } from '../lib/demo';
+import { supabase } from '../lib/supabase';
 
 export const LoginPage = () => {
     const { signInWithOtp, verifyOtp, verifyTwoFactor } = useAuth();
@@ -16,12 +17,19 @@ export const LoginPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     // Reenviar el SMS (el servidor evita duplicados en 2 minutos)
-    const [resent, setResent] = useState(false);
+    const [resent, setResent] = useState<'' | 'sms' | 'wa'>('');
     const resendSms = async () => {
-        setError(''); setResent(false); setLoading(true);
+        setError(''); setResent(''); setLoading(true);
         const { error: rErr } = await signInWithOtp(phone);
         setLoading(false);
-        if (rErr) setError(rErr.message); else setResent(true);
+        if (rErr) setError(rErr.message); else setResent('sms');
+    };
+    // WhatsApp: el celular de la campaña lo muestra y quien lo tiene lo envía con un toque
+    const resendWa = async () => {
+        setError(''); setResent(''); setLoading(true);
+        const { data } = await supabase.rpc('fn_queue_login_code', { p_phone: phone, p_channel: 'wa' });
+        setLoading(false);
+        if (data) setResent('wa'); else setError('No hay un código pendiente para este número. Si ya tienes contraseña, escríbela.');
     };
 
     const handleSendOtp = async (e: React.FormEvent) => {
@@ -169,7 +177,7 @@ export const LoginPage = () => {
 
                             <button
                                 type="button"
-                                onClick={() => { setStep('PHONE'); setResent(false); }}
+                                onClick={() => { setStep('PHONE'); setResent(''); }}
                                 style={{ background: 'transparent', border: 'none', color: '#64748B', textDecoration: 'underline', marginTop: '1rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.9rem' }}
                             >
                                 <span>Usar otro número</span>
@@ -181,7 +189,12 @@ export const LoginPage = () => {
                             <button type="button" className="squishy-btn" style={{ width: '100%', padding: '0.8rem' }} disabled={loading} onClick={resendSms}>
                                 <MessageSquare size={18} /> ¿No te llegó el código? Enviar otro SMS
                             </button>
-                            {resent && <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>Listo. El mensaje puede tardar unos minutos.</p>}
+                            <button type="button" className="squishy-btn" style={{ width: '100%', padding: '0.8rem', borderColor: '#25D366', color: '#25D366' }} disabled={loading} onClick={resendWa}>
+                                Recibirlo por WhatsApp
+                            </button>
+                            {resent && <p style={{ color: '#CBD5E1', fontSize: '0.9rem', textAlign: 'center', margin: 0 }}>
+                                {resent === 'sms' ? 'Listo. El mensaje puede tardar unos minutos.' : 'Listo. Tu campaña te lo enviará por WhatsApp en unos minutos.'}
+                            </p>}
                             <p style={{ color: '#94A3B8', fontSize: '0.85rem', textAlign: 'center', margin: 0 }}>
                                 Si sigue sin llegar, pide tu código a la persona que te registró: lo ve en su app.
                             </p>

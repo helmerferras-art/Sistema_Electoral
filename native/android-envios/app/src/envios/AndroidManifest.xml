@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Versión "Tlatoani Envíos": la misma app, más el permiso para mandar SMS desde el chip del celular de la campaña.
+  Se distribuye como descarga directa desde nemia.lat (Google Play no permite este permiso en apps que no son de mensajería).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+</manifest>

@@ -38,6 +38,8 @@ import { NotificationProvider, useNotifications } from './lib/NotificationContex
 import { supabase } from './lib/supabase'
 import { SetupWizard } from './components/SetupWizard'
 import { PlanBar } from './components/PlanBar'
+import { GatewayBanner, GatewayStatusCard } from './components/GatewayPhone'
+import { resumeGateway } from './lib/phoneGateway'
 import { useMyPlan, endDemo } from './lib/demo'
 import './index.css'
 
@@ -119,6 +121,8 @@ const MainDashboard = () => {
   }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
   const plan = useMyPlan(!!user);
+  // Si este celular es el puente de la campaña, sigue enviando al abrir la app
+  useEffect(() => { if (user) resumeGateway(); }, [user?.id]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
 
@@ -208,6 +212,7 @@ const MainDashboard = () => {
         </div>
       )}
       <PlanBar plan={plan} role={user?.role} />
+      <GatewayBanner />
       {/* HUD (Heads-Up Display) - Optimized for Mobile */}
       <header className="hud-header" style={{
         backgroundColor: 'rgba(15, 18, 24, 0.95)',
@@ -316,6 +321,7 @@ const MainDashboard = () => {
         <Suspense fallback={<PageLoader />}>
         {activeTab === 'profile' && <RegistroForm />}
         {activeTab === 'map' && <MapView />}
+        {activeTab === 'crm' && ['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '') && !plan?.sandbox && <GatewayStatusCard />}
         {activeTab === 'crm' && (
           user?.role === 'candidato'
             ? <CandidateDashboard />

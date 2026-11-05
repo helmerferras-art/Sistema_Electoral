@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Trash2, ExternalLink, KeyRound } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
+import { GatewaySettings } from './GatewayPhone';
 
 /**
  * "Mi cuenta": datos básicos y eliminación de la cuenta desde la app
@@ -67,6 +68,7 @@ export const MyAccount = ({ onClose }: { onClose: () => void }) => {
                     Qué datos se borran y cómo se protegen <ExternalLink size={12} />
                 </a>
 
+                <GatewaySettings role={user?.role} />
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '0.8rem', marginTop: '0.4rem' }}>
                     {protectedRole ? (
                         <div style={{ color: '#bbb', fontSize: '0.8rem' }}>
