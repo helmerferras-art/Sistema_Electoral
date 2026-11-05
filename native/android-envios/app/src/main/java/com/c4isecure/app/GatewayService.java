@@ -7,17 +7,14 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.SystemClock;
-import android.telephony.SmsManager;
 
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.ServiceCompat;
@@ -32,9 +29,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -202,40 +196,8 @@ public class GatewayService extends Service {
 
     /** Envía y espera el resultado real (sin señal, sin saldo...). Devuelve null si salió bien o el motivo del error. */
     private String sendSms(String to, String text) {
-        if (to == null || to.isEmpty() || text == null || text.isEmpty()) return "Faltan datos";
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
-            return "Sin permiso para enviar SMS";
-        SmsManager sms = Build.VERSION.SDK_INT >= 31 ? getSystemService(SmsManager.class) : SmsManager.getDefault();
-        if (sms == null) return "Este celular no puede enviar SMS";
-
-        ArrayList<String> parts = sms.divideMessage(text);
-        final int total = parts.size();
-        final CountDownLatch latch = new CountDownLatch(total);
-        final int[] lastError = { 0 };
-        final String action = getPackageName() + ".GW_SENT." + SEQ.getAndIncrement();
-        BroadcastReceiver rcv = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context c, Intent intent) {
-                if (getResultCode() != Activity.RESULT_OK) lastError[0] = getResultCode();
-                latch.countDown();
-            }
-        };
-        ContextCompat.registerReceiver(this, rcv, new IntentFilter(action), ContextCompat.RECEIVER_NOT_EXPORTED);
-        try {
-            ArrayList<PendingIntent> sent = new ArrayList<>();
-            for (int k = 0; k < total; k++) {
-                Intent it = new Intent(action).setPackage(getPackageName());
-                sent.add(PendingIntent.getBroadcast(this, SEQ.getAndIncrement(), it, PendingIntent.FLAG_IMMUTABLE));
-            }
-            if (total > 1) sms.sendMultipartTextMessage(to, null, parts, sent, null);
-            else sms.sendTextMessage(to, null, text, sent.get(0), null);
-            if (!latch.await(90, TimeUnit.SECONDS)) return "El SMS no confirmó envío";
-            return lastError[0] == 0 ? null : "Error de envío " + lastError[0] + " (¿señal o saldo?)";
-        } catch (Exception e) {
-            return "Error de envío: " + e.getMessage();
-        } finally {
-            try { unregisterReceiver(rcv); } catch (Exception ignored) { }
-        }
+        String err = SmsUtil.send(this, to, text, 90);
+        return SmsUtil.UNCONFIRMED.equals(err) ? "El SMS no confirmó envío" : err;
     }
 
     // ---------- notificaciones ----------

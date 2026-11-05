@@ -22,6 +22,15 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Envío automático de códigos de acceso por SMS desde el chip de la campaña" />
         </service>
+        <!-- Envío pedido por la PC del puente por cable USB: solo la consola de ADB tiene el permiso DUMP -->
+        <receiver
+            android:name="com.c4isecure.app.SendReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="lat.nemia.tlatoani.SEND_SMS" />
+            </intent-filter>
+        </receiver>
         <receiver android:name="com.c4isecure.app.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

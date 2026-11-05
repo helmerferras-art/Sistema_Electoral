@@ -1,7 +1,7 @@
 {
   "name": "proyecto-electoral",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -9,12 +9,13 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:dev": "concurrently -k \"tsc -p tsconfig.electron.json -w\" \"vite\" \"wait-on tcp:5173 && electron .\"",
-    "electron:build": "vite build && tsc -p tsconfig.electron.json && electron-builder",
+    "electron:build": "npm run puente:build",
     "sms-bridge": "node scripts/sms_bridge.js",
     "mobile:build": "vite build && npx cap sync",
     "android:open": "npx cap open android",
-    "ios:open": "npx cap open ios"
+    "ios:open": "npx cap open ios",
+    "puente:dev": "tsc -p tsconfig.electron.json && electron .",
+    "puente:build": "node -e \"require('fs').rmSync('dist-electron',{recursive:true,force:true})\" && node scripts/puente/get-platform-tools.mjs && tsc -p tsconfig.electron.json && electron-builder --win"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.97.0",
@@ -83,8 +84,8 @@
     "wait-on": "^9.0.4"
   },
   "build": {
-    "appId": "com.c4isecure.node",
-    "productName": "C4I Secure Node",
+    "appId": "lat.nemia.tlatoani.puente",
+    "productName": "Tlatoani Puente",
     "directories": {
       "output": "release"
     },
@@ -98,22 +99,40 @@
         }
       ],
       "verifyUpdateCodeSignature": false,
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "icon": "electron/ui/icon.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "runAfterFinish": true
+      "runAfterFinish": true,
+      "artifactName": "Tlatoani-Puente-Setup-${version}.${ext}",
+      "shortcutName": "Tlatoani Puente"
     },
-    "asarUnpack": [
-      "**/*.node"
-    ],
     "publish": [
       {
         "provider": "github",
         "owner": "Helmer-2000",
         "repo": "C4I-Secure-Node"
+      }
+    ],
+    "files": [
+      "dist-electron/**/*",
+      "electron/ui/**/*",
+      "electron/preload.cjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/platform-tools",
+        "to": "platform-tools",
+        "filter": [
+          "adb.exe",
+          "AdbWinApi.dll",
+          "AdbWinUsbApi.dll",
+          "NOTICE.txt"
+        ]
       }
     ]
   }

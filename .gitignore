@@ -51,3 +51,6 @@ tsc_errors.txt
 *log.txt
 # Archivo de logs/volcados viejos (local)
 _archivo/
+
+# Tlatoani Puente: herramientas de Android que se descargan al compilar
+vendor/

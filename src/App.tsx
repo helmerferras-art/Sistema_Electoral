@@ -38,7 +38,7 @@ import { NotificationProvider, useNotifications } from './lib/NotificationContex
 import { supabase } from './lib/supabase'
 import { SetupWizard } from './components/SetupWizard'
 import { PlanBar } from './components/PlanBar'
-import { GatewayBanner, GatewayStatusCard } from './components/GatewayPhone'
+import { GatewayBanner, GatewayStatusCard, PlatformBridgeCard } from './components/GatewayPhone'
 import { resumeGateway } from './lib/phoneGateway'
 import { useMyPlan, endDemo } from './lib/demo'
 import './index.css'
@@ -321,7 +321,8 @@ const MainDashboard = () => {
         <Suspense fallback={<PageLoader />}>
         {activeTab === 'profile' && <RegistroForm />}
         {activeTab === 'map' && <MapView />}
-        {activeTab === 'crm' && ['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '') && !plan?.sandbox && <GatewayStatusCard />}
+        {activeTab === 'crm' && user?.role === 'superadmin' && !plan?.sandbox && <PlatformBridgeCard />}
+        {activeTab === 'crm' && ['candidato', 'coordinador_campana'].includes(user?.role || '') && !plan?.sandbox && <GatewayStatusCard />}
         {activeTab === 'crm' && (
           user?.role === 'candidato'
             ? <CandidateDashboard />
