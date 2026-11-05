@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Smartphone, Send, CheckCircle2, AlertTriangle, Download } from 'lucide-react';
+import { MessageSquare, Smartphone, CheckCircle2, AlertTriangle, Download, BatteryWarning } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { disableGateway, enableGateway, gatewayAvailable, sendWaItem, subscribeGateway, type GatewayState } from '../lib/phoneGateway';
+import { disableGateway, enableGateway, fixBattery, gatewayAvailable, subscribeGateway, type GatewayState } from '../lib/phoneGateway';
 
 const useGateway = () => {
     const [s, setS] = useState<GatewayState | null>(null);
@@ -36,14 +36,14 @@ export const GatewaySettings = ({ role }: { role?: string }) => {
                 <span><strong>Enviar los mensajes de la campaña desde este celular</strong></span>
             </label>
             <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
-                Los códigos de acceso salen por SMS desde el número de este celular. Déjalo conectado al cargador con la app abierta.
+                Los códigos de acceso salen solos por SMS desde el número de este celular, de día y de noche, aunque cierres la app o apagues la pantalla. Déjalo conectado al cargador y con saldo o paquete de SMS. Si alguien pide su código por WhatsApp, también le llega por SMS y el celular te avisa para mandarlo por WhatsApp con un toque.
             </div>
             {msg && <div style={{ fontSize: '0.82rem', color: '#fca5a5' }}>{msg}</div>}
         </div>
     );
 };
 
-/** Franja visible mientras el celular envía; los WhatsApp pendientes se mandan con un toque. */
+/** Franja visible mientras el celular envía (el envío sigue aunque la app se cierre). */
 export const GatewayBanner = () => {
     const s = useGateway();
     if (!s?.on) return null;
@@ -51,15 +51,15 @@ export const GatewayBanner = () => {
         <div style={{ background: 'rgba(0,230,118,0.1)', borderBottom: '1px solid rgba(0,230,118,0.35)', padding: '0.45rem 0.8rem', fontSize: '0.82rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <MessageSquare size={15} color="var(--secondary)" />
-                <span>Este celular envía los mensajes de la campaña · <strong>{s.sent}</strong> enviados{s.failed ? ` · ${s.failed} con error` : ''}</span>
+                <span>Este celular envía los códigos de la campaña, solo y a toda hora · <strong>{s.sent}</strong> enviados{s.failed ? ` · ${s.failed} con error` : ''}</span>
             </div>
             {s.lastError && <div style={{ textAlign: 'center', color: '#fca5a5' }}>Último error: {s.lastError}</div>}
-            {s.wa.map(w => (
-                <button key={w.id} onClick={() => sendWaItem(w)} className="squishy-btn"
-                    style={{ width: '100%', marginTop: '0.4rem', background: '#25D366', borderColor: '#25D366', color: '#062b14', fontWeight: 700 }}>
-                    <Send size={15} /> Enviar por WhatsApp a ***{w.phone.replace(/\D/g, '').slice(-4)}{w.isCode ? ' (código de acceso)' : ''}
+            {!s.batteryOk && (
+                <button onClick={fixBattery} className="squishy-btn"
+                    style={{ width: '100%', marginTop: '0.4rem', background: '#f59e0b', borderColor: '#f59e0b', color: '#1f1300', fontWeight: 700 }}>
+                    <BatteryWarning size={15} /> Permitir que envíe de noche (quitar ahorro de batería)
                 </button>
-            ))}
+            )}
         </div>
     );
 };

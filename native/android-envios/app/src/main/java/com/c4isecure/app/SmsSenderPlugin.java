@@ -35,7 +35,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @CapacitorPlugin(
     name = "SmsSender",
-    permissions = { @Permission(alias = "sms", strings = { Manifest.permission.SEND_SMS }) }
+    permissions = {
+        @Permission(alias = "sms", strings = { Manifest.permission.SEND_SMS }),
+        @Permission(alias = "notif", strings = { "android.permission.POST_NOTIFICATIONS" })
+    }
 )
 public class SmsSenderPlugin extends Plugin {
 
@@ -160,5 +163,88 @@ public class SmsSenderPlugin extends Plugin {
             }
             call.resolve();
         });
+    }
+
+    // ---------- Envío 24/7 (servicio en primer plano) ----------
+
+    /** Arranca el servicio que envía solo, aunque la app esté cerrada o la pantalla apagada. */
+    @PluginMethod
+    public void startGateway(PluginCall call) {
+        String url = call.getString("url"), apiKey = call.getString("apiKey"), token = call.getString("token");
+        if (url == null || apiKey == null || token == null) { call.reject("FALTAN_DATOS"); return; }
+        if (!declaresSms()) { call.reject("NO_DISPONIBLE"); return; }
+        if (getPermissionState("sms") != PermissionState.GRANTED) { call.reject("SIN_PERMISO"); return; }
+        GatewayService.prefs(getContext()).edit()
+            .putString("url", url).putString("apiKey", apiKey).putString("token", token)
+            .putBoolean("enabled", true).remove("lastError").apply();
+        try {
+            GatewayService.start(getContext());
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("NO_ARRANCO", e);
+        }
+    }
+
+    @PluginMethod
+    public void stopGateway(PluginCall call) {
+        GatewayService.prefs(getContext()).edit().putBoolean("enabled", false).remove("token").apply();
+        GatewayService.stop(getContext());
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void gatewayStatus(PluginCall call) {
+        android.content.SharedPreferences p = GatewayService.prefs(getContext());
+        JSObject r = new JSObject();
+        r.put("enabled", p.getBoolean("enabled", false));
+        r.put("sent", p.getInt("sent", 0));
+        r.put("failed", p.getInt("failed", 0));
+        r.put("lastAt", p.getLong("lastAt", 0));
+        r.put("lastSeen", p.getLong("lastSeen", 0));
+        r.put("lastError", p.getString("lastError", null));
+        android.os.PowerManager pm = getContext().getSystemService(android.os.PowerManager.class);
+        r.put("batteryUnrestricted", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
+        r.put("notifications", Build.VERSION.SDK_INT < 33 || getPermissionState("notif") == PermissionState.GRANTED);
+        call.resolve(r);
+    }
+
+    /** Android 13+: permiso para mostrar la notificación fija del servicio y los avisos de WhatsApp. */
+    @PluginMethod
+    public void requestNotificationPermission(PluginCall call) {
+        if (Build.VERSION.SDK_INT < 33 || getPermissionState("notif") == PermissionState.GRANTED) {
+            JSObject r = new JSObject();
+            r.put("granted", true);
+            call.resolve(r);
+            return;
+        }
+        requestPermissionForAlias("notif", call, "notifPermissionCallback");
+    }
+
+    @PermissionCallback
+    private void notifPermissionCallback(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("granted", getPermissionState("notif") == PermissionState.GRANTED);
+        call.resolve(r);
+    }
+
+    /** Pide a Android que no duerma la app (ahorro de batería), para que envíe también en la madrugada. */
+    @PluginMethod
+    public void requestIgnoreBatteryOptimizations(PluginCall call) {
+        android.os.PowerManager pm = getContext().getSystemService(android.os.PowerManager.class);
+        String pkg = getContext().getPackageName();
+        if (pm != null && !pm.isIgnoringBatteryOptimizations(pkg)) {
+            try {
+                Intent i = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:" + pkg));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            } catch (Exception e) {
+                try {
+                    Intent i = new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(i);
+                } catch (Exception ignored) { }
+            }
+        }
+        call.resolve();
     }
 }
