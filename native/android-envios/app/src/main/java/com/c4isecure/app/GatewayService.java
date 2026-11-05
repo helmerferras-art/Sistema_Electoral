@@ -13,7 +13,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
-import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -42,14 +41,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Servicio de envío 24/7 de "Tlatoani Envíos".
  * Corre en primer plano (con su notificación fija) aunque la app esté cerrada o la pantalla apagada,
  * y vuelve a arrancar solo al reiniciar el celular (BootReceiver).
- * Cada 10 segundos pregunta al servidor si hay mensajes de su campaña y los manda por SMS desde el chip.
+ * Cada 10 segundos pregunta al servidor si hay códigos de su campaña y los manda por SMS desde el chip
+ * (es el respaldo del puente de la plataforma: recibe lo que el puente no pudo enviar).
  * Usa una llave propia de este celular (no la sesión de la persona) que se revoca al apagar el envío.
  */
 public class GatewayService extends Service {
 
     public static final String PREFS = "tlatoani_gateway";
     private static final String CHANNEL_RUN = "envios_activo";
-    private static final String CHANNEL_WA = "envios_whatsapp";
     private static final int NOTIF_ID = 4101;
     private static final long POLL_MS = 10_000;
     private static final long GAP_MS = 3_000;
@@ -101,7 +100,6 @@ public class GatewayService extends Service {
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= 26 && nm != null) {
             nm.createNotificationChannel(new NotificationChannel(CHANNEL_RUN, "Envío de mensajes activo", NotificationManager.IMPORTANCE_LOW));
-            nm.createNotificationChannel(new NotificationChannel(CHANNEL_WA, "WhatsApp por enviar", NotificationManager.IMPORTANCE_HIGH));
         }
     }
 
@@ -163,10 +161,8 @@ public class GatewayService extends Service {
                     JSONObject c = items.getJSONObject(i);
                     String id = c.getString("id"), type = c.optString("type"), phone = c.optString("phone"), msg = c.optString("message");
                     String error = null;
-                    if ("sms".equals(type) || "wa".equals(type)) {
-                        // WhatsApp no se puede automatizar: el código sale solo por SMS y además se avisa para mandarlo por WhatsApp con un toque.
+                    if ("sms".equals(type)) {
                         error = sendSms(phone, msg);
-                        if ("wa".equals(type)) notifyWhatsApp(phone, msg, c.optBoolean("is_code"));
                     } else {
                         error = "Tipo no soportado en el celular: " + type;
                     }
@@ -261,25 +257,6 @@ public class GatewayService extends Service {
     private void updateStatus(int sent, String error) {
         NotificationManager nm = getSystemService(NotificationManager.class);
         if (nm != null) nm.notify(NOTIF_ID, buildStatus(sent, error));
-    }
-
-    private void notifyWhatsApp(String phone, String msg, boolean isCode) {
-        String d = phone == null ? "" : phone.replaceAll("\\D", "");
-        if (d.length() == 10) d = "52" + d;
-        Intent wa = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + d + "?text=" + Uri.encode(msg)));
-        wa.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        int n = SEQ.getAndIncrement();
-        PendingIntent pi = PendingIntent.getActivity(this, n, wa, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        String last4 = d.length() >= 4 ? d.substring(d.length() - 4) : d;
-        Notification nt = new NotificationCompat.Builder(this, CHANNEL_WA)
-            .setSmallIcon(android.R.drawable.stat_notify_chat)
-            .setContentTitle("Enviar por WhatsApp a ***" + last4)
-            .setContentText((isCode ? "Código de acceso. " : "") + "Ya salió por SMS; toca para mandarlo también por WhatsApp.")
-            .setAutoCancel(true)
-            .setContentIntent(pi)
-            .build();
-        NotificationManager nm = getSystemService(NotificationManager.class);
-        if (nm != null) nm.notify(n, nt);
     }
 
     // ---------- HTTP ----------

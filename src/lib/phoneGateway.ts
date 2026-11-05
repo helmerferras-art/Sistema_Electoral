@@ -6,8 +6,8 @@ import { isNativeApp } from './location';
  * Celular de la campaña como puente de mensajes ("Tlatoani Envíos"), automático 24/7.
  * Al activarlo, el celular recibe una llave propia (no usa la sesión de la persona) y arranca un servicio
  * nativo que sigue enviando aunque la app esté cerrada, la pantalla apagada o el celular se reinicie.
- * - SMS: salen solos desde el chip del celular, a cualquier hora.
- * - WhatsApp: el código sale solo por SMS y, además, el celular avisa para mandarlo por WhatsApp con un toque.
+ * Es el respaldo del puente de la plataforma: envía por SMS los códigos de su campaña cuando el puente no está
+ * disponible o no pudo enviarlos. Solo SMS.
  */
 
 type NativeStatus = {

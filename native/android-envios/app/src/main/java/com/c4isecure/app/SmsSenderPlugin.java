@@ -203,14 +203,13 @@ public class SmsSenderPlugin extends Plugin {
         r.put("lastSeen", p.getLong("lastSeen", 0));
         r.put("lastError", p.getString("lastError", null));
         r.put("revoked", p.getBoolean("revoked", false));
-        r.put("dedicated", p.getBoolean("dedicated", false));
         android.os.PowerManager pm = getContext().getSystemService(android.os.PowerManager.class);
         r.put("batteryUnrestricted", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
         r.put("notifications", Build.VERSION.SDK_INT < 33 || getPermissionState("notif") == PermissionState.GRANTED);
         call.resolve(r);
     }
 
-    /** Android 13+: permiso para mostrar la notificación fija del servicio y los avisos de WhatsApp. */
+    /** Android 13+: permiso para mostrar la notificación fija del servicio de envío. */
     @PluginMethod
     public void requestNotificationPermission(PluginCall call) {
         if (Build.VERSION.SDK_INT < 33 || getPermissionState("notif") == PermissionState.GRANTED) {

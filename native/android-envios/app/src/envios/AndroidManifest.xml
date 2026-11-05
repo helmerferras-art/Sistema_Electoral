@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Versión "Tlatoani Envíos": la misma app, más el envío de SMS 24/7 desde el chip del celular de la campaña.
+  Versión "Tlatoani Envíos": la misma app, más el envío de códigos por SMS 24/7 desde el chip del celular de la campaña (respaldo del puente).
   Se distribuye como descarga directa desde nemia.lat (Google Play no permite estos permisos en apps que no son de mensajería).
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -22,26 +22,6 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Envío automático de códigos de acceso por SMS desde el chip de la campaña" />
         </service>
-        <!-- Configuración por cable (ADB): solo la consola de ADB tiene el permiso DUMP -->
-        <receiver
-            android:name="com.c4isecure.app.ProvisionReceiver"
-            android:exported="true"
-            android:permission="android.permission.DUMP">
-            <intent-filter>
-                <action android:name="lat.nemia.tlatoani.PROVISION" />
-                <action android:name="lat.nemia.tlatoani.RELEASE" />
-            </intent-filter>
-        </receiver>
-        <!-- Modo celular dedicado (opcional): dpm set-device-owner -->
-        <receiver
-            android:name="com.c4isecure.app.EnviosAdminReceiver"
-            android:exported="true"
-            android:permission="android.permission.BIND_DEVICE_ADMIN">
-            <meta-data android:name="android.app.device_admin" android:resource="@xml/envios_device_admin" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
         <receiver android:name="com.c4isecure.app.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
