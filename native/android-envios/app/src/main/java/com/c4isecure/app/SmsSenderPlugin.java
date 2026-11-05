@@ -176,7 +176,7 @@ public class SmsSenderPlugin extends Plugin {
         if (getPermissionState("sms") != PermissionState.GRANTED) { call.reject("SIN_PERMISO"); return; }
         GatewayService.prefs(getContext()).edit()
             .putString("url", url).putString("apiKey", apiKey).putString("token", token)
-            .putBoolean("enabled", true).remove("lastError").apply();
+            .putBoolean("enabled", true).remove("revoked").remove("lastError").apply();
         try {
             GatewayService.start(getContext());
             call.resolve();
@@ -202,6 +202,8 @@ public class SmsSenderPlugin extends Plugin {
         r.put("lastAt", p.getLong("lastAt", 0));
         r.put("lastSeen", p.getLong("lastSeen", 0));
         r.put("lastError", p.getString("lastError", null));
+        r.put("revoked", p.getBoolean("revoked", false));
+        r.put("dedicated", p.getBoolean("dedicated", false));
         android.os.PowerManager pm = getContext().getSystemService(android.os.PowerManager.class);
         r.put("batteryUnrestricted", pm != null && pm.isIgnoringBatteryOptimizations(getContext().getPackageName()));
         r.put("notifications", Build.VERSION.SDK_INT < 33 || getPermissionState("notif") == PermissionState.GRANTED);

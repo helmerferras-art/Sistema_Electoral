@@ -22,3 +22,14 @@ Compilar el APK de Tlatoani Envíos:
     cd android && gradlew assembleEnviosRelease     (o en Android Studio: Build Variants → enviosRelease)
 
 El APK firmado se publica en `public/descargas/tlatoani-envios.apk` para descargarlo desde nemia.lat.
+
+## Celular dedicado (sin intervención)
+
+- `ProvisionReceiver.java`: recibe la llave por ADB (solo la consola de ADB puede llamarlo: exige el permiso DUMP).
+- `EnviosAdminReceiver.java` + `res/xml/envios_device_admin.xml`: modo "dueña del dispositivo" opcional.
+- Vigilante cada 15 min (`GatewayService.scheduleWatchdog`) que reinicia el servicio si Android lo cerró.
+
+En el tablero, Mando > Envío de mensajes > "Agregar celular dedicado" da la llave (`fn_gateway_provision`).
+En la PC: `public/descargas/tlatoani-envios-pc.zip` (configurar-celular-envios.bat/.ps1) instala el APK, concede
+permisos, quita el ahorro de batería y activa el envío. `-Dedicado` intenta el modo dueña del dispositivo
+(celular sin cuentas); `-Liberar` lo apaga y lo libera.

@@ -12,7 +12,7 @@ import { isNativeApp } from './location';
 
 type NativeStatus = {
     enabled: boolean; sent: number; failed: number; lastAt: number; lastSeen: number;
-    lastError: string | null; batteryUnrestricted: boolean; notifications: boolean;
+    lastError: string | null; batteryUnrestricted: boolean; notifications: boolean; revoked?: boolean;
 };
 type SmsSenderPlugin = {
     available(): Promise<{ available: boolean; granted: boolean }>;
@@ -115,6 +115,8 @@ export const resumeGateway = async () => {
     state = { ...state, bridge: s.bridge };
     try {
         const n = await SmsSender.gatewayStatus();
+        // Dado de baja desde el tablero: no se reactiva solo
+        if (n.revoked) { state = { ...state, on: false }; save(); emit(); return; }
         if (!n.enabled) await startNative(s.device || 'Celular de la campaña');
     } catch { /* sin servicio o sin sesión */ }
     refresh();

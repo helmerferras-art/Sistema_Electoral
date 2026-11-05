@@ -1,6 +1,7 @@
 package com.c4isecure.app;
 
 import android.app.Activity;
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -16,6 +17,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.telephony.SmsManager;
 
 import androidx.core.app.NotificationCompat;
@@ -67,7 +69,27 @@ public class GatewayService extends Service {
     }
 
     public static void stop(Context c) {
+        cancelWatchdog(c);
         c.stopService(new Intent(c, GatewayService.class));
+    }
+
+    // Vigilante: cada 15 minutos revisa que el servicio siga vivo (por si Android lo cerró) y lo vuelve a arrancar.
+    public static final String ACTION_WATCHDOG = "lat.nemia.tlatoani.WATCHDOG";
+    private static final long WATCHDOG_MS = 15 * 60_000;
+
+    private static PendingIntent watchdogIntent(Context c) {
+        Intent i = new Intent(c, BootReceiver.class).setAction(ACTION_WATCHDOG);
+        return PendingIntent.getBroadcast(c, 7, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+    }
+
+    public static void scheduleWatchdog(Context c) {
+        AlarmManager am = c.getSystemService(AlarmManager.class);
+        if (am != null) am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + WATCHDOG_MS, watchdogIntent(c));
+    }
+
+    public static void cancelWatchdog(Context c) {
+        AlarmManager am = c.getSystemService(AlarmManager.class);
+        if (am != null) am.cancel(watchdogIntent(c));
     }
 
     @Override
@@ -89,9 +111,11 @@ public class GatewayService extends Service {
         int type = Build.VERSION.SDK_INT >= 34 ? ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE : 0;
         ServiceCompat.startForeground(this, NOTIF_ID, buildStatus(p.getInt("sent", 0), null), type);
         if (!p.getBoolean("enabled", false) || p.getString("token", null) == null) {
+            cancelWatchdog(this);
             stopSelf();
             return START_NOT_STICKY;
         }
+        scheduleWatchdog(this);
         if (!running) {
             running = true;
             PowerManager pm = getSystemService(PowerManager.class);
@@ -128,7 +152,7 @@ public class GatewayService extends Service {
                 Http r = post(url, key, "fn_gateway_pull_token", body);
                 if (r.code == 400 && r.body.contains("Llave de env")) {
                     // La llave se revocó (alguien apagó el envío o lo activó en otro celular)
-                    p.edit().putBoolean("enabled", false).putString("lastError", "Este celular ya no está activado para enviar.").apply();
+                    p.edit().putBoolean("enabled", false).putBoolean("revoked", true).putString("lastError", "Este celular fue dado de baja desde el tablero.").apply();
                     break;
                 }
                 if (r.code < 200 || r.code >= 300) throw new Exception("Servidor " + r.code);
@@ -164,6 +188,7 @@ public class GatewayService extends Service {
             try { Thread.sleep(wait); } catch (InterruptedException ie) { break; }
         }
         running = false;
+        if (!prefs(this).getBoolean("enabled", false)) cancelWatchdog(this);
         stopSelf();
     }
 
