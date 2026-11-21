@@ -388,10 +388,10 @@ import { BridgeSync } from './lib/BridgeSync';
 import { startActivitySyncListener } from './lib/activitySync';
 import { isNativeApp } from './lib/location';
 
-// Visitantes ven la página de entrada; con sesión, la app
+// Visitantes en la web ven la página de entrada; en la app del celular van directo a "Iniciar sesión". Con sesión, la app.
 const HomeGate = () => {
   const { session } = useAuth();
-  if (!session) return <Landing />;
+  if (!session) return isNativeApp() ? <Navigate to="/login" replace /> : <Landing />;
   return <ProtectedRoute><MainDashboard /></ProtectedRoute>;
 };
 
