@@ -1,8 +1,10 @@
 import { SalesLeads } from './SalesLeads';
+import { SuperAdminOverview } from './SuperAdminOverview';
 import React, { useState, useEffect } from 'react';
 import { USER_COLUMNS } from '../lib/userColumns';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
+import { LayoutDashboard, Building2, Briefcase, UserCog, MessagesSquare, Map as MapIcon } from 'lucide-react';
 import { Layers, Shield, PlusCircle, Upload, LogOut, Trash2, Activity, Settings, BarChart2, Search, FileText, Users, PieChart, ChevronDown, Network, Brain, Cpu, Key, List, AlertCircle } from 'lucide-react';
 import { AdminManager } from './AdminManager';
 import { SecuritySettings } from './SecuritySettings';
@@ -10,11 +12,43 @@ import { GodModeConsole } from './GodModeConsole';
 import { BridgeService } from '../lib/BridgeService';
 import { CHIAPAS_MUNICIPIOS } from '../lib/chiapas_municipios';
 
+// Menú del panel de administración, agrupado por tipo de tarea
+const SA_NAV: { title: string; items: { id: string; label: string; icon: any }[] }[] = [
+    { title: 'General', items: [{ id: 'resumen', label: 'Resumen ejecutivo', icon: LayoutDashboard }] },
+    { title: 'Clientes', items: [
+        { id: 'gestion', label: 'Campañas', icon: Building2 },
+        { id: 'monitoreo', label: 'Estado de campañas', icon: Activity },
+        { id: 'usuarios', label: 'Administradores', icon: UserCog },
+        { id: 'ventas', label: 'Ventas', icon: Briefcase },
+    ] },
+    { title: 'Datos electorales', items: [
+        { id: 'estadistica', label: 'Resultados históricos', icon: BarChart2 },
+        { id: 'padron', label: 'Padrón electoral', icon: Users },
+    ] },
+    { title: 'Plataforma', items: [
+        { id: 'inteligencia', label: 'Inteligencia artificial', icon: Brain },
+        { id: 'comunicaciones', label: 'Mensajería y puentes', icon: MessagesSquare },
+        { id: 'sistema', label: 'Versiones y sistema', icon: Settings },
+    ] },
+];
+const SA_META: Record<string, { title: string; desc: string }> = {
+    resumen: { title: 'Resumen ejecutivo', desc: 'Cómo va la plataforma completa: campañas, equipos, actividad y servicios.' },
+    gestion: { title: 'Campañas', desc: 'Alta de campañas nuevas, cartografía base y administradores.' },
+    monitoreo: { title: 'Estado de campañas', desc: 'Actividad, equipos y simpatizantes de cada campaña.' },
+    usuarios: { title: 'Administradores', desc: 'Cuentas de candidatos y coordinaciones generales.' },
+    ventas: { title: 'Ventas', desc: 'Prospectos que llegaron desde la página y su seguimiento.' },
+    estadistica: { title: 'Resultados históricos', desc: 'Carga y consulta de resultados electorales por sección.' },
+    padron: { title: 'Padrón electoral', desc: 'Carga y consulta del padrón por sección, sexo y edad.' },
+    inteligencia: { title: 'Inteligencia artificial', desc: 'Proveedores, llaves y uso de la IA.' },
+    comunicaciones: { title: 'Mensajería y puentes', desc: 'Envío de SMS, puentes conectados y consola de mensajes.' },
+    sistema: { title: 'Versiones y sistema', desc: 'Publicación de versiones de escritorio y mantenimiento.' },
+};
+
 export const SuperAdminDashboard = () => {
     const { user, signOut } = useAuth();
     const [tenants, setTenants] = useState<any[]>([]);
     const [globalLayers, setGlobalLayers] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('gestion');
+    const [activeTab, setActiveTab] = useState<'resumen' | 'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('resumen');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // OTA Deployment State
@@ -1051,8 +1085,8 @@ export const SuperAdminDashboard = () => {
     if (user?.role !== 'superadmin') {
         return <div className="flex-center flex-col" style={{ height: '80vh', gap: '1rem' }}>
             <Shield size={64} color="var(--primary)" />
-            <h2 style={{ color: 'var(--primary)' }}>ACCESO DENEGADO</h2>
-            <p style={{ color: '#64748B' }}>Solo el Alto Mando tiene acceso a este sistema maestro.</p>
+            <h2 style={{ color: 'var(--primary)' }}>Acceso restringido</h2>
+            <p style={{ color: '#64748B' }}>Esta sección es solo para el administrador del sistema.</p>
         </div>;
     }
 
@@ -1106,70 +1140,73 @@ export const SuperAdminDashboard = () => {
     };
 
     return (
-        <div className={`superadmin-container ${mobileMenuOpen ? 'mobile-menu-open' : ''}`}>
-            {/* TACTICAL SIDEBAR */}
+        <div className={`superadmin-container sa-exec ${mobileMenuOpen ? 'mobile-menu-open' : ''}`}>
+            {/* MENÚ LATERAL */}
             <aside className="sa-sidebar">
-                <button className="sa-mobile-close" onClick={() => setMobileMenuOpen(false)}>×</button>
+                <button className="sa-mobile-close" onClick={() => setMobileMenuOpen(false)} aria-label="Cerrar menú">×</button>
                 <div className="sa-sidebar-header">
-                    <div className="sa-logo-container">
-                        <Shield size={24} color="var(--primary)" />
-                    </div>
+                    <div className="sa-logo-container"><span className="sa-logo-mark">T</span></div>
                     <div className="sa-header-text">
-                        <h2 className="sa-title">C4I COMMAND</h2>
-                        <p className="tactical-font sa-subtitle">MODO DIOS ACTIVO</p>
+                        <h2 className="sa-title">Tlatoani</h2>
+                        <p className="sa-subtitle">Administración del sistema</p>
                     </div>
                 </div>
 
                 <nav className="sa-sidebar-nav">
-                    <div onClick={() => { setActiveTab('gestion'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'gestion' ? 'active tertiary' : ''}`}>
-                        <Layers size={18} /> GESTIÓN DE RED
-                    </div>
-                    <div onClick={() => { setActiveTab('monitoreo'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'monitoreo' ? 'active' : ''}`}>
-                        <Activity size={18} /> MONITOREO
-                    </div>
-                    <div onClick={() => { setActiveTab('estadistica'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'estadistica' ? 'active secondary' : ''}`}>
-                        <BarChart2 size={18} /> ESTADÍSTICA
-                    </div>
-                    <div onClick={() => { setActiveTab('padron'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'padron' ? 'active tertiary' : ''}`}>
-                        <Users size={18} /> PADRÓN
-                    </div>
-                    <div onClick={() => { setActiveTab('inteligencia'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'inteligencia' ? 'active tertiary' : ''}`}>
-                        <Brain size={18} /> INTELIGENCIA (IA)
-                    </div>
-                    <div onClick={() => { setActiveTab('comunicaciones'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'comunicaciones' ? 'active tertiary' : ''}`}>
-                        <Network size={18} /> CONSOLA C4I
-                    </div>
-                    <div onClick={() => { setActiveTab('sistema'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'sistema' ? 'active tertiary' : ''}`}>
-                        <Settings size={18} /> DESPLIEGUES
-                    </div>
-                    <div onClick={() => { setActiveTab('ventas'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'ventas' ? 'active tertiary' : ''}`}>
-                        <Users size={18} /> VENTAS
-                    </div>
+                    {SA_NAV.map(group => (
+                        <div key={group.title} className="sa-nav-group">
+                            <div className="sa-nav-group-title">{group.title}</div>
+                            {group.items.map(it => (
+                                <button key={it.id} onClick={() => { setActiveTab(it.id as any); setMobileMenuOpen(false); }}
+                                    className={`sa-nav-item ${activeTab === it.id ? 'active' : ''}`} aria-current={activeTab === it.id ? 'page' : undefined}>
+                                    <it.icon size={17} /> {it.label}
+                                </button>
+                            ))}
+                        </div>
+                    ))}
                 </nav>
 
                 <div className="sa-sidebar-footer">
-                    <button onClick={() => window.location.href = '/'} className="sa-nav-item secondary">
-                        <List size={18} /> VOLVER AL APP
+                    <div className="sa-user">
+                        <div className="sa-user-avatar">{(user?.name || 'A').trim().charAt(0).toUpperCase()}</div>
+                        <div style={{ minWidth: 0 }}>
+                            <div className="sa-user-name">{user?.name || 'Administrador'}</div>
+                            <div className="sa-user-role">Administrador del sistema</div>
+                        </div>
+                    </div>
+                    <button onClick={() => window.location.href = '/'} className="sa-nav-item">
+                        <List size={17} /> Ir a la app
                     </button>
                     <button onClick={signOut} className="sa-nav-item danger">
-                        <LogOut size={18} /> CERRAR SESIÓN
+                        <LogOut size={17} /> Cerrar sesión
                     </button>
                 </div>
             </aside>
 
-            {/* MOBILE HEADER */}
+            {/* ENCABEZADO EN CELULAR */}
             <div className="sa-mobile-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <Shield size={20} color="var(--primary)" />
-                    <h2 style={{ margin: 0, fontSize: '1rem' }}>C4I</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+                    <span className="sa-logo-mark sm">T</span>
+                    <strong style={{ fontSize: '0.95rem' }}>{SA_META[activeTab]?.title || 'Administración'}</strong>
                 </div>
-                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sa-menu-toggle">
-                    <List size={24} />
+                <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="sa-menu-toggle" aria-label="Abrir menú">
+                    <List size={22} />
                 </button>
             </div>
 
             {/* MAIN CONTENT AREA */}
             <main className="sa-main">
+                <div className="sa-topbar">
+                    <div>
+                        <h1 className="sa-page-title">{SA_META[activeTab]?.title}</h1>
+                        <p className="sa-page-desc">{SA_META[activeTab]?.desc}</p>
+                    </div>
+                    <div className="sa-topbar-right">
+                        <span className="sa-env">Producción</span>
+                        <span className="sa-date">{new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                    </div>
+                </div>
+                {activeTab === 'resumen' && <SuperAdminOverview onGo={(t) => setActiveTab(t as any)} />}
                 {activeTab === 'ventas' && <SalesLeads />}
                 {activeTab === 'gestion' && (
                     <>
@@ -1177,11 +1214,11 @@ export const SuperAdminDashboard = () => {
                             {/* New Tenant Form */}
                             <div className="tactile-card flex-col gap-4" style={{ maxWidth: '480px', flex: '1 1 400px' }}>
                                 <h2 style={{ margin: 0, color: 'var(--secondary)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <PlusCircle size={20} /> NUEVA INSTANCIA
+                                    <PlusCircle size={20} /> Nueva campaña
                                 </h2>
                                 <form onSubmit={handleCreateTenant} className="flex-col gap-4">
                                     <div className="flex-col gap-1">
-                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>NOMBRE DE LA CAMPAÑA</label>
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Nombre de la campaña</label>
                                         <input
                                             className="squishy-input"
                                             placeholder="Ej: Elecciones 2024"
@@ -1191,7 +1228,7 @@ export const SuperAdminDashboard = () => {
                                         />
                                     </div>
                                     <div className="flex-col gap-1">
-                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>IDENTIFICADOR DE RUTA (URL SLUG)</label>
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Identificador en la dirección web</label>
                                         <input
                                             className="squishy-input"
                                             placeholder="ej: juan-perez"
@@ -1229,7 +1266,7 @@ export const SuperAdminDashboard = () => {
                                         </div>
                                     </div>
                                     <div className="flex-col gap-1">
-                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>JURISDICCIÓN</label>
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Ámbito territorial</label>
                                         {loadingRegions ? <p style={{ color: 'var(--tertiary)', fontSize: '0.8rem', padding: '0.6rem' }}>Analizando archivos cartográficos...</p> : (
                                             availableRegions.length > 0 ? (
                                                 <select className="squishy-input" value={geographicScope} onChange={e => setGeographicScope(e.target.value)} required>
@@ -1242,11 +1279,11 @@ export const SuperAdminDashboard = () => {
                                         )}
                                     </div>
                                     <div className="flex-col gap-1">
-                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>CELULAR ADMIN</label>
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Celular del administrador</label>
                                         <input className="squishy-input" type="tel" placeholder="10 dígitos" value={newAdminPhone} onChange={e => setNewAdminPhone(e.target.value)} required />
                                     </div>
                                     <button type="submit" className="squishy-btn primary" style={{ background: 'var(--secondary)' }}>
-                                        DESPLEGAR INSTANCIA
+                                        Crear campaña
                                     </button>
                                 </form>
                                 {message && <p style={{ color: 'var(--secondary)', fontSize: '0.9rem' }}>{message}</p>}
@@ -1255,11 +1292,11 @@ export const SuperAdminDashboard = () => {
                             {/* Master Map Layers */}
                             <div className="tactile-card flex-col gap-4" style={{ maxWidth: '480px', flex: '1 1 400px' }}>
                                 <h2 style={{ margin: 0, color: 'var(--tertiary)', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <Layers size={20} /> CAPAS MAESTRAS (.GEOJSON)
+                                    <Layers size={20} /> Cartografía base (GeoJSON)
                                 </h2>
                                 <p style={{ margin: 0, color: '#64748B', fontSize: '0.7rem' }}>Sube la cartografía para habilitar filtros territoriales.</p>
                                 <div className="flex-col gap-2">
-                                    <label style={{ fontSize: '0.7rem', color: '#64748B' }}>TIPO DE CAPA</label>
+                                    <label style={{ fontSize: '0.7rem', color: '#64748B' }}>Tipo de capa</label>
                                     <select className="squishy-input" value={layerType} onChange={e => setLayerType(e.target.value)}>
                                         <option value="municipio">Municipios</option>
                                         <option value="distrito_local">Distritos Locales</option>
@@ -1312,7 +1349,7 @@ export const SuperAdminDashboard = () => {
                     activeTab === 'monitoreo' && (
                         <div className="flex-col gap-4">
                             <div className="flex-row-resp" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2 style={{ margin: 0, fontFamily: 'Oswald' }}>ESTADO DE LA FLOTA</h2>
+                                <h2 style={{ margin: 0, fontFamily: 'Oswald' }}>Estado de las campañas</h2>
                                 <button onClick={loadData} className="squishy-btn mini"><Activity size={14} /> REFRESCAR</button>
                             </div>
                             {tenants.map(t => {
@@ -1357,7 +1394,7 @@ export const SuperAdminDashboard = () => {
                             <div className="flex-row-resp" style={{ justifyContent: 'center', alignItems: 'stretch', gap: '1rem' }}>
                                 <div className="tactile-card flex-col gap-4">
                                     <div className="flex-row-resp" style={{ justifyContent: 'space-between' }}>
-                                        <h2 style={{ margin: 0, color: 'var(--secondary)' }}>IMPORTAR HISTORIAL (.CSV)</h2>
+                                        <h2 style={{ margin: 0, color: 'var(--secondary)' }}>Importar resultados históricos (CSV)</h2>
                                         <div className="flex-row-resp" style={{ gap: '0.5rem' }}>
                                             <select className="squishy-input mini" value={uploadYear} onChange={e => setUploadYear(parseInt(e.target.value))}>
                                                 <option value={2024}>2024</option>
@@ -1388,7 +1425,7 @@ export const SuperAdminDashboard = () => {
                                 </div>
 
                                 <div className="tactile-card flex-col gap-4">
-                                    <h2 style={{ margin: 0, color: 'var(--tertiary)' }}>BUSCADOR ELECTORAL</h2>
+                                    <h2 style={{ margin: 0, color: 'var(--tertiary)' }}>Consulta de resultados</h2>
                                     <div className="flex-row-resp" style={{ gap: '0.5rem' }}>
                                         <select
                                             className="squishy-input"
@@ -1521,7 +1558,7 @@ export const SuperAdminDashboard = () => {
                             <div className="responsive-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div className="tactile-card flex-col gap-4">
                                     <div className="flex-row-resp" style={{ justifyContent: 'space-between' }}>
-                                        <h2 style={{ margin: 0, color: 'var(--tertiary)' }}>IMPORTAR PADRÓN (.CSV)</h2>
+                                        <h2 style={{ margin: 0, color: 'var(--tertiary)' }}>Importar padrón (CSV)</h2>
                                         <select className="squishy-input mini" value={padronYear} onChange={e => setPadronYear(parseInt(e.target.value))}>
                                             <option value={2024}>2024</option>
                                             <option value={2021}>2021</option>
@@ -1552,7 +1589,7 @@ export const SuperAdminDashboard = () => {
                                                 <PieChart size={24} color="var(--tertiary)" />
                                             </div>
                                             <div>
-                                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'white' }}>HISTORIAL DE PADRÓN</h3>
+                                                <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'white' }}>Historial de cargas del padrón</h3>
                                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748B' }}>{padronHistory.length} años registrados</p>
                                             </div>
                                         </div>
@@ -1610,7 +1647,7 @@ export const SuperAdminDashboard = () => {
 
                             <div className="tactile-card flex-col gap-4">
                                 <div className="flex-row-resp" style={{ justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
-                                    <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'white' }}>BUSCADOR DEMOGRÁFICO</h2>
+                                    <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'white' }}>Consulta del padrón</h2>
                                     <div className="flex-row-resp" style={{ gap: '0.5rem', flex: 1 }}>
                                         <select
                                             className="squishy-input mini"
@@ -1722,7 +1759,7 @@ export const SuperAdminDashboard = () => {
 
                                 <div className="responsive-grid" style={{ gridTemplateColumns: '1fr', gap: '1rem' }}>
                                     <div className="flex-col gap-2">
-                                        <label style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 'bold' }}>NUEVA VERSIÓN (EJ. 1.0.2)</label>
+                                        <label style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 'bold' }}>Nueva versión (ej. 1.0.2)</label>
                                         <input
                                             className="squishy-input"
                                             value={otaVersion}
@@ -1732,7 +1769,7 @@ export const SuperAdminDashboard = () => {
                                         />
                                     </div>
                                     <div className="flex-col gap-2">
-                                        <label style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 'bold' }}>NOTAS DEL PARCHE (QUÉ CAMBIÓ)</label>
+                                        <label style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 'bold' }}>Notas de la versión (qué cambió)</label>
                                         <textarea
                                             className="squishy-input"
                                             value={otaNotes}
@@ -1817,12 +1854,12 @@ export const SuperAdminDashboard = () => {
                                     </button>
 
                                     <div className="flex-col gap-2" style={{ maxHeight: '200px', overflowY: 'auto', marginTop: '1rem' }}>
-                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold' }}>CREDENCIALES ACTIVAS</label>
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold' }}>Llaves configuradas</label>
                                         {aiConfigs.map(config => (
                                             <div key={config.id} className="flex-row-resp" style={{ background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '8px', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div style={{ fontSize: '0.8rem' }}>
                                                     <span style={{ fontWeight: 'bold', color: 'var(--tertiary)' }}>{config.provider.toUpperCase()}</span>
-                                                    <span style={{ marginLeft: '0.5rem', color: '#86efac', fontSize: '0.7rem' }}>[ACTIVA GLOBALMENTE]</span>
+                                                    <span style={{ marginLeft: '0.5rem', color: '#86efac', fontSize: '0.7rem' }}>Activa</span>
                                                 </div>
                                                 <button
                                                     onClick={async () => {
@@ -1882,7 +1919,7 @@ export const SuperAdminDashboard = () => {
                                         <div className="flex-col gap-3" style={{ background: 'rgba(34,197,94,0.05)', border: '1px solid rgba(34,197,94,0.2)', padding: '1.5rem', borderRadius: '12px', alignItems: 'center', textAlign: 'center' }}>
                                             <Activity size={32} color="#22c55e" />
                                             <div>
-                                                <p style={{ margin: 0, fontWeight: 'bold', color: '#22c55e' }}>ESTATUS: ACTIVO</p>
+                                                <p style={{ margin: 0, fontWeight: 'bold', color: '#22c55e' }}>Activo</p>
                                                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>Archivo municipal-colonia cargado ({demographicsCount.toLocaleString()} registros).</p>
                                             </div>
                                             <div className="flex-row-resp" style={{ gap: '1rem', marginTop: '0.5rem' }}>

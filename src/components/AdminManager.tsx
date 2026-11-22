@@ -221,7 +221,7 @@ export const AdminManager = () => {
 
         <div className="flex-col gap-2" style={{ padding: '1rem', color: 'white' }}>
             <h2 className="tactical-font" style={{ color: 'var(--primary)', borderBottom: '2px solid var(--primary)', paddingBottom: '0.5rem' }}>
-                GESTIÓN DE ALTO MANDO
+                Administradores de campaña
             </h2>
 
             {message && (
@@ -235,7 +235,7 @@ export const AdminManager = () => {
                 <div className="tactile-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <h3 className="tactical-font" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
                         <span style={{ marginRight: '0.5rem' }}><UserPlus size={18} /></span>
-                        {isSystemAdmin ? 'RECLUTAR NUEVO ADMINISTRADOR' : 'DAR DE ALTA A MI EQUIPO DE MANDO'}
+                        {isSystemAdmin ? 'Agregar administrador' : 'Dar de alta a mi equipo de coordinación'}
                     </h3>
 
                     <form onSubmit={handleCreateUser} className="flex-col gap-2">

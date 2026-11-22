@@ -367,7 +367,7 @@ const MainDashboard = () => {
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
         {activeTab === 'OBJETIVOS' && (<>
-          {['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'comunicacion_digital'].includes(user?.role || '') && <InternalProcess />}
+          {aspirantStage && ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'comunicacion_digital'].includes(user?.role || '') && <InternalProcess />}
           <GoalsCascade /><EventsModule /><ReferralNetwork /><CriticalPath /></>)}
         {activeTab === 'campo' && (<><ThermoSurvey /><WalkZones /><FieldActivity /></>)}
         </Suspense>
