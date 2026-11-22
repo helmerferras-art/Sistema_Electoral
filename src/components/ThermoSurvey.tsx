@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, ClipboardList, Phone, Home } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { bumpTally } from '../lib/fieldTally';
 import { COMPARATIVE, PER_PERSON, loadContest, pendingInterviews, saveInterview, shuffle, syncInterviews, type Contest, type Person } from '../lib/internal';
 
 /**
@@ -70,6 +71,8 @@ export const ThermoSurvey = () => {
             tenant_id: user.tenant_id!, user_id: user.id, section_id: section.trim() || null, mode, sampled, answers: clean,
         });
         setPending(pendingInterviews());
+        // Bitácora automática: la entrevista es un contacto; si conocía al aspirante también suma ahí
+        bumpTally({ source: 'entrevista', contacts: 1, known: (clean as any).conoce?.self === 'si' ? 1 : 0, door: mode === 'vivienda' });
         setDone(d => d + 1);
         setRunning(false);
         setFlash('Entrevista guardada');

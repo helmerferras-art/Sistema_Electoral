@@ -4,6 +4,7 @@ import { AutoRouteWizard } from './AutoRouteWizard';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { getPositionOnce } from '../lib/location';
+import { bumpTally } from '../lib/fieldTally';
 
 type Zone = { id: string; name: string; section_id: string; notes: string | null; target_doors: number | null; assigned_to: string | null; due_date: string | null; status: string; created_by: string | null;
     center_lat?: number | null; center_lng?: number | null; meta_simpatizantes?: number | null; auto?: boolean };
@@ -46,6 +47,8 @@ export const logKnock = async (outcome: string, note?: string) => {
     };
     writeQueue([...readQueue(), k]);
     syncKnocks();
+    // Bitácora automática: si hubo plática en la puerta cuenta como contacto (el registro suma por su lado)
+    if (outcome !== 'registrado') bumpTally({ source: 'puerta', contacts: ['volver', 'no_interesa'].includes(outcome) ? 1 : 0 });
     return true;
 };
 
