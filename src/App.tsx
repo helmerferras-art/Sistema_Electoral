@@ -48,10 +48,21 @@ import { resumeGateway } from './lib/phoneGateway'
 import { useMyPlan, endDemo } from './lib/demo'
 import './index.css'
 
-const PageLoader = () => <div className="flex-center" style={{ minHeight: '40vh', color: 'var(--primary)' }}>Cargando módulo...</div>;
+const PageLoader = () => {
+  const [ph] = useState(() => quickPhrase());
+  return (
+    <div className="flex-center" style={{ minHeight: '40vh', flexDirection: 'column', gap: '0.8rem', padding: '1.5rem', textAlign: 'center' }}>
+      <div style={{ color: 'var(--primary)' }}>Cargando módulo...</div>
+      <div style={{ color: '#aab', fontSize: '0.92rem', maxWidth: 420, fontStyle: 'italic' }}>“{ph.text}”</div>
+      <div style={{ color: '#667', fontSize: '0.75rem' }}>{ph.idea ? 'Idea de ' : '— '}{ph.source}</div>
+    </div>
+  );
+};
 
 // --- Protected Route Wrapper ---
 import { PasswordSetModal } from './components/PasswordSetModal';
+import { MotivationCard } from './components/MotivationCard';
+import { quickPhrase } from './lib/motivation';
 import { Settings } from 'lucide-react';
 
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: string | string[] }) => {
@@ -220,6 +231,7 @@ const MainDashboard = () => {
         </div>
       )}
       <PlanBar plan={plan} role={user?.role} />
+      <MotivationCard role={user?.role} name={user?.name} />
       <GatewayBanner />
       {/* HUD (Heads-Up Display) - Optimized for Mobile */}
       <header className="hud-header" style={{
