@@ -16,6 +16,8 @@ type UserData = {
     longitude?: number;
     is_first_login?: boolean;
     two_factor_enabled?: boolean;
+    privacy_version?: string | null;
+    email?: string | null;
     tenantScope: string[];
 };
 
@@ -32,6 +34,8 @@ type AuthContextType = {
     impersonateUser: (targetUser: any) => Promise<void>;
     abortImpersonation: () => Promise<void>;
     isImpersonating: boolean;
+    /** Hay sesión (p. ej. Google) pero todavía no existe su perfil en una campaña */
+    profileMissing: boolean;
 };
 
 const toSyntheticEmail = (phone: string) => {
@@ -46,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [session, setSession] = useState<any | null>(null);
     const [loading, setLoading] = useState(true);
     const [isImpersonating, setIsImpersonating] = useState(false);
+    const [profileMissing, setProfileMissing] = useState(false);
 
     useEffect(() => {
         // Bypass persistence check for non-production environments if explicitly set
@@ -116,8 +121,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 .eq('auth_id', authId)
                 .single();
 
+            setProfileMissing(!data && error?.code === 'PGRST116');
             if (error) {
-                console.error("Error fetching user profile:", error);
+                if (error.code !== 'PGRST116') console.error("Error fetching user profile:", error);
             } else if (data) {
                 // Fetch tenant scope (alliances structure)
                 let tenantScope = [data.tenant_id];
@@ -168,7 +174,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
-            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
+            return { error: { message: 'Ese número no está registrado. Pide a tu coordinador o líder que te dé de alta.' } };
         }
 
         if (foundUser.is_first_login) {
@@ -192,16 +198,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const foundUser = precheck && precheck.length > 0 ? precheck[0] : null;
 
         if (!foundUser) {
-            return { error: { message: 'NÚMERO NO REGISTRADO. Debes completar tu registro táctico primero.' } };
+            return { error: { message: 'Ese número no está registrado. Pide a tu coordinador o líder que te dé de alta.' } };
         }
 
         // token = código táctico (primer login) o contraseña permanente (login normal).
         // En ambos casos es, literalmente, la contraseña actual de auth.users para este usuario.
-        const email = toSyntheticEmail(foundUser.phone);
-        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email, password: token });
+        // Primero con el celular (cuentas con celular en Auth, incluidas las que tienen correo de respaldo);
+        // si no, con el correo interno de las cuentas antiguas.
+        const digits = String(foundUser.phone || '').replace(/\D/g, '').slice(-10);
+        let { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ phone: `+52${digits}`, password: token });
+        if (signInErr || !signInData.session) {
+            ({ data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({ email: toSyntheticEmail(foundUser.phone), password: token }));
+        }
 
         if (signInErr || !signInData.session) {
-            return { error: { message: foundUser.is_first_login ? 'Código táctico incorrecto.' : 'Contraseña incorrecta.' } };
+            return { error: { message: foundUser.is_first_login ? 'El código no es correcto. Revisa el mensaje que te llegó.' : 'Contraseña incorrecta.' } };
         }
 
         // --- INTEGRACION 2FA TACTICO PARA ALTO MANDO ---
@@ -295,6 +306,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const impersonateUser = async (targetUser: any) => {
+        // El modo fantasma es exclusivo del administrador del sistema
+        const original = (() => { try { return JSON.parse(localStorage.getItem('__ghost_mode_original_user__') || 'null'); } catch { return null; } })();
+        if ((original?.role || user?.role) !== 'superadmin') return;
         if (!localStorage.getItem('__ghost_mode_original_user__')) {
             const currentContext = localStorage.getItem('gamefi_agent_context');
             localStorage.setItem('__ghost_mode_original_user__', currentContext || JSON.stringify(user));
@@ -326,7 +340,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <AuthContext.Provider value={{
             user, session, loading, signInWithOtp, verifyOtp, verifyTwoFactor, signOut, updatePassword,
-            impersonateUser, abortImpersonation, isImpersonating, tenantScope: user?.tenantScope || []
+            impersonateUser, abortImpersonation, isImpersonating, profileMissing, tenantScope: user?.tenantScope || []
         }}>
 
             {!loading && children}

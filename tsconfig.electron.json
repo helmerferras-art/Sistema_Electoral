@@ -1,16 +1,17 @@
 {
     "compilerOptions": {
-        "target": "ESNext",
+        "target": "ES2022",
         "module": "ESNext",
         "moduleResolution": "node",
         "strict": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
-        "outDir": "./dist-electron"
+        "rootDir": "./electron",
+        "outDir": "./dist-electron",
+        "types": ["node"]
     },
     "include": [
-        "electron/**/*",
-        "src-server/**/*"
+        "electron/**/*.ts"
     ]
 }

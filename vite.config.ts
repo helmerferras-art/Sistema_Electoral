@@ -1,8 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import electron from 'vite-plugin-electron'
-import renderer from 'vite-plugin-electron-renderer'
 
 export default defineConfig({
   // Web (Netlify): rutas absolutas para que /v/<token> y otras rutas profundas encuentren /assets.
@@ -10,18 +8,7 @@ export default defineConfig({
   base: process.env.NETLIFY ? '/' : './',
   plugins: [
     react(),
-    electron([
-      {
-        entry: 'electron/main.ts',
-      },
-      {
-        entry: 'electron/preload.ts',
-        onstart(options) {
-          options.reload()
-        },
-      },
-    ]),
-    renderer(),
+    // El programa de Windows (Tlatoani Puente) se compila aparte: npm run puente:build
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
@@ -37,6 +24,8 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // El PDF de la guía y las imágenes de la página de entrada se piden al servidor, no a la app guardada
+        navigateFallbackDenylist: [/\.pdf$/, /^\/landing\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,

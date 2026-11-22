@@ -20,7 +20,7 @@ export const RegistroForm = () => {
         seccion: '',
         latitude: null as number | null,
         longitude: null as number | null,
-        commitment_level: 1
+        commitment_level: 3
     });
 
     const [isSaving, setIsSaving] = useState(false);
@@ -245,7 +245,7 @@ export const RegistroForm = () => {
                 seccion: '',
                 latitude: null,
                 longitude: null,
-                commitment_level: 1
+                commitment_level: 3
             });
             setColonia(null); setColoniaQuery(''); setLivesHere(true); setWantsToJoin(false); setAnswers({});
             updateOfflineCount();
@@ -307,45 +307,48 @@ export const RegistroForm = () => {
             <form onSubmit={handleSubmit} className="tactile-card flex-col gap-1" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                     <h2 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, fontSize: '1.4rem' }}>
-                        <span style={{ color: 'var(--primary)' }}>//</span> REGISTRO DE ALIADO
+                        {user ? 'Registrar simpatizante' : 'Súmate'}
                     </h2>
                     {offlineCount > 0 && (
                         <div className="tactile-badge" style={{ backgroundColor: 'rgba(255,90,54,0.2)', color: 'var(--primary)', borderColor: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 0 10px rgba(255,90,54,0.3)' }} onClick={handleManualSync}>
-                            <span>{offlineCount} Pendientes</span>
+                            <span>{offlineCount} sin enviar · tocar para enviar</span>
                             <span style={{ fontSize: '1.2em' }}>↻</span>
                         </div>
                     )}
                 </div>
 
                 <div className="flex-col gap-1">
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                        <div className="flex-col">
-                            <label style={{ fontSize: '0.7rem', color: '#94A3B8', marginLeft: '0.5rem' }}>NOMBRE COMPLETO</label>
-                            <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="squishy-input" placeholder="Nombre" required />
-                        </div>
-                        <div className="flex-col">
-                            <label style={{ fontSize: '0.7rem', color: '#94A3B8', marginLeft: '0.5rem' }}>TELÉFONO CELULAR</label>
-                            <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="squishy-input" placeholder="10 dígitos" required />
-                        </div>
-                    </div>
+                    <label className="flex-col" style={{ gap: '0.3rem', fontSize: '0.9rem', color: '#CBD5E1' }}>
+                        Nombre
+                        <input type="text" name="name" value={formData.name} onChange={handleInputChange} className="squishy-input" placeholder="Nombre y apellido" autoComplete="off" autoCapitalize="words" required style={{ fontSize: '1.05rem' }} />
+                    </label>
+                    <label className="flex-col" style={{ gap: '0.3rem', fontSize: '0.9rem', color: '#CBD5E1' }}>
+                        Celular
+                        <input type="tel" inputMode="numeric" name="phone" value={formData.phone}
+                            onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value.replace(/[^\d]/g, '').slice(0, 10) }))}
+                            className="squishy-input" placeholder="10 números" autoComplete="off" required minLength={10} style={{ fontSize: '1.05rem', letterSpacing: '0.04em' }} />
+                    </label>
 
                     <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginLeft: '0.5rem' }}>
                         Solo nombre y celular: no pidas CURP, clave de elector ni foto de la credencial.
                     </div>
 
-                    <div style={{ padding: '0.5rem 0', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', paddingInline: '1rem', marginTop: '0.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, fontFamily: 'Oswald, sans-serif', color: '#94A3B8', letterSpacing: '0.05em' }}>NIVEL DE COMPROMISO</label>
-                        <input
-                            type="range"
-                            name="commitment_level"
-                            min="1"
-                            max="5"
-                            value={formData.commitment_level}
-                            onChange={handleInputChange}
-                            style={{ width: '100%', accentColor: 'var(--primary)' }}
-                        />
-                        <div style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--primary)', filter: 'drop-shadow(0 0 5px var(--primary))', fontSize: '1.2rem', marginTop: '0.5rem' }}>
-                            {'⭐'.repeat(formData.commitment_level)}
+                    <div style={{ marginTop: '0.5rem' }}>
+                        <div style={{ fontSize: '0.9rem', color: '#CBD5E1', marginBottom: '0.4rem' }}>{user ? '¿Qué tanto apoya?' : '¿Cómo quieres participar?'}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                            {(user
+                                ? [{ v: 1, t: 'Lo está pensando' }, { v: 3, t: 'Sí nos apoya' }, { v: 5, t: 'Quiere ayudar' }]
+                                : [{ v: 1, t: 'Solo informarme' }, { v: 3, t: 'Apoyar' }, { v: 5, t: 'Ayudar activamente' }]
+                            ).map(o => (
+                                <button key={o.v} type="button" onClick={() => setFormData(prev => ({ ...prev, commitment_level: o.v }))}
+                                    aria-pressed={formData.commitment_level === o.v}
+                                    style={{ minHeight: 52, padding: '0.4rem', borderRadius: 12, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.2,
+                                        border: formData.commitment_level === o.v ? '2px solid var(--primary)' : '1px solid rgba(255,255,255,0.15)',
+                                        background: formData.commitment_level === o.v ? 'rgba(255,90,54,0.18)' : 'rgba(0,0,0,0.2)',
+                                        color: formData.commitment_level === o.v ? '#fff' : '#CBD5E1' }}>
+                                    {o.t}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -388,8 +391,8 @@ export const RegistroForm = () => {
 
                     {user && (
                         <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', fontSize: '0.85rem', marginTop: '0.5rem', cursor: 'pointer' }}>
-                            <input type="checkbox" checked={wantsToJoin} onChange={e => setWantsToJoin(e.target.checked)} />
-                            ¿Quiere sumarse al equipo como brigadista? (se le crea su acceso a la app)
+                            <input type="checkbox" checked={wantsToJoin} onChange={e => setWantsToJoin(e.target.checked)} style={{ width: 22, height: 22, flex: '0 0 auto' }} />
+                            También quiere ser brigadista (se le crea su acceso a la app)
                         </label>
                     )}
 
@@ -401,7 +404,7 @@ export const RegistroForm = () => {
                                 <button type="button" className={`squishy-btn ${!livesHere ? 'primary' : ''}`} style={{ flex: 1 }} onClick={() => setLivesHere(false)}>No, vive en otro lado</button>
                             </div>
                             {livesHere ? (
-                                <div style={{ fontSize: '0.72rem', color: '#94A3B8', marginTop: '0.35rem' }}>La sección y la colonia se toman del GPS.</div>
+                                <div style={{ fontSize: '0.78rem', color: '#94A3B8', marginTop: '0.35rem' }}>Al guardar, la app toma la ubicación sola.</div>
                             ) : colonia ? (
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', fontSize: '0.85rem' }}>
                                     <span>📍 {colonia.colonia}{colonia.cp ? ` (CP ${colonia.cp})` : ''} · Secc. {colonia.seccion}</span>
@@ -421,17 +424,6 @@ export const RegistroForm = () => {
                         </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                        <button
-                            type="button"
-                            className={`squishy-btn ${formData.latitude ? 'secondary' : ''}`}
-                            style={{ flex: 1, padding: '0.8rem', fontSize: '0.9rem' }}
-                            onClick={handleGPS}
-                        >
-                            {formData.latitude ? '📍 COORDENADAS FIJAS' : '📍 RASTREAR GPS'}
-                        </button>
-                    </div>
-
                     {statusMessage && (
                         <div style={{ textAlign: 'center', fontWeight: 'bold', padding: '0.5rem', color: statusMessage.includes('❌') ? 'red' : 'inherit' }}>
                             {statusMessage}
@@ -444,7 +436,7 @@ export const RegistroForm = () => {
                         style={{ marginTop: '1rem', padding: '1rem', fontSize: '1.2rem', boxShadow: '0 0 20px rgba(255,90,54,0.3)', width: '100%' }}
                         disabled={isSaving}
                     >
-                        {isSaving ? 'ENCRIPTANDO...' : 'REGISTRAR ALIADO'}
+                        {isSaving ? 'Guardando…' : user ? 'Guardar registro' : 'Enviar'}
                     </button>
                 </div>
             </form>
@@ -458,7 +450,7 @@ export const RegistroForm = () => {
                     padding: '1rem', backdropFilter: 'blur(5px)'
                 }}>
                     <div className="tactile-card" style={{
-                        maxWidth: '400px', width: '100%', position: 'relative',
+                        maxWidth: '400px', width: '100%', position: 'relative', height: 'auto', maxHeight: '92vh', overflowY: 'auto',
                         border: '2px solid var(--primary)', animation: 'fadeInScale 0.3s ease-out'
                     }}>
                         <button
@@ -478,55 +470,58 @@ export const RegistroForm = () => {
                                 <User size={30} />
                             </div>
                             <h2 style={{ fontFamily: 'Oswald', margin: 0, fontSize: '1.5rem', color: 'white' }}>
-                                ¡REGISTRO EXITOSO!
+                                ¡Registro guardado!
                             </h2>
                             <p style={{ color: 'var(--tertiary)', fontWeight: 'bold' }}>
-                                Hasta +{xpGained} puntos cuando valide la visita
+                                Ganas puntos cuando la persona confirme la visita
                             </p>
                         </div>
 
                         {lastRegistered && (
                             <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                                <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>VALIDA LA VISITA</div>
-                                {showValidationQR ? (
-                                    <div style={{ background: '#fff', padding: '0.8rem', borderRadius: 12, display: 'inline-block' }}>
-                                        <QRCodeSVG value={verificationLink(lastRegistered.token, 'qr')} size={220} level="M" />
-                                    </div>
-                                ) : (
-                                    <button className="squishy-btn primary" style={{ width: '100%', padding: '0.9rem' }} onClick={() => setShowValidationQR(true)}>
-                                        MOSTRAR QR PARA QUE LO ESCANEE
-                                    </button>
-                                )}
-                                <div style={{ fontSize: '0.75rem', color: '#94A3B8', margin: '0.4rem 0 0.6rem' }}>
-                                    {showValidationQR
-                                        ? `Pide a ${lastRegistered.name.split(' ')[0]} que lo escanee con la cámara de su celular y escriba su número. Ahí verá un mensaje de agradecimiento.`
-                                        : 'La forma más segura: la persona lo escanea con su celular en ese momento.'}
-                                </div>
+                                <div style={{ fontSize: '0.95rem', marginBottom: '0.6rem' }}>Ahora confirma que la visita fue real:</div>
                                 <button
-                                    className="squishy-btn"
-                                    style={{ width: '100%', padding: '0.7rem', borderColor: '#25D366', color: '#25D366' }}
+                                    className="squishy-btn primary"
+                                    style={{ width: '100%', padding: '1rem', fontSize: '1.05rem', background: '#25D366', borderColor: '#25D366', color: '#062b14' }}
                                     onClick={async () => {
                                         await sendVerificationWhatsApp({ phone: lastRegistered.phone, personName: lastRegistered.name, recruiterName: user?.name, campaignName: candidateInfo.name, token: lastRegistered.token });
                                         setValidationSent(true);
                                     }}
                                 >
-                                    {validationSent ? '✅ WHATSAPP ABIERTO · REENVIAR' : 'O ENVIARLE EL ENLACE POR WHATSAPP'}
+                                    {validationSent ? '✅ Enviado · volver a enviar' : `Enviar mensaje a ${lastRegistered.name.split(' ')[0]} por WhatsApp`}
                                 </button>
+                                {showValidationQR ? (
+                                    <div style={{ marginTop: '0.8rem' }}>
+                                        <div style={{ background: '#fff', padding: '0.8rem', borderRadius: 12, display: 'inline-block' }}>
+                                            <QRCodeSVG value={verificationLink(lastRegistered.token, 'qr')} size={220} level="M" />
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '0.4rem' }}>
+                                            Pide a {lastRegistered.name.split(' ')[0]} que lo escanee con la cámara de su celular.
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button className="squishy-btn" style={{ width: '100%', padding: '0.7rem', marginTop: '0.5rem' }} onClick={() => setShowValidationQR(true)}>
+                                        No tiene WhatsApp: mostrar código QR
+                                    </button>
+                                )}
                             </div>
                         )}
 
-                        <WhatsAppQR
-                            phone={candidateInfo.phone || '5219611234567'}
-                            candidateName={candidateInfo.name}
-                            message={`Hola ${candidateInfo.name}, me da gusto saludarte. Me acabo de registrar a través de ${user?.name}. ¡Estamos en contacto!`}
-                        />
+                        <details style={{ marginTop: '0.5rem' }}>
+                            <summary style={{ cursor: 'pointer', color: '#94A3B8', fontSize: '0.85rem' }}>Darle el contacto de {candidateInfo.name}</summary>
+                            <WhatsAppQR
+                                phone={candidateInfo.phone || '5219611234567'}
+                                candidateName={candidateInfo.name}
+                                message={`Hola ${candidateInfo.name}, me da gusto saludarte. Me acabo de registrar a través de ${user?.name}. ¡Estamos en contacto!`}
+                            />
+                        </details>
 
                         <button
                             className="squishy-btn"
                             onClick={() => setShowQR(false)}
-                            style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', backgroundColor: 'transparent', border: '1px solid #64748B', color: '#64748B' }}
+                            style={{ width: '100%', marginTop: '1rem', padding: '0.9rem', backgroundColor: 'transparent', border: '1px solid #CBD5E1', color: '#fff' }}
                         >
-                            CONTINUAR AL SIGUIENTE REGISTRO
+                            Listo, registrar a otra persona
                         </button>
                     </div>
                 </div>

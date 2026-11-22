@@ -237,7 +237,7 @@ export const CandidateDashboard = () => {
         return (
             <div className="flex-center flex-col" style={{ height: '80vh', gap: '1rem' }}>
                 <Activity className="spin" size={48} color="var(--tertiary)" />
-                <p style={{ color: '#888', fontFamily: 'Oswald' }}>SINCRONIZANDO INTELIGENCIA ELECTORAL...</p>
+                <p style={{ color: '#888', fontFamily: 'Oswald' }}>Cargando tu campaña…</p>
             </div>
         );
     }
@@ -246,25 +246,26 @@ export const CandidateDashboard = () => {
         <div className="flex-col gap-2" style={{ paddingBottom: '5rem' }}>
             {/* Header */}
             <div style={{ padding: '1rem', backgroundColor: 'rgba(15,18,24,0.8)', borderBottom: '1px solid rgba(0,212,255,0.2)', marginBottom: '1rem' }}>
-                <h1 style={{ fontFamily: 'Oswald', color: 'white', margin: 0, fontSize: '1.8rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                    <ShieldCheck color="var(--tertiary)" size={28} />
-                    C4I: {tenantInfo?.name || 'CENTRO DE COMANDO'}
+                <h1 style={{ color: 'white', margin: 0, fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', textTransform: 'none', letterSpacing: 0, textShadow: 'none', fontFamily: 'Inter, sans-serif', fontWeight: 700 }}>
+                    <ShieldCheck color="var(--tertiary)" size={20} />
+                    {tenantInfo?.name || 'Mi campaña'}
                 </h1>
-                <p style={{ color: '#888', margin: '0.5rem 0 0 0', fontSize: '0.9rem' }}>Vista Ejecutiva: {tenantInfo?.geographic_scope || 'Jurisdicción Local'}</p>
+                <p style={{ color: '#888', margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>{tenantInfo?.geographic_scope || ''}</p>
             </div>
 
             {/* Navigation Tabs */}
-            <div style={{ display: 'flex', gap: '0.5rem', overflowX: 'auto', padding: '0 1rem', paddingBottom: '0.5rem', scrollbarWidth: 'none' }}>
-                <TabButton active={activeTab === 'pulso'} onClick={() => setActiveTab('pulso')} icon={<Activity size={18} />} label="El Pulso" />
-                <TabButton active={activeTab === 'monitoreo'} onClick={() => setActiveTab('monitoreo')} icon={<Globe size={18} />} label="Monitoreo" />
-                <TabButton active={activeTab === 'activismo'} onClick={() => setActiveTab('activismo')} icon={<Users size={18} />} label="Activismo" />
-                <TabButton active={activeTab === 'finanzas'} onClick={() => setActiveTab('finanzas')} icon={<DollarSign size={18} />} label="Recursos" />
-                <TabButton active={activeTab === 'predicciones'} onClick={() => setActiveTab('predicciones')} icon={<BrainCircuit size={18} />} label="Futuro" />
+            {/* Todas las opciones a la vista (antes había que deslizar de lado para descubrirlas) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
+                <TabButton active={activeTab === 'pulso'} onClick={() => setActiveTab('pulso')} icon={<Activity size={18} />} label="Resumen" />
+                <TabButton active={activeTab === 'monitoreo'} onClick={() => setActiveTab('monitoreo')} icon={<Globe size={18} />} label="Redes" />
+                <TabButton active={activeTab === 'activismo'} onClick={() => setActiveTab('activismo')} icon={<Users size={18} />} label="Equipo" />
+                <TabButton active={activeTab === 'finanzas'} onClick={() => setActiveTab('finanzas')} icon={<DollarSign size={18} />} label="Dinero" />
+                <TabButton active={activeTab === 'predicciones'} onClick={() => setActiveTab('predicciones')} icon={<BrainCircuit size={18} />} label="Pronóstico" />
                 <TabButton active={activeTab === 'seguridad'} onClick={() => setActiveTab('seguridad')} icon={<ShieldCheck size={18} />} label="Seguridad" />
-                <TabButton active={activeTab === 'estructura'} onClick={() => setActiveTab('estructura')} icon={<UserPlus size={18} />} label="Estructura" />
-                <TabButton active={activeTab === 'guiones'} onClick={() => setActiveTab('guiones')} icon={<MessageSquareText size={18} />} label="Guiones" />
-                <TabButton active={activeTab === 'alianzas'} onClick={() => setActiveTab('alianzas')} icon={<Handshake size={18} />} label="Coaliciones" />
-                <TabButton active={activeTab === 'asesor_ai'} onClick={() => setActiveTab('asesor_ai')} icon={<BrainCircuit size={18} />} label="Asesor AI" />
+                <TabButton active={activeTab === 'estructura'} onClick={() => setActiveTab('estructura')} icon={<UserPlus size={18} />} label="Altas" />
+                <TabButton active={activeTab === 'guiones'} onClick={() => setActiveTab('guiones')} icon={<MessageSquareText size={18} />} label="Guion" />
+                <TabButton active={activeTab === 'alianzas'} onClick={() => setActiveTab('alianzas')} icon={<Handshake size={18} />} label="Alianzas" />
+                <TabButton active={activeTab === 'asesor_ai'} onClick={() => setActiveTab('asesor_ai')} icon={<BrainCircuit size={18} />} label="Asistente IA" />
             </div>
 
             {/* Dashboard Content Container */}
@@ -293,14 +294,13 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick:
     <button
         onClick={onClick}
         style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.6rem 1.2rem',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.25rem',
+            padding: '0.55rem 0.3rem', minHeight: 58,
             backgroundColor: active ? 'rgba(0, 212, 255, 0.15)' : 'rgba(255,255,255,0.05)',
             border: `1px solid ${active ? 'var(--tertiary)' : 'rgba(255,255,255,0.1)'}`,
-            borderRadius: '8px',
-            color: active ? 'var(--tertiary)' : '#888',
-            fontFamily: 'Oswald',
-            whiteSpace: 'nowrap',
+            borderRadius: '10px',
+            color: active ? 'var(--tertiary)' : '#CBD5E1',
+            fontFamily: 'Inter, sans-serif', fontSize: '0.8rem', fontWeight: 600,
             transition: 'all 0.2s',
             cursor: 'pointer'
         }}
@@ -320,7 +320,7 @@ const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats
             </div>
             <div className="tactile-card flex-col flex-center glow-primary" style={{ borderLeft: '4px solid var(--primary)' }}>
                 <p style={{ margin: 0, fontSize: '0.7rem', color: '#888' }}>BRECHA HISTÓRICA</p>
-                <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color: 'var(--primary)' }}>+{stats.brecha.toLocaleString()}</p>
+                <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color: 'var(--primary)' }}>{stats.brecha > 0 ? '+' : ''}{stats.brecha.toLocaleString()}</p>
                 <p style={{ margin: 0, fontSize: '0.6rem', color: '#64748B' }}>vs Ganador Anterior</p>
             </div>
             <div className="tactile-card flex-col flex-center glow-secondary" style={{ borderLeft: '4px solid var(--secondary)' }}>

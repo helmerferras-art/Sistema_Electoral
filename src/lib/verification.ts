@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, isDemoMode, isDemoLink } from './supabase';
 
 /**
  * Validación de visitas por WhatsApp.
@@ -11,6 +11,12 @@ import { supabase } from './supabase';
 export const PUBLIC_URL = (import.meta.env.VITE_PUBLIC_URL as string | undefined)
     || (typeof window !== 'undefined' && window.location.origin.startsWith('http') && !window.location.hostname.match(/^(localhost|127\.)/)
         ? window.location.origin : 'https://nemia.lat');
+
+/** Agrega ?demo=1 a los enlaces públicos que se generan dentro de la demo. */
+export const withDemoFlag = (url: string) => {
+    if (!(isDemoMode() || isDemoLink())) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'demo=1';
+};
 
 const DEVICE_KEY = 'c4i_device_id';
 
@@ -31,7 +37,7 @@ export const newVerificationToken = (): string => {
     return btoa(String.fromCharCode(...bytes)).replace(/\//g, 'x').replace(/\+/g, 'z').replace(/=+$/, '');
 };
 
-export const verificationLink = (token: string, channel: 'wa' | 'qr' = 'wa') => `${PUBLIC_URL}/v/${token}${channel === 'qr' ? '?c=qr' : ''}`;
+export const verificationLink = (token: string, channel: 'wa' | 'qr' = 'wa') => withDemoFlag(`${PUBLIC_URL}/v/${token}${channel === 'qr' ? '?c=qr' : ''}`);
 
 const firstName = (s?: string | null) => (s || '').trim().split(/\s+/)[0] || '';
 

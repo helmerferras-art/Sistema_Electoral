@@ -6,20 +6,41 @@ import { BridgeService } from '../lib/BridgeService';
 import { UserPlus, Trash2, CheckCircle, Search, Play, Key, PauseCircle, PlayCircle, Edit } from 'lucide-react';
 
 
+// Roles que se pueden dar de alta desde este formulario.
+// El superadmin (modo dios) y la creación de candidatos quedan reservados al administrador del sistema.
+// Debe coincidir con GRANTABLE_ROLES de supabase/functions/create-team-member (el servidor es quien manda).
+const ROLE_LABELS: Record<string, string> = {
+    superadmin: 'SuperAdmin (Sistema Global)',
+    candidato: 'Candidato (Comando Campaña)',
+    coordinador_campana: 'Coordinador de Campaña',
+    comunicacion: 'Comunicación',
+    comunicacion_digital: 'Comunicación digital',
+    coordinador_logistica: 'Logística',
+    coordinador: 'Coordinador',
+    coordinador_territorial: 'Coordinador Territorial',
+};
+const GRANTABLE_FROM_FORM: Record<string, string[]> = {
+    superadmin: ['superadmin', 'candidato', 'coordinador_campana'],
+    candidato: ['coordinador_campana', 'comunicacion', 'comunicacion_digital', 'coordinador_logistica', 'coordinador', 'coordinador_territorial'],
+    coordinador_campana: ['comunicacion', 'comunicacion_digital', 'coordinador_logistica', 'coordinador', 'coordinador_territorial'],
+};
+
 export const AdminManager = () => {
     const [users, setUsers] = useState<any[]>([]);
     const [tenants, setTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
 
-    const { impersonateUser } = useAuth();
+    const { impersonateUser, user: me } = useAuth();
+    const isSystemAdmin = me?.role === 'superadmin';
+    const roleOptions = GRANTABLE_FROM_FORM[me?.role || ''] || [];
     const [searchTerm, setSearchTerm] = useState('');
     const [processingId, setProcessingId] = useState<string | null>(null);
 
     // Form states
     const [newName, setNewName] = useState('');
     const [newPhone, setNewPhone] = useState('');
-    const [newRole, setNewRole] = useState('candidato');
+    const [newRole, setNewRole] = useState('');
     const [newTenantId, setNewTenantId] = useState('');
     const [targetMunicipality, setTargetMunicipality] = useState('');
     const [targetSection, setTargetSection] = useState('');
@@ -28,6 +49,11 @@ export const AdminManager = () => {
     useEffect(() => {
         loadData();
     }, []);
+
+    // Rol por defecto según quién da de alta (nunca superadmin para una campaña)
+    useEffect(() => {
+        if (!roleOptions.includes(newRole)) setNewRole(isSystemAdmin ? 'candidato' : (roleOptions[0] || ''));
+    }, [me?.role]);
 
     const loadData = async () => {
         setLoading(true);
@@ -56,6 +82,10 @@ export const AdminManager = () => {
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('');
+        if (!roleOptions.includes(newRole)) {
+            setMessage('❌ Tu perfil no puede dar de alta ese rol. El SuperAdmin solo lo crea el administrador del sistema.');
+            return;
+        }
         setIsSubmitting(true);
 
         const formattedPhone = newPhone.startsWith('+52') ? newPhone : `+52${newPhone}`;
@@ -66,7 +96,8 @@ export const AdminManager = () => {
                     name: newName,
                     phone: newPhone,
                     role: newRole,
-                    tenant_id: newTenantId || null,
+                    // Fuera del administrador del sistema, el alta siempre es en la propia campaña
+                    tenant_id: isSystemAdmin ? (newTenantId || null) : (me?.tenant_id || null),
                     two_factor_enabled: newRole === 'superadmin'
                 }
             });
@@ -168,11 +199,13 @@ export const AdminManager = () => {
     };
 
     const handleImpersonate = async (user: any) => {
+        if (!isSystemAdmin) return;
         if (!confirm(`MODO FANTASMA\n\n¿Estás seguro de iniciar sesión simulando ser ${user.name}? \n\nPodrás operar en el sistema como si fueras este usuario. En cualquier momento podrás abortar la suplantación desde el Menú Principal.`)) return;
         await impersonateUser(user);
     };
 
-    const filteredUsers = users.filter((u: any) =>
+    // Una campaña no ve ni toca cuentas del administrador del sistema
+    const filteredUsers = users.filter((u: any) => isSystemAdmin || u.role !== 'superadmin').filter((u: any) =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.phone?.includes(searchTerm)
     );
@@ -202,7 +235,7 @@ export const AdminManager = () => {
                 <div className="tactile-card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <h3 className="tactical-font" style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>
                         <span style={{ marginRight: '0.5rem' }}><UserPlus size={18} /></span>
-                        RECLUTAR NUEVO ADMINISTRADOR
+                        {isSystemAdmin ? 'RECLUTAR NUEVO ADMINISTRADOR' : 'DAR DE ALTA A MI EQUIPO DE MANDO'}
                     </h3>
 
                     <form onSubmit={handleCreateUser} className="flex-col gap-2">
@@ -235,12 +268,10 @@ export const AdminManager = () => {
                                 onChange={e => setNewRole(e.target.value)}
                                 style={{ background: '#1a1d24', color: 'white' }}
                             >
-                                <option value="superadmin">SuperAdmin (Sistema Global)</option>
-                                <option value="candidato">Candidato (Comando Campaña)</option>
-                                <option value="coordinador_campana">Coordinador de Campaña</option>
+                                {roleOptions.map(r => <option key={r} value={r}>{ROLE_LABELS[r] || r}</option>)}
                             </select>
                         </div>
-                        {newRole !== 'superadmin' && (
+                        {isSystemAdmin && newRole !== 'superadmin' && (
                             <div className="flex-col">
                                 <label style={{ fontSize: '0.8rem', color: '#888' }}>ASIGNAR A CAMPAÑA (TENANT)</label>
                                 <select
@@ -349,6 +380,7 @@ export const AdminManager = () => {
 
                                         <td style={{ textAlign: 'right', padding: '0.5rem' }}>
                                             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', opacity: processingId === u.id ? 0.5 : 1 }}>
+                                                {isSystemAdmin && (
                                                 <button
                                                     onClick={() => handleImpersonate(u)}
                                                     title="Modo Fantasma (Suplantar Identidad)"
@@ -357,6 +389,7 @@ export const AdminManager = () => {
                                                 >
                                                     <Play size={16} />
                                                 </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleResetCredentials(u.id, u.name, u.phone)}
                                                     title="Restablecer Credenciales (Forzar Nuevo Código)"

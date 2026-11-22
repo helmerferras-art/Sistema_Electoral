@@ -1,3 +1,4 @@
+import { SalesLeads } from './SalesLeads';
 import React, { useState, useEffect } from 'react';
 import { USER_COLUMNS } from '../lib/userColumns';
 import { useAuth } from '../lib/AuthContext';
@@ -13,7 +14,7 @@ export const SuperAdminDashboard = () => {
     const { user, signOut } = useAuth();
     const [tenants, setTenants] = useState<any[]>([]);
     const [globalLayers, setGlobalLayers] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia'>('gestion');
+    const [activeTab, setActiveTab] = useState<'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('gestion');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // OTA Deployment State
@@ -1141,6 +1142,9 @@ export const SuperAdminDashboard = () => {
                     <div onClick={() => { setActiveTab('sistema'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'sistema' ? 'active tertiary' : ''}`}>
                         <Settings size={18} /> DESPLIEGUES
                     </div>
+                    <div onClick={() => { setActiveTab('ventas'); setMobileMenuOpen(false); }} className={`sa-nav-item ${activeTab === 'ventas' ? 'active tertiary' : ''}`}>
+                        <Users size={18} /> VENTAS
+                    </div>
                 </nav>
 
                 <div className="sa-sidebar-footer">
@@ -1166,6 +1170,7 @@ export const SuperAdminDashboard = () => {
 
             {/* MAIN CONTENT AREA */}
             <main className="sa-main">
+                {activeTab === 'ventas' && <SalesLeads />}
                 {activeTab === 'gestion' && (
                     <>
                         <div className="flex-row-resp" style={{ justifyContent: 'center', alignItems: 'stretch', gap: '2rem', width: '100%' }}>

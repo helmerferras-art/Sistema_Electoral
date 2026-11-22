@@ -7,8 +7,8 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // superadmin no aparece aquí: se maneja aparte (sin restricción de rol destino).
 // comunicacion_digital y coordinador_logistica son roles terminales: no dan de alta a nadie del sistema.
 export const GRANTABLE_ROLES: Record<string, string[]> = {
-    candidato: ['coordinador_campana', 'comunicacion_digital', 'coordinador_logistica', 'coordinador'],
-    coordinador_campana: ['comunicacion_digital', 'coordinador_logistica', 'coordinador'],
+    candidato: ['coordinador_campana', 'comunicacion', 'comunicacion_digital', 'coordinador_logistica', 'coordinador', 'coordinador_territorial'],
+    coordinador_campana: ['comunicacion', 'comunicacion_digital', 'coordinador_logistica', 'coordinador', 'coordinador_territorial'],
     coordinador: ['coordinador_territorial'],
     coordinador_territorial: ['lider'],
     lider: ['brigadista'],
@@ -37,6 +37,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const { name, phone, role: targetRole, tenant_id: bodyTenantId, parent_id: bodyParentId, assigned_territory, two_factor_enabled } = body;
+    // Correo de respaldo opcional: si el SMS no llega, el código de acceso se puede mandar ahí
+    const backupEmail = typeof body.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(body.email.trim()) ? body.email.trim().toLowerCase() : null;
 
     if (!name || !phone || !targetRole) {
         return json({ error: 'Faltan campos requeridos: name, phone, role' }, 400);
@@ -67,7 +69,13 @@ Deno.serve(async (req: Request) => {
         }
 
         callerId = caller.id;
-        callerTenantId = caller.tenant_id;
+        // El superadmin da de alta en la campaña que indica; los demás, solo en la suya
+        callerTenantId = caller.role === 'superadmin' ? (bodyTenantId || caller.tenant_id) : caller.tenant_id;
+
+        // El SuperAdmin (modo dios) y los candidatos solo los da de alta el administrador del sistema
+        if (caller.role !== 'superadmin' && (targetRole === 'superadmin' || targetRole === 'candidato')) {
+            return json({ error: 'Solo el administrador del sistema puede crear cuentas SuperAdmin o de candidato' }, 403);
+        }
 
         if (caller.role !== 'superadmin') {
             const allowed = GRANTABLE_ROLES[caller.role] || [];
@@ -99,19 +107,43 @@ Deno.serve(async (req: Request) => {
         return json({ error: 'No se pudo determinar el tenant_id' }, 400);
     }
 
+    // El jefe indicado debe pertenecer a la misma campaña
+    if (bodyParentId) {
+        const { data: parentRow } = await admin.from('users').select('tenant_id').eq('id', bodyParentId).maybeSingle();
+        if (!parentRow || parentRow.tenant_id !== finalTenantId) {
+            return json({ error: 'El jefe indicado no pertenece a esta campaña' }, 400);
+        }
+    }
+
     const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
     const formattedPhone = cleanPhone.startsWith('+') ? cleanPhone : `+52${cleanPhone}`;
-    const email = toSyntheticEmail(cleanPhone);
+    const email = backupEmail || toSyntheticEmail(cleanPhone);
+    if (backupEmail) {
+        const { data: taken } = await admin.from('users').select('id, phone').ilike('email', backupEmail).limit(1);
+        if (taken?.length && taken[0].phone !== formattedPhone) return json({ error: 'Ese correo ya está en uso por otra cuenta.' }, 409);
+    }
     const tacticalCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     // Re-registro: si ya existe un usuario con este teléfono, refrescar en vez de duplicar
     const { data: existingUser } = await admin
         .from('users')
-        .select('id, auth_id')
+        .select('id, auth_id, tenant_id, role')
         .eq('phone', formattedPhone)
         .maybeSingle();
 
     if (existingUser) {
+        // Antes, cualquiera (incluso sin sesión) podía "re-registrar" el número de otra persona, cambiarle
+        // campaña y rol y recibir su nueva clave. Ahora solo se refresca a alguien de la propia campaña,
+        // con un perfil que quien da el alta puede otorgar.
+        const { data: callerRow } = callerId
+            ? await admin.from('users').select('role').eq('id', callerId).maybeSingle()
+            : { data: null } as any;
+        const isSuper = callerRow?.role === 'superadmin';
+        const sameTenant = existingUser.tenant_id === finalTenantId;
+        const canGrantExisting = isSuper || (callerRow && (GRANTABLE_ROLES[callerRow.role] || []).includes(existingUser.role));
+        if (!callerId || !sameTenant || !canGrantExisting) {
+            return json({ error: 'Ese número ya está registrado. Pide a su coordinación que lo actualice.' }, 409);
+        }
         const { data: updated, error: updateErr } = await admin
             .from('users')
             .update({
@@ -124,15 +156,19 @@ Deno.serve(async (req: Request) => {
                 code_sent: false,
                 two_factor_enabled: !!two_factor_enabled,
                 ...(assigned_territory ? { assigned_territory } : {}),
+                ...(backupEmail ? { email: backupEmail } : {}),
             })
             .eq('id', existingUser.id)
             .select()
             .single();
 
-        if (updateErr) return json({ error: updateErr.message }, 500);
+        if (updateErr) return json({ error: updateErr.message }, updateErr.code === 'P0402' ? 402 : 500);
 
         if (existingUser.auth_id) {
-            await admin.auth.admin.updateUserById(existingUser.auth_id, { password: tacticalCode });
+            await admin.auth.admin.updateUserById(existingUser.auth_id, {
+                password: tacticalCode, phone: formattedPhone, phone_confirm: true,
+                ...(backupEmail ? { email: backupEmail, email_confirm: true } : {}),
+            });
         }
 
         return json({ success: true, user: updated, temp_code: tacticalCode });
@@ -142,11 +178,15 @@ Deno.serve(async (req: Request) => {
         email,
         password: tacticalCode,
         email_confirm: true,
+        // El celular también queda en Auth: así se entra con celular + contraseña aunque el correo cambie
+        phone: formattedPhone,
+        phone_confirm: true,
         user_metadata: { phone: formattedPhone, role: targetRole },
     });
 
     if (createErr) {
-        return json({ error: createErr.message }, 409);
+        const msg = /phone/i.test(createErr.message) ? 'Ese celular ya tiene una cuenta.' : /email/i.test(createErr.message) ? 'Ese correo ya está en uso por otra cuenta.' : createErr.message;
+        return json({ error: msg }, 409);
     }
 
     const { data: newUser, error: insertErr } = await admin
@@ -164,6 +204,7 @@ Deno.serve(async (req: Request) => {
             code_sent: false,
             two_factor_enabled: !!two_factor_enabled,
             ...(assigned_territory ? { assigned_territory } : {}),
+            ...(backupEmail ? { email: backupEmail } : {}),
         }])
         .select()
         .single();
@@ -171,8 +212,10 @@ Deno.serve(async (req: Request) => {
     if (insertErr) {
         // Rollback: no dejar un usuario huérfano en Auth si el insert en public.users falla
         await admin.auth.admin.deleteUser(created.user.id);
-        return json({ error: insertErr.message }, 500);
+        // P0402 = límite del plan (Plan Arranque)
+        return json({ error: insertErr.message }, insertErr.code === 'P0402' ? 402 : 500);
     }
 
-    return json({ success: true, user: newUser, temp_code: tacticalCode });
+    // En el registro público la clave nunca viaja al navegador: se envía por SMS desde el servidor
+    return json({ success: true, user: newUser, ...(callerId ? { temp_code: tacticalCode } : {}) });
 });

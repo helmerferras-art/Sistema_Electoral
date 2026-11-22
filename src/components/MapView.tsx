@@ -1,3 +1,4 @@
+import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -543,11 +544,20 @@ export const MapView = () => {
                 const roleType = tenant?.position?.toLowerCase() || '';
                 const geoScope = tenant?.geographic_scope || '';
 
+                // historical_election_results y padron_electoral guardan el municipio por NOMBRE en mayúsculas
+                // sin acentos ("TUXTLA GUTIERREZ"). Antes se filtraba solo por la clave numérica y la consulta
+                // regresaba 0 filas: el mapa salía sin padrón ni votación. Se filtra por ambas formas.
+                const munVariants = (idOrName: string | number) => {
+                    const raw = String(idOrName).trim();
+                    const name = /^\d+$/.test(raw) ? (ID_TO_MUN_NAME[raw] || '') : raw;
+                    const norm = removeAccents(name).toLowerCase();
+                    const id = /^\d+$/.test(raw) ? raw : String((CHIAPAS_MUNICIPIOS as any)[norm] ?? '');
+                    return [id, norm.toUpperCase(), name.toUpperCase(), name].filter(Boolean);
+                };
+
                 if (roleType.includes('presidente municipal') || roleType.includes('presidencia_municipal')) {
                     if (geoScope) {
-                        const mNorm = geoScope.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-                        const mId = (CHIAPAS_MUNICIPIOS as any)[mNorm];
-                        if (mId) validMunicipalities = [mId.toString()];
+                        validMunicipalities = Array.from(new Set(munVariants(geoScope)));
                     }
                 } else if (roleType.includes('diputado') || roleType.includes('diputacion')) {
                     if (geoScope) {
@@ -557,7 +567,7 @@ export const MapView = () => {
                             const mapObj = isLocal ? CHIAPAS_DISTRITOS_LOCALES : CHIAPAS_DISTRITOS_FEDERALES;
                             const distMunIds = (mapObj as any)[dNum];
                             if (distMunIds && distMunIds.length > 0) {
-                                validMunicipalities = distMunIds.map((id: number) => id.toString());
+                                validMunicipalities = Array.from(new Set(distMunIds.flatMap((id: number) => munVariants(id))));
                             }
                         }
                     }
@@ -1075,14 +1085,14 @@ export const MapView = () => {
 
     return (
         <div className="tactile-card flex-col gap-1" style={{ padding: '1rem', height: 'clamp(500px, 80vh, 800px)', border: '1px solid rgba(0, 212, 255, 0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h2 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, fontSize: '1.4rem' }}>
-                    <span style={{ color: 'var(--tertiary)' }}>//</span> {pollMode ? `MAPA DE CALOR: ENCUESTA` : 'RADAR ESTRATÉGICO'}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', marginBottom: '0.6rem' }}>
+                <h2 style={{ fontFamily: 'Oswald, sans-serif', color: 'var(--text-color)', margin: 0, fontSize: '1.25rem' }}>
+                    {pollMode ? 'MAPA DE LA ENCUESTA' : 'MAPA'}
                     <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', marginLeft: '10px', boxShadow: '0 0 5px #10B981', verticalAlign: 'middle' }}></span>
                 </h2>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    {/* Tactical Filter Bar */}
-                    <div style={{ display: 'flex', gap: '0.5rem', marginRight: '1rem', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '1rem' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', alignItems: 'center' }}>
+                    {/* Filtros: en el celular se acomodan en varias líneas en lugar de salirse de la pantalla */}
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
                         {!(tenantConfig?.position?.toLowerCase().includes('presidente') || tenantConfig?.position?.toLowerCase().includes('presidencia_municipal')) && (
                             <select
                                 className="squishy-input mini"
@@ -1101,7 +1111,7 @@ export const MapView = () => {
                                     setSelectedSec('');
                                 }}
                             >
-                                <option value="">MUNICIPIO...</option>
+                                <option value="">Municipio</option>
                                 {processedGeoJson && Array.from(new Set(processedGeoJson.features.map((f: any) => f.properties?.municipio))).filter(Boolean).sort().map((m: any) => (
                                     <option key={m} value={m}>{m}</option>
                                 ))}
@@ -1125,7 +1135,7 @@ export const MapView = () => {
                             }}
                             disabled={!(tenantConfig?.position?.toLowerCase().includes('presidente') || tenantConfig?.position?.toLowerCase().includes('presidencia_municipal')) && !selectedMun}
                         >
-                            <option value="">SECCIÓN...</option>
+                            <option value="">Sección</option>
                             {availableSecs.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                     </div>
@@ -1164,7 +1174,7 @@ export const MapView = () => {
                         style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
                         onClick={() => setViewMode('niebla')}
                     >
-                        🌫️ NIEBLA
+                        🗺️ AVANCE
                     </button>
                     <button
                         className={`squishy-btn ${viewMode === 'heatmap' ? 'primary' : ''}`}
@@ -1208,7 +1218,7 @@ export const MapView = () => {
 
             {loading ? (
                 <div className="flex-center" style={{ flex: 1, height: '100%', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', background: 'rgba(0,0,0,0.5)' }}>
-                    <h3 style={{ fontFamily: 'Oswald, sans-serif', letterSpacing: '0.1em', animation: 'pulse 1.5s infinite', color: 'var(--tertiary)' }}>&gt; SINCRONIZANDO SATÉLITE...</h3>
+                    <h3 style={{ fontFamily: 'Oswald, sans-serif', letterSpacing: '0.1em', animation: 'pulse 1.5s infinite', color: 'var(--tertiary)' }}>Cargando mapa…</h3>
                 </div>
             ) : (
                 <div style={{ flex: 1, minHeight: '400px', borderRadius: '8px', overflow: 'hidden', border: '2px solid var(--tertiary)', boxShadow: '0 0 15px rgba(0, 212, 255, 0.2)', position: 'relative' }}>
@@ -1218,10 +1228,7 @@ export const MapView = () => {
                         style={{ height: '100%', width: '100%', backgroundColor: '#0F1218' }}
                     >
                         {/* Using Carto Dark Matter base map for tactical feel */}
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        />
+                        <TileLayer url={BASE_TILE_URL} attribution={BASE_TILE_ATTRIBUTION} className={BASE_TILE_CLASS} maxZoom={19} />
 
                         {/* Auto-focus camera on filtered geometry */}
                         <AutoFitBounds
@@ -1282,7 +1289,7 @@ export const MapView = () => {
                                     const padron = feature.properties?._padronTotal || feature.properties?.padron_total;
                                     const hombres = feature.properties?._padronHombres || feature.properties?.hombres || 0;
                                     const mujeres = feature.properties?._padronMujeres || feature.properties?.mujeres || 0;
-                                    const votalHistory = feature.properties?._actualVoted || feature.properties?.total_votes;
+                                    const votalHistory = feature.properties?._votersRaw || feature.properties?.total_votes;
                                     const edadRangos = feature.properties?._edadRangos || feature.properties?.edad_rangos;
 
                                     let detailsHtml = '';
@@ -1319,7 +1326,12 @@ export const MapView = () => {
                                         ${detailsHtml}
                                     `;
 
-                                    layer.bindPopup(`<strong style="font-family: Oswald; color: #00D4FF; letter-spacing: 0.05em; text-transform: uppercase;">ZONA: ${displayValue}</strong>${statsHtml}`);
+                                    // Solo en pantallas anchas se usa además el popup (con autoPan y ancho máximo);
+                                    // en celular el panel inferior muestra la misma información sin salirse del cuadro.
+                                    if (typeof window !== 'undefined' && window.innerWidth >= 900) {
+                                        layer.bindPopup(`<strong style="font-family: Oswald; color: #00D4FF; letter-spacing: 0.05em; text-transform: uppercase;">ZONA: ${displayValue}</strong>${statsHtml}`,
+                                            { maxWidth: 280, autoPan: true, autoPanPadding: L.point(20, 60), keepInView: true });
+                                    }
                                     layer.bindTooltip(`<span style="font-weight: bold; font-family: Inter;">${displayValue}</span><br/>${isCustom ? 'Meta Asignada' : 'Meta'}: ${meta40 ?? '---'}`, { sticky: true, className: 'tactile-tooltip' });
 
                                     layer.on({
@@ -1505,12 +1517,12 @@ export const MapView = () => {
 
                     {/* Tactical Slide-Out Dashboard */}
                     {selectedRegion && (
-                        <div style={{
+                        <div className="radar-detail-panel" style={{
                             position: 'absolute',
                             top: 0,
                             right: 0,
                             bottom: 0,
-                            width: '350px',
+                            width: 'min(350px, 100%)',
                             backgroundColor: 'rgba(15, 18, 24, 0.95)',
                             borderLeft: '2px solid var(--tertiary)',
                             boxShadow: '-5px 0 20px rgba(0, 0, 0, 0.7)',
@@ -1521,7 +1533,7 @@ export const MapView = () => {
                         }}>
                             <div style={{ padding: '1.2rem', borderBottom: '1px solid rgba(0, 212, 255, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(0, 212, 255, 0.05)' }}>
                                 <div>
-                                    <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>REPORTE TÁCTICO - {String(selectedRegion.type).toUpperCase()}</div>
+                                    <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>DETALLE · {String(selectedRegion.type).toUpperCase()}</div>
                                     <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)', fontSize: '1.4rem' }}>{selectedRegion.name}</h3>
                                 </div>
                                 <button onClick={() => {
@@ -1605,8 +1617,14 @@ export const MapView = () => {
                                             </div>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                                                 <div style={{ fontSize: '0.65rem', color: '#888' }}>VOTACIÓN HIST</div>
-                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._actualVoted ?? selectedRegion.properties?.total_votes ?? 0).toLocaleString()}</div>
-                                                <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Participación Real</div>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._votersRaw ?? selectedRegion.properties?.total_votes ?? 0).toLocaleString()}</div>
+                                                <div style={{ fontSize: '0.6rem', color: '#10B981' }}>
+                                                    {(() => {
+                                                        const v = Number(selectedRegion.properties?._votersRaw ?? 0);
+                                                        const p = Number(selectedRegion.properties?._padronTotal ?? 0);
+                                                        return p > 0 && v > 0 ? `Participación ${(v / p * 100).toFixed(1)}% (2024)` : 'Participación 2024';
+                                                    })()}
+                                                </div>
                                             </div>
                                         </div>
                                     </>

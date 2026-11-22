@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+<title>Tlatoani Puente</title>
+<style>
+  :root { --bg:#0F1218; --card:#171C25; --line:#262E3B; --text:#E6EAF0; --muted:#94A3B8; --pri:#E8743B; --ok:#22C55E; --warn:#F59E0B; --bad:#F87171; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 "Segoe UI", system-ui, sans-serif; }
+  header { display:flex; align-items:center; gap:.7rem; padding:1rem 1.4rem; border-bottom:1px solid var(--line); }
+  header img { width:34px; height:34px; border-radius:8px; }
+  header h1 { font-size:1.15rem; margin:0; letter-spacing:.06em; }
+  header .sub { color:var(--muted); font-size:.85rem; }
+  main { max-width:820px; margin:0 auto; padding:1.4rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1.2rem 1.3rem; margin-bottom:1rem; }
+  h2 { font-size:1.1rem; margin:0 0 .4rem; }
+  p { margin:.3rem 0 .8rem; color:var(--muted); }
+  .steps { display:flex; gap:.4rem; margin-bottom:1rem; }
+  .steps span { flex:1; text-align:center; padding:.45rem; border-radius:8px; background:var(--card); border:1px solid var(--line); color:var(--muted); font-size:.85rem; }
+  .steps span.on { border-color:var(--pri); color:var(--text); }
+  .steps span.done { color:var(--ok); }
+  input { width:100%; padding:.7rem .8rem; border-radius:8px; border:1px solid var(--line); background:#0B0E13; color:var(--text); font-size:1rem; }
+  button { padding:.7rem 1.1rem; border-radius:8px; border:1px solid var(--line); background:#202836; color:var(--text); font-size:.95rem; cursor:pointer; }
+  button.pri { background:var(--pri); border-color:var(--pri); color:#1b0d05; font-weight:700; }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; margin-top:.7rem; }
+  .err { color:var(--bad); margin-top:.6rem; white-space:pre-wrap; }
+  .okt { color:var(--ok); margin-top:.6rem; }
+  .opt { display:flex; gap:.8rem; align-items:flex-start; padding:.8rem; border:1px solid var(--line); border-radius:10px; margin:.5rem 0; cursor:pointer; }
+  .opt.sel { border-color:var(--pri); background:#1d1712; }
+  .opt .t { font-weight:700; }
+  .opt .d { color:var(--muted); font-size:.88rem; }
+  .pill { display:inline-block; padding:.1rem .55rem; border-radius:99px; font-size:.78rem; border:1px solid var(--line); margin-left:.3rem; }
+  .pill.ok { color:var(--ok); border-color:var(--ok); } .pill.warn { color:var(--warn); border-color:var(--warn); } .pill.bad { color:var(--bad); border-color:var(--bad); }
+  ol { color:var(--muted); padding-left:1.2rem; } ol li { margin:.25rem 0; }
+  .big { display:flex; align-items:center; gap:1rem; }
+  .dot { width:18px; height:18px; border-radius:50%; background:var(--muted); flex:none; }
+  .dot.en_linea { background:var(--ok); box-shadow:0 0 12px var(--ok); } .dot.sin_linea, .dot.sin_internet { background:var(--bad); } .dot.pausado { background:var(--warn); }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.6rem; margin-top:1rem; }
+  .stats div { background:#0B0E13; border-radius:10px; padding:.7rem; text-align:center; }
+  .stats b { display:block; font-size:1.5rem; }
+  .log { max-height:260px; overflow:auto; font-size:.86rem; }
+  .log div { padding:.3rem 0; border-bottom:1px solid var(--line); }
+  .log .no { color:var(--bad); }
+  .hidden { display:none !important; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid var(--muted); border-top-color:transparent; border-radius:50%; animation:s 1s linear infinite; vertical-align:-2px; margin-right:.4rem; }
+  @keyframes s { to { transform:rotate(360deg); } }
+  small { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <img src="icon.png" alt="">
+  <div><h1>TLATOANI PUENTE</h1><div class="sub">Envío de los códigos de acceso por SMS · <span id="ver"></span></div></div>
+</header>
+<main>
+  <!-- ===== ASISTENTE ===== -->
+  <section id="wizard" class="hidden">
+    <div class="steps"><span data-s="1">1 · Llave</span><span data-s="2">2 · Celular o módem</span><span data-s="3">3 · Prueba</span><span data-s="4">4 · Listo</span></div>
+
+    <div class="card" id="s1">
+      <h2>Configura este equipo antes de usar el sistema</h2>
+      <p>Esta PC enviará por SMS los códigos de acceso de todas las campañas. Es la primera opción de envío; si se apaga, los códigos salen por el celular de cada campaña.</p>
+      <ol>
+        <li>En <b>nemia.lat</b> entra como administración de la plataforma.</li>
+        <li>En el Tablero, en <b>Puente de SMS de la plataforma</b>, oprime <b>Generar llave para la PC</b>.</li>
+        <li>Copia la llave y pégala aquí.</li>
+      </ol>
+      <input id="token" placeholder="Llave de 64 letras y números" autocomplete="off" spellcheck="false">
+      <div class="row"><input id="pcname" placeholder="Nombre de este equipo (ej. PC oficina)" style="flex:1"></div>
+      <div class="row"><button class="pri" id="b1">Continuar</button></div>
+      <div class="err" id="e1"></div>
+    </div>
+
+    <div class="card hidden" id="s2">
+      <h2>Conecta la línea que enviará los SMS</h2>
+      <p>Puede ser un <b>módem USB GSM</b> con chip, o un <b>celular Android</b> con chip conectado por cable. El programa detecta cuál está conectado.</p>
+      <details><summary style="cursor:pointer;color:var(--muted)">¿Cómo preparo un celular Android?</summary>
+        <ol>
+          <li>Ajustes › Acerca del teléfono › toca 7 veces <b>Número de compilación</b>.</li>
+          <li>Ajustes › Opciones de desarrollador › enciende <b>Depuración por USB</b> (en Xiaomi también "Instalar vía USB" y "Depuración USB (ajustes de seguridad)").</li>
+          <li>Conéctalo con cable y en el celular acepta <b>"¿Permitir depuración por USB?"</b> marcando "Permitir siempre".</li>
+          <li>El celular no necesita datos móviles: el internet lo pone esta PC.</li>
+        </ol>
+      </details>
+      <div class="row"><button id="b2scan">Buscar de nuevo</button><small id="scanmsg"></small></div>
+      <div id="lines"></div>
+      <div class="row"><button id="b2back">Atrás</button><button class="pri" id="b2" disabled>Continuar</button></div>
+      <div class="err" id="e2"></div>
+    </div>
+
+    <div class="card hidden" id="s3">
+      <h2>Haz una prueba</h2>
+      <p>Escribe tu celular. Te llegará un SMS de prueba desde la línea elegida (<span id="linename"></span>).</p>
+      <input id="testphone" placeholder="Celular de 10 números" inputmode="numeric" maxlength="10">
+      <div class="row"><button id="b3test">Enviar prueba</button><button id="b3back">Atrás</button></div>
+      <div class="err" id="e3"></div><div class="okt" id="o3"></div>
+      <div class="row"><button class="pri" id="b3" disabled>Sí me llegó · Activar el puente</button></div>
+    </div>
+  </section>
+
+  <!-- ===== PANEL ===== -->
+  <section id="panel" class="hidden">
+    <div class="card">
+      <div class="big"><div class="dot" id="dot"></div><div><h2 id="stitle" style="margin:0"></h2><small id="sline"></small></div></div>
+      <div class="stats"><div><b id="nsent">0</b>enviados</div><div><b id="nfail">0</b>con error</div><div><b id="nlast">—</b>último envío</div></div>
+      <div class="err" id="lasterr"></div>
+      <div class="row">
+        <button id="bpause"></button>
+        <button id="bline">Cambiar celular o módem</button>
+        <button id="btest">Enviar prueba</button>
+        <button id="breset">Desconectar este equipo</button>
+      </div>
+      <p style="margin-top:.9rem"><small>Puedes cerrar esta ventana: el puente sigue enviando desde la bandeja, junto al reloj, y arranca solo al encender la PC. Déjala conectada a la corriente y a internet, sin suspensión.</small></p>
+    </div>
+    <div class="card"><h2>Bitácora</h2><div class="log" id="log"></div></div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -12,13 +12,13 @@ const CORS_HEADERS = {
 const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } });
 
-const toSyntheticEmail = (phone: string) => `${phone.replace(/\D/g, '').slice(-10)}@c4i.local`;
-
 /**
  * Segundo factor de login. El cliente ya validó la contraseña en verifyOtp (y AuthContext
  * cerró esa sesión sin dejarla activa); aquí solo se valida el código de 6 dígitos enviado
  * por SMS y, si coincide, se emite un magic-link server-side (requiere service_role) que el
  * cliente canjea con supabase.auth.verifyOtp para obtener una sesión real.
+ * El correo de Auth puede ser el interno (<celular>@c4i.local) o el correo de respaldo de la persona,
+ * por eso se toma de la cuenta de Auth y no se arma a partir del celular.
  */
 Deno.serve(async (req: Request) => {
     if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS });
@@ -67,12 +67,13 @@ Deno.serve(async (req: Request) => {
     // Invalidar el código de un solo uso
     await admin.from('users').update({ temp_code: null, temp_code_expires_at: null }).eq('id', target.id);
 
-    const email = toSyntheticEmail(target.phone);
+    const { data: authUser } = await admin.auth.admin.getUserById(target.auth_id);
+    const email = authUser?.user?.email || `${cleanPhone}@c4i.local`;
     const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({ type: 'magiclink', email });
 
     if (linkErr || !linkData?.properties?.hashed_token) {
         return json({ error: linkErr?.message || 'No se pudo generar el token de sesión' }, 500);
     }
 
-    return json({ success: true, email, token_hash: linkData.properties.hashed_token });
+    return json({ success: true, token_hash: linkData.properties.hashed_token });
 });

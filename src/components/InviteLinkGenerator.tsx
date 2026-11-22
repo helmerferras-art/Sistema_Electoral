@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
+import { PUBLIC_URL } from '../lib/verification';
 import { UserPlus, Copy, CheckCircle, Smartphone } from 'lucide-react';
 
 type InviteRole = 'coordinador' | 'lider' | 'brigadista';
@@ -55,7 +56,7 @@ export const InviteLinkGenerator = ({ targetRole, parentId }: { targetRole: Invi
             // 2. Generate WhatsApp Text with the generic login link
             // In a real app with deep linking, this could be a direct deep link. 
             // For MVP, we send them to the main /login page since they are already pre-authorized in DB.
-            const appUrl = window.location.origin + '/login';
+            const appUrl = PUBLIC_URL + '/login';
 
             const message = `🚨 *MISIÓN ELECTORAL* 🚨\n\nHola ${newUserName}, has sido convocado a unirte como *${targetRole.toUpperCase()}* por ${user.name}.\n\nTu acceso ha sido pre-aprobado. Ingresa al cuartel aquí usando tu número celular (${newUserPhone}):\n${appUrl}`;
 

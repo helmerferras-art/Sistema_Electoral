@@ -144,7 +144,7 @@ export const DiaDDashboard = () => {
             {/* 2. BOSS FIGHTS (CASILLAS) */}
             <div className="tactile-card" style={{ border: '1px solid var(--tertiary)' }}>
                 <h2 style={{ fontFamily: 'Oswald', color: 'var(--tertiary)', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Zap size={20} /> OBJETIVOS TÁCTICOS (BOSS FIGHTS)
+                    <Zap size={20} /> CASILLAS PRIORITARIAS
                 </h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     {targets.map(target => {
@@ -223,7 +223,7 @@ export const DiaDDashboard = () => {
                         disabled={isSubmitting}
                         style={{ marginTop: '0.5rem', width: '100%', fontSize: '1.2rem', boxShadow: '0 0 15px rgba(255,90,54,0.4)', textShadow: '0 0 5px rgba(255,255,255,0.5)' }}
                     >
-                        {isSubmitting ? 'ENCRIPTANDO TRANSMISIÓN...' : (
+                        {isSubmitting ? 'Enviando…' : (
                             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}>
                                 <Upload size={20} /> TRANSMITIR AL CUARTEL GENERAL
                             </div>
