@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Crown, Gauge, MapPin, Plus, RefreshCw, Shuffle, Trash2, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
+import { useAspirantStage } from '../lib/stage';
 import { DEFAULT_WEIGHTS, loadContest, loadThermometer, marginOfError, type Contest, type Rival, type ThermoResult } from '../lib/internal';
 
 /**
@@ -28,6 +29,18 @@ export const InternalProcess = () => {
     const [newRival, setNewRival] = useState('');
     const [sample, setSample] = useState<SampleSec[]>([]);
     const [open, setOpen] = useState(true);
+    const aspirant = useAspirantStage(user?.tenant_id);
+    const canPromote = ['candidato', 'coordinador_campana', 'superadmin'].includes(user?.role || '');
+
+    /** El aspirante pasa a candidato solo cuando su partido o coalición lo elige. */
+    const promote = async () => {
+        if (!user?.tenant_id) return;
+        if (!confirm('¿Ya fuiste elegido(a) como candidato(a)? El sistema cambia a etapa de campaña: metas de votos, intención de voto y jornada electoral. El termómetro del proceso interno queda guardado como historial.')) return;
+        const { error } = await supabase.from('goal_settings').update({ objective: 'votos' }).eq('tenant_id', user.tenant_id);
+        if (error) { alert('No se pudo cambiar la etapa: ' + error.message); return; }
+        await supabase.from('internal_contest').update({ active: false, updated_at: new Date().toISOString() }).eq('tenant_id', user.tenant_id);
+        window.location.reload();
+    };
 
     const load = async () => {
         if (!user?.tenant_id) return;
@@ -136,6 +149,13 @@ export const InternalProcess = () => {
                         <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.4rem', fontSize: '0.82rem', color: '#cbd5e1' }}>
                             <span>{contest.self_name} · {contest.coalition_label}{left !== null ? ` · ${left > 0 ? `faltan ${left} días para la encuesta` : 'fecha de encuesta cumplida'}` : ''}</span>
                             <button className="squishy-btn" style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }} onClick={() => setEditing(true)}>Editar</button>
+                        </div>
+                    )}
+
+                    {aspirant && canPromote && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.35)', borderRadius: 8, padding: '0.5rem 0.6rem', fontSize: '0.8rem' }}>
+                            <span>Etapa actual: <strong>aspirante</strong>. Cuando tu partido o coalición te elija, cambia a candidato(a).</span>
+                            <button className="squishy-btn" style={{ padding: '0.3rem 0.7rem', fontSize: '0.78rem' }} onClick={promote}>Ya fui elegido(a) candidato(a)</button>
                         </div>
                     )}
 

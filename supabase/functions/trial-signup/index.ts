@@ -62,6 +62,9 @@ Deno.serve(async (req) => {
 
         await admin.from('users').update({ temp_code: code, code_sent: false, is_first_login: true }).eq('auth_id', created.user.id);
         await admin.from('tenants').update({ demo_ip: ip }).eq('id', (res as any).tenant);
+        // Etapa: el aspirante entra con metas de conocimiento (sin metas de votos); pasa a candidato cuando lo eligen
+        const aspirante = b.etapa !== 'candidato' || b.cargo === 'aspirante';
+        await admin.from('goal_settings').update({ objective: aspirante ? 'conocimiento' : 'votos' }).eq('tenant_id', (res as any).tenant);
         const { data: queued } = await admin.rpc('fn_queue_first_login_code', { p_phone: phone });
         return json({ estado: 'ok', sms: !!queued });
     } catch (e) {
