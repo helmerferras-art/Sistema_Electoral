@@ -1646,11 +1646,11 @@ export const MapView = () => {
                                 {sidebarTab === 'info' && (
                                     <>
                                         <div className="rdp-force" style={{ backgroundColor: 'rgba(255, 51, 102, 0.1)', border: '1px solid #FF3366', borderRadius: '8px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem' }}>
-                                            <div style={{ fontSize: '0.9rem', color: '#ff99b3', fontWeight: 'bold' }}>FUERZA DESPLEGADA</div>
+                                            <div style={{ fontSize: '0.9rem', color: '#ff99b3', fontWeight: 'bold' }}>SIMPATIZANTES</div>
                                             <div style={{ fontSize: '3rem', fontWeight: 'bold', fontFamily: 'Oswald', color: '#FF3366', textShadow: '0 0 15px rgba(255, 51, 102, 0.5)', lineHeight: 1 }}>
                                                 {selectedRegion.count}
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '0.5rem' }}>Simpatizantes Geo-verificados</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '0.5rem' }}>Registrados con ubicación en esta sección</div>
                                         </div>
 
                                         {(() => {
@@ -1659,7 +1659,7 @@ export const MapView = () => {
                                             return (
                                                 <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10B981', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                                                        <span style={{ fontSize: '0.9rem', color: '#6EE7B7', fontWeight: 'bold' }}>META GANADO GOBERNADOR</span>
+                                                        <span style={{ fontSize: '0.9rem', color: '#6EE7B7', fontWeight: 'bold' }}>META PARA GANAR LA SECCIÓN</span>
                                                         <span style={{ fontSize: '1.5rem', fontWeight: 'bold', fontFamily: 'Oswald', color: '#10B981' }}>{meta40.toLocaleString()}</span>
                                                     </div>
                                                     <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
@@ -1671,7 +1671,7 @@ export const MapView = () => {
                                                         }}></div>
                                                     </div>
                                                     <div style={{ fontSize: '0.85rem', color: '#fff', textAlign: 'right', fontFamily: 'Inter', fontWeight: 'bold' }}>
-                                                        {((selectedRegion.count / (meta40 || 1)) * 100).toFixed(1)}% <span style={{ color: '#aaa', fontWeight: 'normal' }}>Efectividad Tactica</span>
+                                                        {((selectedRegion.count / (meta40 || 1)) * 100).toFixed(1)}% <span style={{ color: '#aaa', fontWeight: 'normal' }}>de la meta</span>
                                                     </div>
                                                 </div>
                                             );
@@ -1684,7 +1684,7 @@ export const MapView = () => {
                                                 <div style={{ fontSize: '0.6rem', color: '#666' }}>Hombres: {selectedRegion.properties?._padronHombres ?? 0} / Mujeres: {selectedRegion.properties?._padronMujeres ?? 0}</div>
                                             </div>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                <div style={{ fontSize: '0.65rem', color: '#888' }}>VOTACIÓN HIST</div>
+                                                <div style={{ fontSize: '0.65rem', color: '#888' }}>VOTACIÓN 2024</div>
                                                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._votersRaw ?? selectedRegion.properties?.total_votes ?? 0).toLocaleString()}</div>
                                                 <div style={{ fontSize: '0.6rem', color: '#10B981' }}>
                                                     {(() => {
@@ -1702,7 +1702,7 @@ export const MapView = () => {
                                     <div className="flex-col gap-4">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem', color: 'var(--tertiary)' }}>
                                             <Network className="w-5 h-5" />
-                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', fontFamily: 'Oswald', textTransform: 'uppercase' }}>Fuerzas de Coalición</span>
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', fontFamily: 'Oswald', textTransform: 'uppercase' }}>Simpatizantes de la coalición</span>
                                         </div>
                                         <div className="flex-col gap-3">
                                             {Object.entries(
@@ -1720,7 +1720,7 @@ export const MapView = () => {
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
                                                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--tertiary)', fontFamily: 'Oswald' }}>+{total}</div>
-                                                        <div style={{ fontSize: '0.6rem', color: '#10B981' }}>EFECTIVOS</div>
+                                                        <div style={{ fontSize: '0.6rem', color: '#10B981' }}>SIMPATIZANTES</div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1735,11 +1735,11 @@ export const MapView = () => {
 
                                 {sidebarTab === 'list' && (
                                     <>
-                                        <h4 style={{ color: 'var(--tertiary)', borderBottom: '1px solid rgba(0, 212, 255, 0.2)', paddingBottom: '0.5rem', marginBottom: '1rem', fontFamily: 'Oswald', fontSize: '1.1rem' }}>DESGLOSE DE EFECTIVOS</h4>
+                                        <h4 style={{ color: 'var(--tertiary)', borderBottom: '1px solid rgba(0, 212, 255, 0.2)', paddingBottom: '0.5rem', marginBottom: '1rem', fontFamily: 'Oswald', fontSize: '1.1rem' }}>SIMPATIZANTES REGISTRADOS</h4>
 
                                         {selectedRegion.supportersList.length === 0 ? (
                                             <div style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', padding: '2rem 0', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-                                                No hay tropas registradas en esta zona.
+                                                Aún no hay simpatizantes registrados en esta sección.
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
