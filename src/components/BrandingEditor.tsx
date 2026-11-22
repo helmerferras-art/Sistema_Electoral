@@ -20,8 +20,8 @@ export const BrandingCard = () => {
             <div className="tactile-card brand-card" style={{ height: 'auto' }}>
                 <div className="brand-card-row">
                     {brand.photo
-                        ? <img src={brand.photo} alt="" className="brand-avatar lg" />
-                        : <div className="brand-avatar lg brand-avatar-empty"><Palette size={22} /></div>}
+                        ? <img src={brand.photo} alt="" className="brand-avatar brand-avatar-lg" />
+                        : <div className="brand-avatar brand-avatar-lg brand-avatar-empty"><Palette size={22} /></div>}
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div className="brand-card-title">{set ? (brand.shortName || 'Identidad de la campaña') : 'Personaliza tu campaña'}</div>
                         <div className="brand-card-sub">{set
@@ -94,7 +94,7 @@ export const BrandingEditor = ({ onClose }: { onClose: () => void }) => {
                 </div>
 
                 <div className="brand-photo-row">
-                    {f.photo ? <img src={f.photo} alt="Foto de la campaña" className="brand-avatar xl" /> : <div className="brand-avatar xl brand-avatar-empty">Sin foto</div>}
+                    {f.photo ? <img src={f.photo} alt="Foto de la campaña" className="brand-avatar brand-avatar-xl" /> : <div className="brand-avatar brand-avatar-xl brand-avatar-empty">Sin foto</div>}
                     <div className="flex-col" style={{ gap: '0.4rem', flex: 1, minWidth: 0 }}>
                         <label className="squishy-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', cursor: busy ? 'wait' : 'pointer' }}>
                             <Upload size={16} /> {f.photo ? 'Cambiar foto' : 'Subir foto'}

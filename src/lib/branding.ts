@@ -116,16 +116,19 @@ export const loadBrandForm = async (tenant: string): Promise<BrandForm> => {
 };
 
 export const saveBrand = async (tenant: string, f: BrandForm) => {
-    const { error } = await supabase.from('tenants').update({
+    const { data, error } = await supabase.from('tenants').update({
         brand_photo_url: f.photo || null,
         brand_short_name: f.shortName.trim() || null,
         brand_slogan: f.slogan.trim() || null,
         brand_color: f.color || null,
         brand_rights_ok: f.rightsOk,
         brand_updated_at: new Date().toISOString(),
-    }).eq('id', tenant);
-    if (!error) window.dispatchEvent(new Event(BRAND_EVENT));
-    return error;
+    }).eq('id', tenant).select('id');
+    if (error) return error;
+    // Si los permisos no dejan cambiar la campaña, la base no marca error: solo no actualiza nada
+    if (!data?.length) return { message: 'No tienes permiso para cambiar la identidad de esta campaña.' } as { message: string };
+    window.dispatchEvent(new Event(BRAND_EVENT));
+    return null;
 };
 
 /** Reduce la foto a un cuadrado de 600 px centrado (JPEG) antes de subirla. */
