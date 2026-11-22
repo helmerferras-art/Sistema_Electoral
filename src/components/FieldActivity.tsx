@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { saveOfflineActivity, getOfflineActivities, type OfflineEvidence } from '../lib/indexedDB';
 import { syncOfflineActivities, compressImage } from '../lib/activitySync';
 import { getPositionOnce, lastKnownFix, locationErrorText } from '../lib/location';
+import { bumpTally, readTally, resetTally, writeTallyCounts, type Tally } from '../lib/fieldTally';
 
 const ACTIVITY_TYPES = [
     { id: 'casa_por_casa', label: '🏠 Casa por casa' },
@@ -37,9 +38,11 @@ const Counter = ({ label, value, onChange, max }: { label: string; value: number
 export const FieldActivity = () => {
     const { user } = useAuth();
     const [activityType, setActivityType] = useState('casa_por_casa');
-    const [contacts, setContacts] = useState(0);
-    const [convinced, setConvinced] = useState(0);
-    const [known, setKnown] = useState(0);
+    // Los contadores se llenan solos con puertas, registros y entrevistas (ver lib/fieldTally)
+    const [contacts, setContacts] = useState(() => readTally().contacts);
+    const [convinced, setConvinced] = useState(() => readTally().joined);
+    const [known, setKnown] = useState(() => readTally().known);
+    const [tally, setTally] = useState<Tally>(() => readTally());
     const [objective, setObjective] = useState<'votos' | 'encuesta' | 'conocimiento'>('votos');
     const [notes, setNotes] = useState('');
     const [consent, setConsent] = useState(false);
@@ -120,6 +123,22 @@ export const FieldActivity = () => {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // ─── Conteo automático ────────────────────────────────
+    useEffect(() => {
+        const onTally = (e: Event) => {
+            const t = readTally();
+            setContacts(t.contacts); setKnown(t.known); setConvinced(t.joined); setTally(t);
+            if ((e as CustomEvent).detail?.source === 'puerta') setActivityType('casa_por_casa');
+        };
+        window.addEventListener('field-tally', onTally);
+        return () => window.removeEventListener('field-tally', onTally);
+    }, []);
+    useEffect(() => { writeTallyCounts({ contacts, known, joined: convinced }); }, [contacts, known, convinced]);
+    const quick = (kind: 'contacto' | 'conocia' | 'suma') => {
+        ensureLocation();
+        bumpTally({ source: 'registro', contacts: 1, known: kind === 'conocia' ? 1 : 0, joined: kind === 'suma' ? 1 : 0 });
+    };
 
     // ─── Fotos ────────────────────────────────────────────
     const onPhotos = async (files: FileList | null) => {
@@ -203,6 +222,7 @@ export const FieldActivity = () => {
             });
             evidences.forEach(e => URL.revokeObjectURL(e.preview));
             setEvidences([]); setContacts(0); setConvinced(0); setKnown(0); setNotes(''); setConsent(false);
+            resetTally(); setTally(readTally());
             if (navigator.onLine) {
                 setMessage('⏳ Subiendo...');
                 const r = await syncOfflineActivities();
@@ -294,6 +314,19 @@ export const FieldActivity = () => {
                     ))}
                 </div>
 
+                {/* Registro al momento: un toque por persona, sin tener que recordar al final */}
+                <div style={{ fontSize: '0.8rem', color: '#9aa' }}>Toca cada vez que platiques con alguien:</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.4rem' }}>
+                    <button type="button" className="squishy-btn" style={{ padding: '0.7rem 0.3rem', fontSize: '0.8rem' }} onClick={() => quick('contacto')}>👋 Platiqué</button>
+                    <button type="button" className="squishy-btn" style={{ padding: '0.7rem 0.3rem', fontSize: '0.8rem' }} onClick={() => quick('conocia')}>👋 Ya me conocía</button>
+                    <button type="button" className="squishy-btn primary" style={{ padding: '0.7rem 0.3rem', fontSize: '0.8rem' }} onClick={() => quick('suma')}>🤝 Se suma</button>
+                </div>
+                {(tally.doors > 0 || tally.registros > 0 || tally.entrevistas > 0) && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--secondary)', background: 'rgba(16,185,129,0.08)', padding: '0.4rem 0.5rem', borderRadius: 8 }}>
+                        Se va sumando solo{tally.since ? ` desde las ${new Date(tally.since).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : ''}:
+                        {tally.doors ? ` ${tally.doors} puertas` : ''}{tally.registros ? ` · ${tally.registros} contactos/registros` : ''}{tally.entrevistas ? ` · ${tally.entrevistas} entrevistas` : ''}. Ajusta con − / + si hace falta.
+                    </div>
+                )}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <Counter label="CONTACTADOS" value={contacts} onChange={(v) => { setContacts(v); if (convinced > v) setConvinced(v); if (known > v) setKnown(v); }} />
                     <Counter label="YA LO CONOCÍAN" value={known} onChange={setKnown} max={contacts} />
