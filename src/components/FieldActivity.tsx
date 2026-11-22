@@ -6,6 +6,7 @@ import { saveOfflineActivity, getOfflineActivities, type OfflineEvidence } from 
 import { syncOfflineActivities, compressImage } from '../lib/activitySync';
 import { getPositionOnce, lastKnownFix, locationErrorText } from '../lib/location';
 import { bumpTally, readTally, resetTally, writeTallyCounts, type Tally } from '../lib/fieldTally';
+import { nextPhrase } from '../lib/motivation';
 
 const ACTIVITY_TYPES = [
     { id: 'casa_por_casa', label: '🏠 Casa por casa' },
@@ -226,7 +227,7 @@ export const FieldActivity = () => {
             if (navigator.onLine) {
                 setMessage('⏳ Subiendo...');
                 const r = await syncOfflineActivities();
-                setMessage(r.pending === 0 ? '✅ Actividad registrada. ¡El mapa ya la ilumina!' : `💾 Guardada. Quedan ${r.pending} por subir; se reintentará sola.`);
+                { const ph = nextPhrase(user?.role); setMessage((r.pending === 0 ? '✅ Actividad registrada. ¡El mapa ya la ilumina!' : `💾 Guardada. Quedan ${r.pending} por subir; se reintentará sola.`) + `\n\n“${ph.text}” — ${ph.source}`); }
             } else {
                 setMessage('📴 Sin señal: guardada en el teléfono. Se subirá sola al recuperar conexión.');
             }
@@ -395,7 +396,7 @@ export const FieldActivity = () => {
                     onClick={save} style={{ padding: '0.8rem', fontSize: '1rem' }}>
                     <CheckCircle size={18} /> {saving ? 'GUARDANDO...' : 'REGISTRAR ACTIVIDAD'}
                 </button>
-                {message && <div style={{ fontSize: '0.85rem', textAlign: 'center' }}>{message}</div>}
+                {message && <div style={{ fontSize: '0.85rem', textAlign: 'center', whiteSpace: 'pre-line' }}>{message}</div>}
             </div>
 
             {/* Mis últimas actividades */}
