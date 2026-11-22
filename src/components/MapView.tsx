@@ -11,6 +11,7 @@ import { getOfflineSupporters } from '../lib/indexedDB';
 import { CHIAPAS_MUNICIPIOS } from '../lib/chiapas_municipios';
 import { CHIAPAS_DISTRITOS_FEDERALES, CHIAPAS_DISTRITOS_LOCALES } from '../lib/chiapas_distritos';
 import { Network } from 'lucide-react';
+import { loadThermometer } from '../lib/internal';
 
 // Fix for default Leaflet marker icons in React
 import L from 'leaflet';
@@ -160,7 +161,24 @@ export const MapView = () => {
     const [rawGeoJson, setRawGeoJson] = useState<any>(null);
     const [availableLayers, setAvailableLayers] = useState<any[]>([]);
     const [activeLayerId, setActiveLayerId] = useState<string>('');
-    const [viewMode, setViewMode] = useState<'niebla' | 'heatmap' | 'markers' | 'trabajo'>('niebla');
+    // "Ver en el mapa" desde Proceso interno abre directo el modo de reconocimiento
+    const [viewMode, setViewMode] = useState<'niebla' | 'heatmap' | 'markers' | 'trabajo' | 'reconocimiento'>(() => {
+        try { const m = localStorage.getItem('tl_map_mode'); localStorage.removeItem('tl_map_mode'); if (m === 'reconocimiento') return 'reconocimiento'; } catch { /* */ }
+        return 'niebla';
+    });
+    // Reconocimiento por sección (termómetro del proceso interno)
+    const [recog, setRecog] = useState<Record<string, { self: number; rival: number | null; n: number }> | null>(null);
+    const [recogMsg, setRecogMsg] = useState('');
+    useEffect(() => {
+        if (viewMode !== 'reconocimiento' || recog) return;
+        loadThermometer(null, false).then(r => {
+            if (!r.configured) { setRecogMsg('Configura el proceso interno en Metas para ver este mapa.'); setRecog({}); return; }
+            const m: Record<string, { self: number; rival: number | null; n: number }> = {};
+            (r.sections || []).forEach(sc => { m[String(Number(sc.section_id))] = { self: Number(sc.conoce_self), rival: sc.conoce_rival, n: sc.n }; });
+            setRecog(m);
+            setRecogMsg(Object.keys(m).length ? '' : 'Aún no hay entrevistas del termómetro con sección.');
+        }).catch(() => { setRecogMsg('Solo la coordinación puede ver el reconocimiento.'); setRecog({}); });
+    }, [viewMode, recog]);
     // Mapa de calor del trabajo territorial (bitácora de campo de brigadistas)
     const [activityDays, setActivityDays] = useState(30);
     const [activityPoints, setActivityPoints] = useState<[number, number, number][]>([]);
@@ -1078,6 +1096,15 @@ export const MapView = () => {
         return { fillColor: '#00D4FF', weight: 1.5, opacity: 1, color: '#00D4FF', fillOpacity: 0.1 };
     };
 
+    // Reconocimiento: % que conoce al aspirante en cada sección (rojo = poco, verde = mucho)
+    const getRecogStyle = (feature: any) => {
+        const fid = getFeatureId(feature?.properties, 'seccion');
+        const r = fid ? recog?.[String(Number(fid))] : null;
+        if (!r) return { fillColor: '#334155', weight: 1, opacity: 0.4, color: '#00D4FF', fillOpacity: 0.05 };
+        const c = r.self >= 60 ? '#10B981' : r.self >= 45 ? '#EAB308' : r.self >= 25 ? '#F97316' : '#EF4444';
+        return { fillColor: c, weight: 1.5, opacity: 0.9, color: c, fillOpacity: 0.45 };
+    };
+
     // Outline-only style for context in Heatmap and Marker modes
     const getOutlineStyle = (_feature: any) => {
         return { fillColor: 'transparent', weight: 1, opacity: 0.4, color: '#00D4FF', fillOpacity: 0 };
@@ -1198,6 +1225,21 @@ export const MapView = () => {
                     >
                         🧭 TRABAJO
                     </button>
+                    {['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'comunicacion_digital'].includes(user?.role || '') && (
+                        <button
+                            className={`squishy-btn ${viewMode === 'reconocimiento' ? 'primary' : ''}`}
+                            style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                            onClick={() => setViewMode('reconocimiento')}
+                            title="Qué tanto te conocen en cada sección (termómetro del proceso interno)"
+                        >
+                            🎯 RECONOCIMIENTO
+                        </button>
+                    )}
+                    {viewMode === 'reconocimiento' && (
+                        <span style={{ fontSize: '0.75rem', color: '#9aa' }}>
+                            {recogMsg || <>Te conoce: <span style={{ color: '#EF4444' }}>■</span> &lt;25% <span style={{ color: '#F97316' }}>■</span> 25–44% <span style={{ color: '#EAB308' }}>■</span> 45–59% <span style={{ color: '#10B981' }}>■</span> 60%+</>}
+                        </span>
+                    )}
                     {viewMode === 'trabajo' && (
                         <select
                             className="squishy-input"
@@ -1239,9 +1281,9 @@ export const MapView = () => {
 
                         {processedGeoJson && (
                             <GeoJSON
-                                key={`radar-layer-${activeLayerId}-${dataUpdateTick}`}
+                                key={`radar-layer-${activeLayerId}-${dataUpdateTick}-${viewMode}-${recog ? Object.keys(recog).length : 0}`}
                                 data={processedGeoJson}
-                                style={viewMode === 'niebla' ? getFogStyle : getOutlineStyle}
+                                style={viewMode === 'niebla' ? getFogStyle : viewMode === 'reconocimiento' ? getRecogStyle : getOutlineStyle}
                                 filter={geoJsonFilter}
                                 pointToLayer={(_feature, latlng) => {
                                     // For point features like 'localidades', render a tactical circle marker
