@@ -232,7 +232,7 @@ export const InternalProcess = () => {
                                     </div>
 
                                     {/* Reconocimiento por sección */}
-                                    {(result.sections || []).length > 0 && (
+                                    {(result.sections || []).some(s => s.n >= 3) && (
                                         <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '0.6rem' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div style={{ fontFamily: 'Oswald', fontSize: '0.85rem' }}>DONDE MENOS TE CONOCEN</div>
@@ -241,14 +241,14 @@ export const InternalProcess = () => {
                                                     <MapPin size={12} /> Ver en el mapa
                                                 </button>
                                             </div>
-                                            {(result.sections || []).slice(0, 8).map(s => (
+                                            {(result.sections || []).filter(s => s.n >= 3).slice(0, 8).map(s => (
                                                 <div key={s.section_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', padding: '0.25rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                                     <span>Sección {s.section_id} <span style={{ color: '#64748B' }}>({s.n} entrevistas)</span></span>
                                                     <span><strong style={{ color: s.conoce_self < (s.conoce_rival || 0) ? '#EF4444' : '#10B981' }}>{s.conoce_self}%</strong>
                                                         <span style={{ color: '#64748B' }}> vs {s.conoce_rival ?? 0}% del rival más conocido</span></span>
                                                 </div>
                                             ))}
-                                            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: 4 }}>Crea rutas automáticas en estas secciones desde Campo → Rutas de visita.</div>
+                                            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: 4 }}>Solo secciones con 3 entrevistas o más. Crea rutas automáticas en ellas desde Campo → Rutas de visita.</div>
                                         </div>
                                     )}
                                 </>
