@@ -1,5 +1,6 @@
 import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../lib/AuthContext';
@@ -184,6 +185,14 @@ export const MapView = () => {
     const [activityPoints, setActivityPoints] = useState<[number, number, number][]>([]);
     const [activityCount, setActivityCount] = useState(0);
     const [selectedRegion, setSelectedRegion] = useState<any>(null);
+    // En celular el detalle de la sección ocupa toda la pantalla (se leía tapado por la barra inferior)
+    const [isPhone, setIsPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 767px)');
+        const on = () => setIsPhone(mq.matches);
+        mq.addEventListener('change', on);
+        return () => mq.removeEventListener('change', on);
+    }, []);
 
     const [seccionGeoJson, setSeccionGeoJson] = useState<any>(null);
     const [dataUpdateTick, setDataUpdateTick] = useState(0);
@@ -444,6 +453,26 @@ export const MapView = () => {
     }, [pointsScope, viewMode]);
 
     const [sidebarTab, setSidebarTab] = useState<'info' | 'coalition' | 'list'>('info');
+    const closeDetail = () => { setSelectedRegion(null); setSidebarTab('info'); };
+    // Botón "atrás" de Android: cierra el detalle y regresa al mapa en vez de salir de la app
+    const detailOpen = !!selectedRegion;
+    useEffect(() => {
+        if (!detailOpen || !isPhone) return;
+        window.history.pushState({ tlDetail: true }, '');
+        const onPop = () => { setSelectedRegion(null); setSidebarTab('info'); };
+        window.addEventListener('popstate', onPop);
+        return () => {
+            window.removeEventListener('popstate', onPop);
+            if (window.history.state?.tlDetail) window.history.back();
+        };
+    }, [detailOpen, isPhone]);
+    useEffect(() => {
+        if (!detailOpen || !isPhone) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [detailOpen, isPhone]);
+    const wrapDetail = (node: React.ReactNode) => (isPhone ? createPortal(node, document.body) : node);
 
     // Handle tactical focus from top-bar dropdown
     useEffect(() => {
@@ -1558,8 +1587,8 @@ export const MapView = () => {
                     )}
 
                     {/* Tactical Slide-Out Dashboard */}
-                    {selectedRegion && (
-                        <div className="radar-detail-panel" style={{
+                    {selectedRegion && wrapDetail(
+                        <div className={`radar-detail-panel${isPhone ? ' is-phone' : ''}`} role="dialog" aria-label={`Detalle ${selectedRegion.name}`} style={{
                             position: 'absolute',
                             top: 0,
                             right: 0,
@@ -1578,10 +1607,7 @@ export const MapView = () => {
                                     <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>DETALLE · {String(selectedRegion.type).toUpperCase()}</div>
                                     <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)', fontSize: '1.4rem' }}>{selectedRegion.name}</h3>
                                 </div>
-                                <button onClick={() => {
-                                    setSelectedRegion(null);
-                                    setSidebarTab('info');
-                                }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.8rem', cursor: 'pointer', opacity: 0.7 }}>&times;</button>
+                                <button onClick={closeDetail} aria-label="Cerrar detalle" className="rdp-close" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.8rem', cursor: 'pointer', opacity: 0.7 }}>&times;</button>
                             </div>
 
                             {/* Tactical Tabs */}
@@ -1616,15 +1642,15 @@ export const MapView = () => {
                                 })}
                             </div>
 
-                            <div style={{ padding: '1.2rem', flex: 1, overflowY: 'auto' }}>
+                            <div className="rdp-body" style={{ padding: '1.2rem', flex: 1, overflowY: 'auto' }}>
                                 {sidebarTab === 'info' && (
                                     <>
-                                        <div style={{ backgroundColor: 'rgba(255, 51, 102, 0.1)', border: '1px solid #FF3366', borderRadius: '8px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem' }}>
-                                            <div style={{ fontSize: '0.9rem', color: '#ff99b3', fontWeight: 'bold' }}>FUERZA DESPLEGADA</div>
+                                        <div className="rdp-force" style={{ backgroundColor: 'rgba(255, 51, 102, 0.1)', border: '1px solid #FF3366', borderRadius: '8px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+                                            <div style={{ fontSize: '0.9rem', color: '#ff99b3', fontWeight: 'bold' }}>SIMPATIZANTES</div>
                                             <div style={{ fontSize: '3rem', fontWeight: 'bold', fontFamily: 'Oswald', color: '#FF3366', textShadow: '0 0 15px rgba(255, 51, 102, 0.5)', lineHeight: 1 }}>
                                                 {selectedRegion.count}
                                             </div>
-                                            <div style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '0.5rem' }}>Simpatizantes Geo-verificados</div>
+                                            <div style={{ fontSize: '0.8rem', color: '#ccc', marginTop: '0.5rem' }}>Registrados con ubicación en esta sección</div>
                                         </div>
 
                                         {(() => {
@@ -1633,7 +1659,7 @@ export const MapView = () => {
                                             return (
                                                 <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10B981', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                                                        <span style={{ fontSize: '0.9rem', color: '#6EE7B7', fontWeight: 'bold' }}>META GANADO GOBERNADOR</span>
+                                                        <span style={{ fontSize: '0.9rem', color: '#6EE7B7', fontWeight: 'bold' }}>META · VOTOS DEL GANADOR 2024</span>
                                                         <span style={{ fontSize: '1.5rem', fontWeight: 'bold', fontFamily: 'Oswald', color: '#10B981' }}>{meta40.toLocaleString()}</span>
                                                     </div>
                                                     <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
@@ -1645,26 +1671,28 @@ export const MapView = () => {
                                                         }}></div>
                                                     </div>
                                                     <div style={{ fontSize: '0.85rem', color: '#fff', textAlign: 'right', fontFamily: 'Inter', fontWeight: 'bold' }}>
-                                                        {((selectedRegion.count / (meta40 || 1)) * 100).toFixed(1)}% <span style={{ color: '#aaa', fontWeight: 'normal' }}>Efectividad Tactica</span>
+                                                        {((selectedRegion.count / (meta40 || 1)) * 100).toFixed(1)}% <span style={{ color: '#aaa', fontWeight: 'normal' }}>de la meta</span>
                                                     </div>
                                                 </div>
                                             );
                                         })()}
 
-                                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                                        <div className="responsive-grid rdp-stats" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                                                 <div style={{ fontSize: '0.65rem', color: '#888' }}>PADRÓN TOTAL</div>
                                                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._padronTotal ?? selectedRegion.properties?.padron_total ?? 0).toLocaleString()}</div>
                                                 <div style={{ fontSize: '0.6rem', color: '#666' }}>Hombres: {selectedRegion.properties?._padronHombres ?? 0} / Mujeres: {selectedRegion.properties?._padronMujeres ?? 0}</div>
                                             </div>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                <div style={{ fontSize: '0.65rem', color: '#888' }}>VOTACIÓN HIST</div>
+                                                <div style={{ fontSize: '0.65rem', color: '#888' }}>VOTACIÓN 2024</div>
                                                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._votersRaw ?? selectedRegion.properties?.total_votes ?? 0).toLocaleString()}</div>
                                                 <div style={{ fontSize: '0.6rem', color: '#10B981' }}>
                                                     {(() => {
                                                         const v = Number(selectedRegion.properties?._votersRaw ?? 0);
                                                         const p = Number(selectedRegion.properties?._padronTotal ?? 0);
-                                                        return p > 0 && v > 0 ? `Participación ${(v / p * 100).toFixed(1)}% (2024)` : 'Participación 2024';
+                                                        if (!(p > 0 && v > 0)) return 'Participación 2024';
+                                                        const pct = v / p * 100;
+                                                        return `Participación ${pct.toFixed(1)}% (gubernatura 2024)${pct > 85 ? ' · alta: puede haber casilla especial' : ''}`;
                                                     })()}
                                                 </div>
                                             </div>
@@ -1676,7 +1704,7 @@ export const MapView = () => {
                                     <div className="flex-col gap-4">
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem', color: 'var(--tertiary)' }}>
                                             <Network className="w-5 h-5" />
-                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', fontFamily: 'Oswald', textTransform: 'uppercase' }}>Fuerzas de Coalición</span>
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 'bold', fontFamily: 'Oswald', textTransform: 'uppercase' }}>Simpatizantes de la coalición</span>
                                         </div>
                                         <div className="flex-col gap-3">
                                             {Object.entries(
@@ -1694,7 +1722,7 @@ export const MapView = () => {
                                                     </div>
                                                     <div style={{ textAlign: 'right' }}>
                                                         <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--tertiary)', fontFamily: 'Oswald' }}>+{total}</div>
-                                                        <div style={{ fontSize: '0.6rem', color: '#10B981' }}>EFECTIVOS</div>
+                                                        <div style={{ fontSize: '0.6rem', color: '#10B981' }}>SIMPATIZANTES</div>
                                                     </div>
                                                 </div>
                                             ))}
@@ -1709,11 +1737,11 @@ export const MapView = () => {
 
                                 {sidebarTab === 'list' && (
                                     <>
-                                        <h4 style={{ color: 'var(--tertiary)', borderBottom: '1px solid rgba(0, 212, 255, 0.2)', paddingBottom: '0.5rem', marginBottom: '1rem', fontFamily: 'Oswald', fontSize: '1.1rem' }}>DESGLOSE DE EFECTIVOS</h4>
+                                        <h4 style={{ color: 'var(--tertiary)', borderBottom: '1px solid rgba(0, 212, 255, 0.2)', paddingBottom: '0.5rem', marginBottom: '1rem', fontFamily: 'Oswald', fontSize: '1.1rem' }}>SIMPATIZANTES REGISTRADOS</h4>
 
                                         {selectedRegion.supportersList.length === 0 ? (
                                             <div style={{ color: '#888', fontStyle: 'italic', textAlign: 'center', padding: '2rem 0', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '8px' }}>
-                                                No hay tropas registradas en esta zona.
+                                                Aún no hay simpatizantes registrados en esta sección.
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
@@ -1747,6 +1775,9 @@ export const MapView = () => {
                                     </>
                                 )}
                             </div>
+                            {isPhone && (
+                                <button onClick={closeDetail} className="rdp-back">← Volver al mapa</button>
+                            )}
                         </div>
                     )}
                 </div>

@@ -54,3 +54,4 @@ _archivo/
 
 # Tlatoani Puente: herramientas de Android que se descargan al compilar
 vendor/
+*.apk

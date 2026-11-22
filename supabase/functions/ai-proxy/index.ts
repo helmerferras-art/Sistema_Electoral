@@ -26,6 +26,15 @@ const COMMAND = ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_
 const VISION = ['openai', 'openrouter', 'gemini'];
 const MAX_IMAGE_CHARS = 4_500_000; // ~3.3 MB en base64
 
+// ---- Topes de uso (para que nadie agote el saldo de la IA)
+// La demo es la base tlatoani-demo: ahí cualquiera entra sin registro, así que los topes son mínimos.
+const IS_DEMO = SUPABASE_URL.includes('uukewfxjpeavsfeercmi') || Deno.env.get('TL_DEMO') === '1';
+const USER_DAILY_DEFAULT = 15;   // consultas por persona al día (producción); se ajusta por campaña en tenants.ai_user_daily_limit
+const DEMO_USER_DAILY = 3;       // consultas por visitante de la demo al día
+const DEMO_GLOBAL_DAILY = 40;    // consultas al día sumando a todos los visitantes de la demo
+const BURST_PER_MINUTE = 3;      // consultas por persona en un minuto (evita que se ponga a jugar)
+const MAX_PROMPT_CHARS = IS_DEMO ? 6000 : 30000;
+
 type Msg = { system: string; text: string; image?: string; json?: boolean };
 type Cfg = { provider: string; api_key: string };
 
@@ -47,6 +56,7 @@ async function callProvider(cfg: Cfg, m: Msg): Promise<string> {
             : m.text;
         const payload: Record<string, unknown> = {
             model, temperature: m.image ? 0 : 0.6,
+            max_tokens: m.image ? 1500 : 3000, // sin tope, OpenRouter reserva el máximo del modelo y falla con poco saldo
             messages: [{ role: 'system', content: m.system }, { role: 'user', content }],
         };
         if (m.json && p !== 'openrouter') payload.response_format = { type: 'json_object' };
@@ -66,7 +76,7 @@ async function callProvider(cfg: Cfg, m: Msg): Promise<string> {
         }
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${cfg.api_key}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: m.image ? 0 : 0.6, ...(m.json ? { responseMimeType: 'application/json' } : {}) } }),
+            body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: m.image ? 0 : 0.6, maxOutputTokens: m.image ? 4000 : 8000, ...(m.json ? { responseMimeType: 'application/json' } : {}) } }),
         });
         if (!r.ok) throw new Error(`gemini HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
         const d = await r.json();
@@ -102,12 +112,31 @@ Deno.serve(async (req) => {
         }
     } else return json({ error: 'Tarea no válida' }, 400);
 
-    // ---- Tope diario por campaña
-    const { data: tenant } = await admin.from('tenants').select('ai_daily_limit').eq('id', me.tenant_id).maybeSingle();
+    // ---- Topes: ráfaga por minuto, diario por persona, diario por campaña y global de la demo
     const since = new Date(); since.setUTCHours(6, 0, 0, 0); if (since > new Date()) since.setUTCDate(since.getUTCDate() - 1); // día en hora de México
-    const { count: used } = await admin.from('ai_usage_log').select('id', { count: 'exact', head: true })
-        .eq('tenant_id', me.tenant_id).eq('ok', true).gte('created_at', since.toISOString());
-    if ((used || 0) >= (tenant?.ai_daily_limit ?? 60)) return json({ error: 'Se alcanzó el tope diario de consultas de IA de la campaña' }, 429);
+    const sinceIso = since.toISOString();
+    const isAdmin = me.role === 'superadmin' && !IS_DEMO;
+    const countLog = async (filter: (q: any) => any) => {
+        const { count } = await filter(admin.from('ai_usage_log').select('id', { count: 'exact', head: true }));
+        return count || 0;
+    };
+    if (!isAdmin) {
+        const lastMinute = new Date(Date.now() - 60_000).toISOString();
+        if (await countLog(q => q.eq('user_id', me.id).gte('created_at', lastMinute)) >= BURST_PER_MINUTE)
+            return json({ error: 'Vas muy rápido: espera un minuto antes de otra consulta de IA' }, 429);
+    }
+    const { data: tenant } = await admin.from('tenants').select('*').eq('id', me.tenant_id).maybeSingle();
+    if (!isAdmin) {
+        const userLimit = IS_DEMO ? DEMO_USER_DAILY : Number((tenant as any)?.ai_user_daily_limit ?? USER_DAILY_DEFAULT);
+        if (await countLog(q => q.eq('user_id', me.id).eq('ok', true).gte('created_at', sinceIso)) >= userLimit)
+            return json({ error: IS_DEMO
+                ? `En la demo cada visitante tiene ${userLimit} consultas de IA al día. Crea tu cuenta para usarla en tu campaña.`
+                : `Llegaste a tu tope de ${userLimit} consultas de IA por hoy. Mañana se renueva.` }, 429);
+    }
+    if (await countLog(q => q.eq('tenant_id', me.tenant_id).eq('ok', true).gte('created_at', sinceIso)) >= ((tenant as any)?.ai_daily_limit ?? 60))
+        return json({ error: 'Se alcanzó el tope diario de consultas de IA de la campaña' }, 429);
+    if (IS_DEMO && await countLog(q => q.eq('ok', true).gte('created_at', sinceIso)) >= DEMO_GLOBAL_DAILY)
+        return json({ error: 'La IA de la demo ya llegó a su uso del día. Vuelve mañana o crea tu cuenta.' }, 429);
 
     const { data: cfgs } = await admin.from('ai_config').select('provider, api_key').eq('is_active', true).neq('api_key', '').order('created_at');
     let configs = (cfgs || []) as Cfg[];
@@ -118,7 +147,7 @@ Deno.serve(async (req) => {
     let msg: Msg;
     let snapshot: unknown = null;
     if (task === 'advisor') {
-        const prompt = String(body.prompt || '').slice(0, 30000);
+        const prompt = String(body.prompt || '').slice(0, MAX_PROMPT_CHARS);
         if (!prompt) return json({ error: 'Falta prompt' }, 400);
         msg = { system: STRATEGIST, text: prompt, json: true };
     } else if (task === 'acta') {
