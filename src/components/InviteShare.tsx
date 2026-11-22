@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { PUBLIC_URL } from '../lib/verification';
+import { PUBLIC_URL, withDemoFlag } from '../lib/verification';
 
-export const inviteLink = (code: string) => `${PUBLIC_URL}/u/${code}`;
+export const inviteLink = (code: string) => withDemoFlag(`${PUBLIC_URL}/u/${code}`);
 
 /** Botón para que un simpatizante comparta su enlace personal de invitación. */
 export const InviteShare = ({ code, campaign }: { code: string; campaign?: string | null }) => {

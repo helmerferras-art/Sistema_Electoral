@@ -306,6 +306,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const impersonateUser = async (targetUser: any) => {
+        // El modo fantasma es exclusivo del administrador del sistema
+        const original = (() => { try { return JSON.parse(localStorage.getItem('__ghost_mode_original_user__') || 'null'); } catch { return null; } })();
+        if ((original?.role || user?.role) !== 'superadmin') return;
         if (!localStorage.getItem('__ghost_mode_original_user__')) {
             const currentContext = localStorage.getItem('gamefi_agent_context');
             localStorage.setItem('__ghost_mode_original_user__', currentContext || JSON.stringify(user));

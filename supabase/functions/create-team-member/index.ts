@@ -72,6 +72,11 @@ Deno.serve(async (req: Request) => {
         // El superadmin da de alta en la campaña que indica; los demás, solo en la suya
         callerTenantId = caller.role === 'superadmin' ? (bodyTenantId || caller.tenant_id) : caller.tenant_id;
 
+        // El SuperAdmin (modo dios) y los candidatos solo los da de alta el administrador del sistema
+        if (caller.role !== 'superadmin' && (targetRole === 'superadmin' || targetRole === 'candidato')) {
+            return json({ error: 'Solo el administrador del sistema puede crear cuentas SuperAdmin o de candidato' }, 403);
+        }
+
         if (caller.role !== 'superadmin') {
             const allowed = GRANTABLE_ROLES[caller.role] || [];
             if (!allowed.includes(targetRole)) {

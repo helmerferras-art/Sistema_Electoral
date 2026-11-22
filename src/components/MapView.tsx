@@ -544,11 +544,20 @@ export const MapView = () => {
                 const roleType = tenant?.position?.toLowerCase() || '';
                 const geoScope = tenant?.geographic_scope || '';
 
+                // historical_election_results y padron_electoral guardan el municipio por NOMBRE en mayúsculas
+                // sin acentos ("TUXTLA GUTIERREZ"). Antes se filtraba solo por la clave numérica y la consulta
+                // regresaba 0 filas: el mapa salía sin padrón ni votación. Se filtra por ambas formas.
+                const munVariants = (idOrName: string | number) => {
+                    const raw = String(idOrName).trim();
+                    const name = /^\d+$/.test(raw) ? (ID_TO_MUN_NAME[raw] || '') : raw;
+                    const norm = removeAccents(name).toLowerCase();
+                    const id = /^\d+$/.test(raw) ? raw : String((CHIAPAS_MUNICIPIOS as any)[norm] ?? '');
+                    return [id, norm.toUpperCase(), name.toUpperCase(), name].filter(Boolean);
+                };
+
                 if (roleType.includes('presidente municipal') || roleType.includes('presidencia_municipal')) {
                     if (geoScope) {
-                        const mNorm = geoScope.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-                        const mId = (CHIAPAS_MUNICIPIOS as any)[mNorm];
-                        if (mId) validMunicipalities = [mId.toString()];
+                        validMunicipalities = Array.from(new Set(munVariants(geoScope)));
                     }
                 } else if (roleType.includes('diputado') || roleType.includes('diputacion')) {
                     if (geoScope) {
@@ -558,7 +567,7 @@ export const MapView = () => {
                             const mapObj = isLocal ? CHIAPAS_DISTRITOS_LOCALES : CHIAPAS_DISTRITOS_FEDERALES;
                             const distMunIds = (mapObj as any)[dNum];
                             if (distMunIds && distMunIds.length > 0) {
-                                validMunicipalities = distMunIds.map((id: number) => id.toString());
+                                validMunicipalities = Array.from(new Set(distMunIds.flatMap((id: number) => munVariants(id))));
                             }
                         }
                     }
@@ -1280,7 +1289,7 @@ export const MapView = () => {
                                     const padron = feature.properties?._padronTotal || feature.properties?.padron_total;
                                     const hombres = feature.properties?._padronHombres || feature.properties?.hombres || 0;
                                     const mujeres = feature.properties?._padronMujeres || feature.properties?.mujeres || 0;
-                                    const votalHistory = feature.properties?._actualVoted || feature.properties?.total_votes;
+                                    const votalHistory = feature.properties?._votersRaw || feature.properties?.total_votes;
                                     const edadRangos = feature.properties?._edadRangos || feature.properties?.edad_rangos;
 
                                     let detailsHtml = '';
@@ -1317,7 +1326,12 @@ export const MapView = () => {
                                         ${detailsHtml}
                                     `;
 
-                                    layer.bindPopup(`<strong style="font-family: Oswald; color: #00D4FF; letter-spacing: 0.05em; text-transform: uppercase;">ZONA: ${displayValue}</strong>${statsHtml}`);
+                                    // Solo en pantallas anchas se usa además el popup (con autoPan y ancho máximo);
+                                    // en celular el panel inferior muestra la misma información sin salirse del cuadro.
+                                    if (typeof window !== 'undefined' && window.innerWidth >= 900) {
+                                        layer.bindPopup(`<strong style="font-family: Oswald; color: #00D4FF; letter-spacing: 0.05em; text-transform: uppercase;">ZONA: ${displayValue}</strong>${statsHtml}`,
+                                            { maxWidth: 280, autoPan: true, autoPanPadding: L.point(20, 60), keepInView: true });
+                                    }
                                     layer.bindTooltip(`<span style="font-weight: bold; font-family: Inter;">${displayValue}</span><br/>${isCustom ? 'Meta Asignada' : 'Meta'}: ${meta40 ?? '---'}`, { sticky: true, className: 'tactile-tooltip' });
 
                                     layer.on({
@@ -1503,12 +1517,12 @@ export const MapView = () => {
 
                     {/* Tactical Slide-Out Dashboard */}
                     {selectedRegion && (
-                        <div style={{
+                        <div className="radar-detail-panel" style={{
                             position: 'absolute',
                             top: 0,
                             right: 0,
                             bottom: 0,
-                            width: '350px',
+                            width: 'min(350px, 100%)',
                             backgroundColor: 'rgba(15, 18, 24, 0.95)',
                             borderLeft: '2px solid var(--tertiary)',
                             boxShadow: '-5px 0 20px rgba(0, 0, 0, 0.7)',
@@ -1603,8 +1617,14 @@ export const MapView = () => {
                                             </div>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                                                 <div style={{ fontSize: '0.65rem', color: '#888' }}>VOTACIÓN HIST</div>
-                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._actualVoted ?? selectedRegion.properties?.total_votes ?? 0).toLocaleString()}</div>
-                                                <div style={{ fontSize: '0.6rem', color: '#10B981' }}>Participación Real</div>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._votersRaw ?? selectedRegion.properties?.total_votes ?? 0).toLocaleString()}</div>
+                                                <div style={{ fontSize: '0.6rem', color: '#10B981' }}>
+                                                    {(() => {
+                                                        const v = Number(selectedRegion.properties?._votersRaw ?? 0);
+                                                        const p = Number(selectedRegion.properties?._padronTotal ?? 0);
+                                                        return p > 0 && v > 0 ? `Participación ${(v / p * 100).toFixed(1)}% (2024)` : 'Participación 2024';
+                                                    })()}
+                                                </div>
                                             </div>
                                         </div>
                                     </>

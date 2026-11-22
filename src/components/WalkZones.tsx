@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Route, Plus, DoorOpen, CheckCircle, X, RotateCcw } from 'lucide-react';
+import { Route, Plus, DoorOpen, CheckCircle, X, RotateCcw, Sparkles, MapPin } from 'lucide-react';
+import { AutoRouteWizard } from './AutoRouteWizard';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { getPositionOnce } from '../lib/location';
 
-type Zone = { id: string; name: string; section_id: string; notes: string | null; target_doors: number | null; assigned_to: string | null; due_date: string | null; status: string; created_by: string | null };
+type Zone = { id: string; name: string; section_id: string; notes: string | null; target_doors: number | null; assigned_to: string | null; due_date: string | null; status: string; created_by: string | null;
+    center_lat?: number | null; center_lng?: number | null; meta_simpatizantes?: number | null; auto?: boolean };
 type Progress = { zone_id: string; puertas: number; registrados: number; no_estaba: number; volver_pendientes: number; no_interesa: number; ultima: string | null };
 type Knock = { offline_id: string; tenant_id: string; zone_id: string; user_id: string; outcome: string; note: string | null; latitude: number | null; longitude: number | null; captured_at: string };
 type Revisit = { id: string; note: string | null; revisit_on: string | null; captured_at: string; latitude: number | null; longitude: number | null };
@@ -57,6 +59,7 @@ export const WalkZones = () => {
     const [progress, setProgress] = useState<Record<string, Progress>>({});
     const [team, setTeam] = useState<{ id: string; name: string }[]>([]);
     const [creating, setCreating] = useState(false);
+    const [autoMode, setAutoMode] = useState(false);
     const [form, setForm] = useState({ name: '', section: '', target: '', assigned: '', due: '', notes: '' });
     const [active, setActive] = useState<string | null>(() => { try { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null')?.id || null; } catch { return null; } });
     const [note, setNote] = useState('');
@@ -145,19 +148,28 @@ export const WalkZones = () => {
 
     return (
         <div className="tactile-card flex-col gap-2" style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h3 style={{ margin: 0, fontFamily: 'Oswald', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Route color="var(--tertiary)" /> RUTAS DE VISITA
                 </h3>
-                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     {pending > 0 && <span style={{ fontSize: '0.75rem', color: 'var(--primary)' }}>{pending} sin subir</span>}
-                    {isLeader && !creating && (
-                        <button className="squishy-btn primary" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.3rem', alignItems: 'center' }} onClick={() => setCreating(true)}>
-                            <Plus size={16} /> Zona
-                        </button>
+                    {isLeader && !creating && !autoMode && (
+                        <>
+                            <button className="squishy-btn primary" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.3rem', alignItems: 'center' }} onClick={() => setAutoMode(true)}>
+                                <Sparkles size={16} /> Ruta automática
+                            </button>
+                            <button className="squishy-btn" title="Definir la zona a mano (calles, manzanas)" style={{ padding: '0.35rem 0.6rem', display: 'flex', gap: '0.3rem', alignItems: 'center' }} onClick={() => setCreating(true)}>
+                                <Plus size={16} /> Manual
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
+
+            {autoMode && (
+                <AutoRouteWizard team={team} onCancel={() => setAutoMode(false)} onDone={() => { setAutoMode(false); load(); }} />
+            )}
 
             {creating && (
                 <form onSubmit={create} className="flex-col gap-1" style={{ background: 'rgba(0,0,0,0.25)', padding: '0.8rem', borderRadius: 8 }}>
@@ -181,7 +193,7 @@ export const WalkZones = () => {
                 </form>
             )}
 
-            {zones.length === 0 && !creating && <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Divide tus secciones en zonas y asígnalas a tu equipo.</div>}
+            {zones.length === 0 && !creating && !autoMode && <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Elige una sección con «Ruta automática»: el sistema arma la ruta, las puertas meta y la meta de simpatizantes.</div>}
 
             {zones.map(z => {
                 const p = progress[z.id];
@@ -197,13 +209,19 @@ export const WalkZones = () => {
                                     {assignee ? `${assignee} · ` : ''}{z.due_date ? `Para el ${new Date(z.due_date + 'T12:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}` : 'Sin fecha'}
                                 </div>
                                 {z.notes && <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>{z.notes}</div>}
+                                {z.center_lat && z.center_lng && (
+                                    <a href={`https://www.google.com/maps/dir/?api=1&destination=${z.center_lat},${z.center_lng}`} target="_blank" rel="noopener noreferrer"
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--tertiary)' }}>
+                                        <MapPin size={13} /> Cómo llegar
+                                    </a>
+                                )}
                             </div>
                             {isLeader && (z.created_by === user.id || ['candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user.role)) && (
                                 <button onClick={() => closeZone(z)} aria-label="Cerrar zona" style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', alignSelf: 'flex-start' }}><X size={18} /></button>
                             )}
                         </div>
                         <div style={{ fontSize: '0.8rem', marginTop: '0.4rem' }}>
-                            <strong>{p?.puertas || 0}</strong>{z.target_doors ? `/${z.target_doors}` : ''} puertas · <strong>{p?.registrados || 0}</strong> registros · <strong>{p?.volver_pendientes || 0}</strong> por volver · {p?.no_estaba || 0} sin respuesta
+                            <strong>{p?.puertas || 0}</strong>{z.target_doors ? `/${z.target_doors}` : ''} puertas · <strong>{p?.registrados || 0}</strong>{z.meta_simpatizantes ? `/${z.meta_simpatizantes}` : ''} registros · <strong>{p?.volver_pendientes || 0}</strong> por volver · {p?.no_estaba || 0} sin respuesta
                         </div>
                         {pct !== null && (
                             <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, marginTop: '0.3rem' }}>

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { PUBLIC_URL } from './verification';
+import { PUBLIC_URL, withDemoFlag } from './verification';
 
 /** Versión del aviso de privacidad y términos de la plataforma (Ko'on Soluciones) que acepta cada usuario. */
 export const PLATFORM_TERMS_VERSION = '2026-11';
@@ -77,7 +77,7 @@ export type EventRow = {
 };
 
 export const eventLink = (token: string, refUserId?: string | null) =>
-    `${PUBLIC_URL}/e/${token}${refUserId ? `?r=${refUserId}` : ''}`;
+    withDemoFlag(`${PUBLIC_URL}/e/${token}${refUserId ? `?r=${refUserId}` : ''}`);
 
 export const formatEventDate = (iso: string) =>
     new Date(iso).toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });

@@ -733,3 +733,19 @@ h4,
 .bottom-nav .nav-tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .bottom-nav .nav-tab.on { color: var(--primary); background: rgba(255, 90, 54, 0.12); }
 @media (min-width: 768px) { .bottom-nav .nav-tab { flex: 0 0 auto; width: 64px; } }
+
+/* Mapa: panel de detalle de sección. En celular se vuelve hoja inferior para no salirse del cuadro */
+@media (max-width: 768px) {
+  .radar-detail-panel {
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-height: 62% !important;
+    border-left: none !important;
+    border-top: 2px solid var(--tertiary) !important;
+    border-radius: 14px 14px 0 0;
+  }
+}
+.leaflet-popup-content { max-width: calc(100vw - 60px); overflow-wrap: anywhere; }

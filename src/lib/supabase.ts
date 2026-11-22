@@ -23,8 +23,16 @@ export const isDemoMode = () => {
         return last > 0 && Date.now() - last < 35 * 60_000
     } catch { return false }
 }
+/**
+ * Enlace público generado dentro de la demo (QR de visita, invitación por WhatsApp, evento).
+ * Lo abre OTRA persona en SU celular, donde no hay demo activa: sin esta marca la página buscaba
+ * el registro en producción y respondía "enlace no válido". Solo afecta a esta carga de página.
+ */
+export const isDemoLink = () => {
+    try { return new URLSearchParams(window.location.search).get('demo') === '1' } catch { return false }
+}
 export const markDemoActivity = () => { try { localStorage.setItem(DEMO_MODE_KEY, String(Date.now())) } catch { /* sin almacenamiento */ } }
 
-export const supabase = isDemoMode()
+export const supabase = (isDemoMode() || isDemoLink())
     ? createClient(DEMO_SUPABASE_URL, DEMO_SUPABASE_KEY)
     : createClient(supabaseUrl, supabaseAnonKey)
