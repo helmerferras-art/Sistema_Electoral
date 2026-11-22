@@ -284,7 +284,7 @@ export const SocialMediaDashboard = () => {
             {/* CONNECTIONS PANEL */}
             {showConnections && (
                 <div className="tactile-card" style={{ border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>
-                    <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
+                    <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))' }}>
                         {Object.entries(NETWORK_CONFIG).map(([id, config]) => {
                             const acc = accounts.find(a => a.network === id);
                             const Icon = config.icon;
@@ -417,7 +417,7 @@ export const SocialMediaDashboard = () => {
                     <div style={{ padding: '0.6rem', background: 'rgba(0, 212, 255, 0.1)', borderRadius: '10px' }}><Calendar size={24} color="var(--tertiary)" /></div>
                     <h2 style={{ fontFamily: 'Oswald', margin: 0 }}><SafeText>PLANNER ESTRATÉGICO</SafeText></h2>
                 </div>
-                <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+                <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))' }}>
                     {posts.length === 0 && <p style={{ color: '#64748B' }}><SafeText>Sin posts.</SafeText></p>}
                     {posts.map(post => {
                         const Icon = NETWORK_CONFIG[post.network]?.icon || Video;

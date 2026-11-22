@@ -141,7 +141,7 @@ export const BrigadistaDashboard = () => {
                         </div>
 
                         <h3 className="tactical-font" style={{ fontSize: '0.9rem', color: '#64748B', margin: '1rem 0 0.5rem 0' }}>// LOGROS</h3>
-                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
+                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))' }}>
                             <div className="tactile-card flex-col flex-center" style={{ padding: '1rem', opacity: agentContext.xp > 0 ? 1 : 0.3 }}>
                                 <Trophy size={32} color="var(--accent)" />
                                 <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', fontWeight: 'bold' }}>FUNDADOR</p>

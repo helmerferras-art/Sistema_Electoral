@@ -526,7 +526,7 @@ export const TerritoryAssignmentModal: React.FC<TerritoryAssignmentModalProps> =
                 {selectedZones.length > 0 && (
                     <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
                         <h4 style={{ fontFamily: 'Oswald', color: 'var(--primary)', margin: '0 0 0.5rem 0' }}>DEFINICIÓN DE METAS POR ZONA</h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))', gap: '0.5rem', maxHeight: '150px', overflowY: 'auto' }}>
                             {selectedZones.map(id => (
                                 <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.5rem', borderRadius: '4px' }}>
                                     <span style={{ fontSize: '0.8rem', color: '#888', flex: 1 }}>{layerType.toUpperCase()} {id}:</span>

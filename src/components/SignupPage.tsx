@@ -14,13 +14,18 @@ export const CARGOS = [
     { v: 'gubernatura', l: 'Gubernatura' },
     { v: 'senaduria', l: 'Senaduría' },
     { v: 'regiduria', l: 'Regiduría / sindicatura' },
-    { v: 'aspirante', l: 'Aún soy aspirante' },
+];
+
+/** Etapa: quien aún no es elegido entra como aspirante y pasa a candidato solo cuando lo eligen. */
+export const ETAPAS = [
+    { v: 'aspirante', l: 'Soy aspirante', d: 'Busco la candidatura (proceso interno o darme a conocer)' },
+    { v: 'candidato', l: 'Ya soy candidato(a)', d: 'Mi partido o coalición ya me eligió' },
 ];
 
 export const ESTADOS = ['Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua', 'Ciudad de México', 'Coahuila', 'Colima', 'Durango', 'Estado de México', 'Guanajuato', 'Guerrero', 'Hidalgo', 'Jalisco', 'Michoacán', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla', 'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala', 'Veracruz', 'Yucatán', 'Zacatecas'];
 
 const INCLUDED = [
-    '1 candidato(a), 1 coordinación de campaña, 1 comunicación, 1 comunicación digital y 1 coordinación territorial',
+    '1 aspirante o candidato(a), 1 coordinación general, 1 comunicación, 1 comunicación digital y 1 coordinación territorial',
     '2 líderes con 5 brigadistas cada uno',
     'Hasta 500 simpatizantes, 1 guion de campo, 1 sondeo y 3 eventos al mes',
     'Mapa, zonas de recorrido, metas, capacitación y 3 consultas de IA al día',
@@ -45,7 +50,7 @@ const ERRORS: Record<string, string> = {
 export const SignupPage = () => {
     const { session, user } = useAuth();
     const leavingDemo = useLeaveDemo('/registro');
-    const [f, setF] = useState({ name: '', phone: '', cargo: 'presidencia_municipal', estado: 'Chiapas', municipio: '', campaign: '' });
+    const [f, setF] = useState({ name: '', phone: '', cargo: 'presidencia_municipal', etapa: 'aspirante', estado: 'Chiapas', municipio: '', campaign: '' });
     const [accept, setAccept] = useState(false);
     const [legend, setLegend] = useState(false);
     const [done, setDone] = useState<null | { sms: boolean }>(null);
@@ -90,22 +95,31 @@ export const SignupPage = () => {
                     </div>
                 ) : (
                     <form onSubmit={submit} className="tl-form">
-                        <h1 className="tl-h2">Crea tu campaña gratis</h1>
-                        <p className="tl-lead">El Plan Arranque es para que un candidato sin estructura ponga a andar su equipo y pruebe el sistema, sin pago.</p>
+                        <h1 className="tl-h2">Crea tu cuenta gratis</h1>
+                        <p className="tl-lead">El Plan Arranque es para aspirantes y candidaturas sin estructura que quieren poner a andar a su equipo y probar el sistema, sin pago.</p>
                         <ul className="tl-checklist">{INCLUDED.map(i => <li key={i}><CheckCircle2 size={18} /> {i}</li>)}</ul>
                         <label>Tu nombre<input required minLength={3} value={f.name} onChange={set('name')} autoComplete="name" /></label>
                         <label>Celular (10 números)<input required inputMode="numeric" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value.replace(/[^\d]/g, '').slice(0, 10) })} placeholder="961 123 4567" autoComplete="tel-national" /></label>
                         <div className="tl-fineprint" style={{ marginTop: '-0.4rem' }}>Ahí te llega por SMS el código para entrar.</div>
-                        <label>Nombre de la campaña<input required minLength={3} value={f.campaign} onChange={set('campaign')} placeholder="Ej. Ana López para Tuxtla" /></label>
+                        <div className="tl-step" style={{ marginTop: '0.2rem' }}>¿En qué etapa estás?</div>
+                        <div className="tl-choice-grid">
+                            {ETAPAS.map(e => (
+                                <button key={e.v} type="button" className={`tl-choice ${f.etapa === e.v ? 'on' : ''}`} aria-pressed={f.etapa === e.v} onClick={() => setF({ ...f, etapa: e.v })}>
+                                    <strong>{e.l}</strong>
+                                    <span className="tl-choice-blurb">{e.d}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <label>{f.etapa === 'aspirante' ? 'Nombre de tu proyecto' : 'Nombre de la campaña'}<input required minLength={3} value={f.campaign} onChange={set('campaign')} placeholder={f.etapa === 'aspirante' ? 'Ej. Ana López · Tuxtla' : 'Ej. Ana López para Tuxtla'} /></label>
                         <div className="tl-form-row">
-                            <label>Cargo<select value={f.cargo} onChange={set('cargo')}>{CARGOS.map(c => <option key={c.v} value={c.v}>{c.l}</option>)}</select></label>
+                            <label>{f.etapa === 'aspirante' ? 'Cargo al que aspiras' : 'Cargo'}<select value={f.cargo} onChange={set('cargo')}>{CARGOS.map(c => <option key={c.v} value={c.v}>{c.l}</option>)}</select></label>
                             <label>Estado<select value={f.estado} onChange={set('estado')}>{ESTADOS.map(s => <option key={s}>{s}</option>)}</select></label>
                         </div>
                         <label>Municipio o distrito<input value={f.municipio} onChange={set('municipio')} placeholder="Ej. Tuxtla Gutiérrez" /></label>
                         <label className="tl-check"><input type="checkbox" checked={accept} onChange={e => setAccept(e.target.checked)} /> <span>Acepto el <a href="/privacidad" target="_blank">aviso de privacidad</a> y los <a href="/terminos" target="_blank">términos de uso</a>.</span></label>
                         <label className="tl-check"><input type="checkbox" checked={legend} onChange={e => setLegend(e.target.checked)} /> <span>Entiendo que es una <strong>versión de demostración gratuita</strong> y que <strong>no constituye aportación a ninguna campaña electoral</strong>.</span></label>
                         <button className="tl-btn tl-btn-primary tl-btn-wide" disabled={busy || !accept || !legend}>
-                            {busy ? <><Loader2 size={18} className="spin" /> Creando…</> : 'Crear mi campaña'}
+                            {busy ? <><Loader2 size={18} className="spin" /> Creando…</> : f.etapa === 'aspirante' ? 'Crear mi cuenta de aspirante' : 'Crear mi campaña'}
                         </button>
                         {error && <div className="tl-error">{error}</div>}
                         <p className="tl-fineprint">{FREE_LEGEND} Si después contratas, se emite un precio simbólico o el que se acuerde, para que puedas reportarlo a la autoridad electoral.</p>

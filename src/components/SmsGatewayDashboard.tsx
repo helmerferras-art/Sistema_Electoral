@@ -331,7 +331,7 @@ export const SmsGatewayDashboard = () => {
             )}
 
             {/* 1. TOP STATS */}
-            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
                 <div className="tactile-card" style={{ borderLeft: '4px solid var(--secondary)' }}>
                     <div className="flex-row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
@@ -373,7 +373,7 @@ export const SmsGatewayDashboard = () => {
                     <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Globe size={20} color="var(--tertiary)" /> <SafeText>GATEWAY STATUS (CLUSTER)</SafeText>
                     </h3>
-                    <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem' }}>
+                    <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))', gap: '1rem' }}>
                         {devices.map((device: Device) => (
                             <div key={device.id} className="tactile-card" style={{
                                 background: 'rgba(255,255,255,0.02)',

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Target, ChevronRight, ArrowLeft, Calculator, Settings, X, Users, CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { stageRoleLabel, useAspirantStage } from '../lib/stage';
 import { supabase } from '../lib/supabase';
 import { ThanksPageEditor } from './ThanksPageEditor';
 import { AuditPanel } from './AuditPanel';
@@ -91,6 +92,7 @@ const pace = (value: number, expected: number) => (expected > 0 ? Math.round((va
 
 export const GoalsCascade = () => {
     const { user } = useAuth();
+    const aspirant = useAspirantStage(user?.tenant_id);
     const [stack, setStack] = useState<{ id: string | null; name: string }[]>([{ id: null, name: 'Mi meta' }]);
     const [rows, setRows] = useState<BoardRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -263,7 +265,7 @@ export const GoalsCascade = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '0.5rem' }}>
                         <strong>{me.name}</strong>
                         <span style={{ fontSize: '0.75rem', color: '#9aa', textAlign: 'right' }}>
-                            {ROLE_LABEL[me.role] || me.role}
+                            {stageRoleLabel(me.role, ROLE_LABEL[me.role] || me.role, aspirant)}
                             {me.territory_zones > 0 && ` · ${me.territory_zones} ${TERRITORY_LABEL[me.territory_type || ''] || 'zonas'}`}
                         </span>
                     </div>
@@ -341,7 +343,7 @@ export const GoalsCascade = () => {
                                     <div style={{ minWidth: 0 }}>
                                         <div style={{ fontWeight: 600 }}>{t.name}</div>
                                         <div style={{ fontSize: '0.72rem', color: '#9aa' }}>
-                                            {ROLE_LABEL[t.role] || t.role}
+                                            {stageRoleLabel(t.role, ROLE_LABEL[t.role] || t.role, aspirant)}
                                             {t.territory_zones > 0 ? ` · ${t.territory_zones} ${TERRITORY_LABEL[t.territory_type || ''] || 'zonas'}` : ' · sin territorio'}
                                             {t.equipo > 0 && ` · equipo de ${t.equipo}`}
                                         </div>

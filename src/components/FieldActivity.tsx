@@ -323,8 +323,8 @@ export const FieldActivity = () => {
                 </div>
                 {(tally.doors > 0 || tally.registros > 0 || tally.entrevistas > 0) && (
                     <div style={{ fontSize: '0.75rem', color: 'var(--secondary)', background: 'rgba(16,185,129,0.08)', padding: '0.4rem 0.5rem', borderRadius: 8 }}>
-                        Se va sumando solo{tally.since ? ` desde las ${new Date(tally.since).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : ''}:
-                        {tally.doors ? ` ${tally.doors} puertas` : ''}{tally.registros ? ` · ${tally.registros} contactos/registros` : ''}{tally.entrevistas ? ` · ${tally.entrevistas} entrevistas` : ''}. Ajusta con − / + si hace falta.
+                        Se va sumando solo{tally.since ? ` desde las ${new Date(tally.since).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}` : ''}:{' '}
+                        {[tally.doors ? `${tally.doors} puertas` : '', tally.registros ? `${tally.registros} contactos o registros` : '', tally.entrevistas ? `${tally.entrevistas} entrevistas` : ''].filter(Boolean).join(' · ')}. Ajusta con − / + si hace falta.
                     </div>
                 )}
                 <div style={{ display: 'flex', gap: '0.5rem' }}>

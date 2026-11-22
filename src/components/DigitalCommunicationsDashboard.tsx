@@ -928,7 +928,7 @@ export const DigitalCommunicationsDashboard = () => {
                 {/* 1. SECCIÓN DE AUDITORÍA */}
                 {activeTab === 'auditoria' && (
                     <div className="flex-col gap-4">
-                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))' }}>
                             <div className="tactile-card flex-col flex-center" style={{ borderLeft: '4px solid var(--tertiary)' }}>
                                 <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748B' }}>PENDIENTES</p>
                                 <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald' }}>{auditStats.totalPending}</p>
@@ -1271,7 +1271,7 @@ export const DigitalCommunicationsDashboard = () => {
                 {/* 2. SECCIÓN DE WHATSAPP TÁCTICO */}
                 {
                     activeTab === 'whatsapp' && (
-                        <div className="responsive-grid" style={{ gridTemplateColumns: 'minmax(300px, 1fr) 350px' }}>
+                        <div className="responsive-grid" style={{ gridTemplateColumns: 'minmax(min(100%, 300px), 1fr) 350px' }}>
                             <div className="tactile-card" style={{ border: '1px solid var(--secondary)' }}>
                                 <h2 style={{ fontFamily: 'Oswald', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                     <Settings size={20} /> REDACTOR DE EMISIÓN MASIVA

@@ -48,7 +48,7 @@ export const C4IPredictiveOracle = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
 
                 {/* AI / Terminal Interface */}
                 <div style={{ flex: '1 1 500px', backgroundColor: '#0A0A0A', border: '1px solid var(--tertiary)', borderRadius: '4px', position: 'relative', overflow: 'hidden' }}>

@@ -179,7 +179,7 @@ export default function SuppliesDashboard() {
                 <PackageSearch size={32} color="#00D4FF" />
                 <div>
                     <h2 style={{ margin: 0, fontFamily: 'Oswald', fontSize: '2rem', letterSpacing: '0.05em' }}>MÓDULO DE SUMINISTROS</h2>
-                    <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>Control Logístico y Asignación de Recursos Gubernamentales/Electorales</p>
+                    <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>Control de materiales del equipo: inventario, entregas y quién los tiene</p>
                 </div>
             </div>
 
@@ -237,7 +237,7 @@ export default function SuppliesDashboard() {
                 <>
                     {/* INVENTORY TAB */}
                     {activeTab === 'inventory' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: isMasterLogistics ? '1fr 2fr' : '1fr', gap: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMasterLogistics ? 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))' : '1fr', gap: '2rem' }}>
                             {/* Add Resource Form (Only Master) */}
                             {isMasterLogistics && (
                                 <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', height: 'fit-content' }}>
@@ -322,7 +322,7 @@ export default function SuppliesDashboard() {
                                         No hay suministros registrados en la base de datos.
                                     </div>
                                 ) : (
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1rem' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
                                         {resources.map(res => (
                                             <div key={res.id} style={{ backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '1rem' }}>
                                                 <div style={{ fontSize: '0.7rem', color: '#00D4FF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.3rem' }}>{res.type}</div>
@@ -342,7 +342,7 @@ export default function SuppliesDashboard() {
 
                     {/* DISPATCH TAB */}
                     {activeTab === 'dispatch' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '2rem' }}>
                             {/* Dispatch Form */}
                             <div style={{ backgroundColor: 'rgba(255, 51, 102, 0.05)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255, 51, 102, 0.2)', height: 'fit-content' }}>
                                 <h3 style={{ marginTop: 0, borderBottom: '1px solid rgba(255, 51, 102, 0.2)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#FF3366' }}>

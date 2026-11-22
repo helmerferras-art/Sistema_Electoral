@@ -9,6 +9,9 @@ import { SecuritySettings } from './SecuritySettings';
 import { AdminManager } from './AdminManager';
 import { AlliancesManager } from './AlliancesManager';
 import { AIAdvisorModule } from './AIAdvisorModule';
+import { InternalProcess } from './InternalProcess';
+import { useAspirantStage } from '../lib/stage';
+import { loadThermometer } from '../lib/internal';
 
 import {
     Activity, TrendingUp, Users, DollarSign, BrainCircuit, MessageSquare,
@@ -21,6 +24,16 @@ import {
 
 export const CandidateDashboard = () => {
     const { user } = useAuth();
+    // Etapa de aspirante: sin metas de votos ni intención de voto (evita lenguaje de campaña antes de tiempo)
+    const aspirant = useAspirantStage(user?.tenant_id);
+    const [recognition, setRecognition] = useState<number | null>(null);
+    useEffect(() => {
+        if (!aspirant) return;
+        loadThermometer(null, false).then(r => {
+            const v = r.variables?.find(x => x.key === 'conoce')?.results.find(x => x.is_self);
+            setRecognition(v ? v.pct : null);
+        }).catch(() => setRecognition(null));
+    }, [aspirant]);
     const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'finanzas' | 'predicciones' | 'seguridad' | 'estructura' | 'alianzas' | 'asesor_ai' | 'guiones'>('pulso');
 
     const [loading, setLoading] = useState(true);
@@ -255,12 +268,12 @@ export const CandidateDashboard = () => {
 
             {/* Navigation Tabs */}
             {/* Todas las opciones a la vista (antes había que deslizar de lado para descubrirlas) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 90px), 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
                 <TabButton active={activeTab === 'pulso'} onClick={() => setActiveTab('pulso')} icon={<Activity size={18} />} label="Resumen" />
                 <TabButton active={activeTab === 'monitoreo'} onClick={() => setActiveTab('monitoreo')} icon={<Globe size={18} />} label="Redes" />
                 <TabButton active={activeTab === 'activismo'} onClick={() => setActiveTab('activismo')} icon={<Users size={18} />} label="Equipo" />
                 <TabButton active={activeTab === 'finanzas'} onClick={() => setActiveTab('finanzas')} icon={<DollarSign size={18} />} label="Dinero" />
-                <TabButton active={activeTab === 'predicciones'} onClick={() => setActiveTab('predicciones')} icon={<BrainCircuit size={18} />} label="Pronóstico" />
+                {!aspirant && <TabButton active={activeTab === 'predicciones'} onClick={() => setActiveTab('predicciones')} icon={<BrainCircuit size={18} />} label="Pronóstico" />}
                 <TabButton active={activeTab === 'seguridad'} onClick={() => setActiveTab('seguridad')} icon={<ShieldCheck size={18} />} label="Seguridad" />
                 <TabButton active={activeTab === 'estructura'} onClick={() => setActiveTab('estructura')} icon={<UserPlus size={18} />} label="Altas" />
                 <TabButton active={activeTab === 'guiones'} onClick={() => setActiveTab('guiones')} icon={<MessageSquareText size={18} />} label="Guion" />
@@ -271,11 +284,13 @@ export const CandidateDashboard = () => {
             {/* Dashboard Content Container */}
             <div style={{ padding: '0 1rem', position: 'relative' }}>
                 <div className="scanline"></div>
-                {activeTab === 'pulso' && <PulsoModule data={intentionData} stats={stats} historicalComparison={historicalComparison} />}
+                {activeTab === 'pulso' && (aspirant
+                    ? <AspirantPulse stats={stats} recognition={recognition} historicalComparison={historicalComparison} />
+                    : <PulsoModule data={intentionData} stats={stats} historicalComparison={historicalComparison} />)}
                 {activeTab === 'monitoreo' && <MonitoreoModule sentimentData={sentimentData} />}
                 {activeTab === 'activismo' && <ActivismoModule demoData={demographicsData} stats={stats} />}
                 {activeTab === 'finanzas' && <C4IFinanceManager />}
-                {activeTab === 'predicciones' && <PrediccionesModule data={intentionData} stats={stats} />}
+                {activeTab === 'predicciones' && !aspirant && <PrediccionesModule data={intentionData} stats={stats} />}
                 {activeTab === 'seguridad' && <SecuritySettings />}
                 {activeTab === 'estructura' && <AdminManager />}
                 {activeTab === 'alianzas' && <AlliancesManager />}
@@ -309,10 +324,47 @@ const TabButton = ({ active, onClick, icon, label }: { active: boolean, onClick:
     </button>
 );
 
+/** Resumen en etapa de aspirante: reconocimiento, alcance y termómetro; nada de metas de votos. */
+const AspirantPulse = ({ stats, recognition, historicalComparison }: { stats: any; recognition: number | null; historicalComparison: any[] }) => {
+    const card = (title: string, value: string, sub: string, color: string) => (
+        <div className="tactile-card flex-col flex-center" style={{ borderLeft: `4px solid ${color}` }}>
+            <p style={{ margin: 0, fontSize: '0.7rem', color: '#888' }}>{title}</p>
+            <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color }}>{value}</p>
+            <p style={{ margin: 0, fontSize: '0.6rem', color: '#64748B' }}>{sub}</p>
+        </div>
+    );
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem' }}>
+                {card('RECONOCIMIENTO', recognition !== null ? `${recognition}%` : '—', 'Te conocen (termómetro)', 'var(--tertiary)')}
+                {card('PERSONAS QUE SE SUMAN', (stats.convencidos || 0).toLocaleString(), 'Registradas por el equipo', '#10B981')}
+                {card('COBERTURA SECCIONAL', `${(stats.cobertura || 0).toFixed(1)}%`, `${stats.seccionesConSimpatizantes}/${stats.totalSecciones} secciones`, 'var(--secondary)')}
+                {card('ALCANCE', `${(stats.penetracion || 0).toFixed(2)}%`, 'Personas que se suman / lista nominal', 'var(--primary)')}
+            </div>
+            <InternalProcess />
+            {historicalComparison && historicalComparison.length > 0 && (
+                <DashboardCard title="Resultados 2024 en tu territorio (diagnóstico)" icon={<BarChart2 />} glowColor="var(--tertiary)">
+                    <div style={{ height: '280px', width: '100%', minHeight: '280px' }}>
+                        <ResponsiveContainer width="99%" height="100%">
+                            <BarChart data={historicalComparison} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                <XAxis dataKey="name" stroke="#888" fontSize={10} interval={0} angle={-15} textAnchor="end" />
+                                <YAxis stroke="#888" />
+                                <Tooltip contentStyle={{ backgroundColor: '#1A1D24', border: '1px solid var(--tertiary)' }} formatter={(value: any) => [value?.toLocaleString() + ' votos', '2024']} />
+                                <Bar dataKey="votos" fill="rgba(255,255,255,0.25)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </DashboardCard>
+            )}
+        </div>
+    );
+};
+
 const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats: any, historicalComparison: any[] }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* Tactical Metric Cards */}
-        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
             <div className="tactile-card flex-col flex-center glow-tertiary" style={{ borderLeft: '4px solid var(--tertiary)' }}>
                 <p style={{ margin: 0, fontSize: '0.7rem', color: '#888' }}>META ELECTORAL</p>
                 <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color: 'var(--tertiary)' }}>{stats.meta.toLocaleString()}</p>
@@ -382,7 +434,7 @@ const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats
 
 const MonitoreoModule = ({ sentimentData }: { sentimentData: any[] }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
             <DashboardCard title="Sentimiento de Redes (Real)" icon={<MessageSquare />} glowColor="var(--secondary)">
 
                 <div style={{ height: '250px', width: '100%', minHeight: '250px' }}>
@@ -420,7 +472,7 @@ const MonitoreoModule = ({ sentimentData }: { sentimentData: any[] }) => (
 
 const ActivismoModule = ({ demoData, stats }: { demoData: any[], stats: any }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
             <DashboardCard title="Demografía de Base Convencida" icon={<BarChart2 />} glowColor="var(--tertiary)">
 
                 <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>

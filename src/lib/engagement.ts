@@ -13,7 +13,7 @@ export type Poll = {
     poll_questions: PollQuestion[];
 };
 
-const POLL_SELECT = 'id, title, description, kind, script_intro, script_closing, active, created_at, poll_questions(id, question_text, sort, show_if_option, poll_options(id, option_text, sort))';
+const POLL_SELECT = 'id, title, description, kind, script_intro, script_closing, active, created_at, poll_questions(id, question_text, sort, show_if_option, poll_options!poll_options_question_id_fkey(id, option_text, sort))';
 
 export const sortPoll = (p: Poll): Poll => ({
     ...p,
