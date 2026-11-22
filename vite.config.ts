@@ -24,6 +24,10 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Al publicar una versión nueva, la app guardada en el teléfono la toma de inmediato
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // El PDF de la guía y las imágenes de la página de entrada se piden al servidor, no a la app guardada
         navigateFallbackDenylist: [/\.pdf$/, /^\/landing\//],
         runtimeCaching: [

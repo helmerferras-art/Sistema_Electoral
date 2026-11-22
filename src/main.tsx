@@ -16,6 +16,22 @@ window.addEventListener('vite:preloadError', (event) => {
   } catch { /* sin almacenamiento */ }
 })
 
+// App guardada (PWA): busca versión nueva al volver a la app y recarga una vez cuando la nueva toma el control.
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) return // primera instalación: no hace falta recargar
+    try {
+      if (sessionStorage.getItem('tl_sw_reloaded')) return
+      sessionStorage.setItem('tl_sw_reloaded', '1')
+    } catch { /* sin almacenamiento */ }
+    window.location.reload()
+  })
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') navigator.serviceWorker.getRegistration().then(r => r?.update()).catch(() => undefined)
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

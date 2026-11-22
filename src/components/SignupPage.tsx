@@ -95,8 +95,8 @@ export const SignupPage = () => {
                     </div>
                 ) : (
                     <form onSubmit={submit} className="tl-form">
-                        <h1 className="tl-h2">Crea tu campaña gratis</h1>
-                        <p className="tl-lead">El Plan Arranque es para que un candidato sin estructura ponga a andar su equipo y pruebe el sistema, sin pago.</p>
+                        <h1 className="tl-h2">Crea tu cuenta gratis</h1>
+                        <p className="tl-lead">El Plan Arranque es para aspirantes y candidaturas sin estructura que quieren poner a andar a su equipo y probar el sistema, sin pago.</p>
                         <ul className="tl-checklist">{INCLUDED.map(i => <li key={i}><CheckCircle2 size={18} /> {i}</li>)}</ul>
                         <label>Tu nombre<input required minLength={3} value={f.name} onChange={set('name')} autoComplete="name" /></label>
                         <label>Celular (10 números)<input required inputMode="numeric" value={f.phone} onChange={e => setF({ ...f, phone: e.target.value.replace(/[^\d]/g, '').slice(0, 10) })} placeholder="961 123 4567" autoComplete="tel-national" /></label>
