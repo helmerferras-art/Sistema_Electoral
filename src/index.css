@@ -796,3 +796,36 @@ h4,
 .motiv-link { background: none; border: none; color: #9aa3b2; font-size: .85rem; text-decoration: underline; cursor: pointer; padding: .4rem 0; min-height: 36px; }
 @keyframes motivFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes motivRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* Identidad de la campaña */
+.brand-avatar { flex: none; width: 42px; height: 42px; min-width: 42px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; border: 2px solid var(--bp, var(--primary)); }
+.brand-avatar.brand-avatar-lg { width: 56px; height: 56px; min-width: 56px; }
+.brand-avatar.brand-avatar-xl { width: 96px; height: 96px; min-width: 96px; font-size: .75rem; }
+.brand-avatar-empty { background: rgba(255,255,255,.05); color: #9aa; border-style: dashed; }
+.brand-card { padding: 1rem !important; margin-bottom: .2rem; }
+.brand-card-row { display: flex; align-items: center; gap: .8rem; }
+.brand-card-title { font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand-card-sub { font-size: .8rem; color: #9aa3b2; margin-top: .15rem; }
+@media (max-width: 480px) { .brand-card-row { flex-wrap: wrap; } .brand-card-row > button { flex: 1 1 100%; } }
+.brand-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.brand-editor { max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto; height: auto !important; font-size: .88rem; display: flex; flex-direction: column; gap: .9rem; }
+.brand-editor-head { display: flex; justify-content: space-between; align-items: center; }
+.brand-note { color: #9aa; font-size: .8rem; background: rgba(255,255,255,.04); border-left: 3px solid var(--primary); padding: .5rem .7rem; border-radius: 6px; }
+.brand-photo-row { display: flex; gap: 1rem; align-items: center; }
+.brand-check { display: flex; gap: .5rem; align-items: flex-start; font-size: .82rem; color: #cbd; }
+.brand-hint { font-size: .75rem; color: #8a93a3; font-weight: 400; }
+.brand-link { background: none; border: none; color: #9aa3b2; text-decoration: underline; padding: 0; cursor: pointer; font-size: .8rem; align-self: flex-start; }
+.brand-palette { display: flex; flex-wrap: wrap; gap: .5rem; }
+.brand-swatch { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255,255,255,.15); cursor: pointer; padding: 0; position: relative; overflow: hidden; }
+.brand-swatch.on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.25); }
+.brand-swatch-custom { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+.brand-swatch-custom input { opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.brand-preview { border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: .8rem; background: rgba(0,0,0,.25); }
+.brand-preview-head { display: flex; gap: .6rem; align-items: center; padding-bottom: .6rem; border-bottom: 1px solid var(--bp); }
+.brand-preview-slogan { margin-top: .6rem; font-style: italic; color: #dde; }
+.brand-preview-btn { margin-top: .7rem; background: var(--bp); color: #fff; text-align: center; padding: .6rem; border-radius: 10px; font-family: Oswald, sans-serif; letter-spacing: .05em; }
+.motiv-brand { display: flex; gap: .7rem; align-items: center; padding-bottom: .9rem; margin-bottom: .9rem; border-bottom: 1px solid rgba(255,255,255,.08); }
+.motiv-brand img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary); }
+.motiv-brand-name { font-weight: 700; color: #fff; }
+.motiv-brand-slogan { font-size: .82rem; color: #cbd2dc; font-style: italic; }
+.motiv-thanks { margin-top: .7rem; font-size: .85rem; color: var(--primary); font-weight: 600; }

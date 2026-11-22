@@ -83,3 +83,7 @@
   .lg-map .hx.won, .lg-map .hx.work, .lg-map .hx.beat { animation-duration: 0.01s; animation-iteration-count: 1; animation-delay: 0s; }
   .lg-map .pin-ring, .lg-step, .lg-error { animation: none; }
 }
+
+/* Identidad de la campaña que ya entró antes en este teléfono */
+.lg-campaign { display: flex; align-items: center; gap: .9rem; }
+.lg-campaign img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 6px 20px rgba(0,0,0,.45); flex: none; }

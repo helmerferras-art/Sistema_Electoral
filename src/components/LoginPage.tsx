@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { readLastBrand } from '../lib/branding';
 import { useAuth } from '../lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, MessageSquare, ShieldCheck, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
@@ -104,6 +105,8 @@ export const LoginPage = () => {
 
 
     const map = useMemo(buildMap, []);
+    // Si en este teléfono ya entró alguien de una campaña, se muestra su identidad (no se consulta nada antes de entrar)
+    const [lastBrand] = useState(() => readLastBrand());
     if (leavingDemo) return null;
 
     return (
@@ -116,8 +119,18 @@ export const LoginPage = () => {
                 </svg>
                 <div className="lg-shade" />
                 <div className="lg-brand">
+                    {lastBrand ? (
+                        <div className="lg-campaign">
+                            {lastBrand.photo && <img src={lastBrand.photo} alt="" />}
+                            <div>
+                                <h1 style={{ fontSize: 'clamp(1.6rem, 7vw, 2.4rem)' }}>{lastBrand.shortName ? `Equipo ${lastBrand.shortName}` : 'TLATOANI'}</h1>
+                                <p>{lastBrand.slogan || 'Tu campaña, sección por sección.'}</p>
+                            </div>
+                        </div>
+                    ) : (<>
                     <h1>TLATOANI</h1>
                     <p>Tu campaña, sección por sección.</p>
+                    </>)}
                     <div className="lg-legend">
                         <span><i style={{ background: 'var(--lg-won)' }} />Secciones con avance</span>
                         <span><i style={{ background: 'var(--lg-work)' }} />En recorrido</span>
