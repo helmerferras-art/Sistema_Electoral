@@ -1659,7 +1659,7 @@ export const MapView = () => {
                                             return (
                                                 <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10B981', borderRadius: '8px', padding: '1rem', marginBottom: '1.5rem' }}>
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                                                        <span style={{ fontSize: '0.9rem', color: '#6EE7B7', fontWeight: 'bold' }}>META PARA GANAR LA SECCIÓN</span>
+                                                        <span style={{ fontSize: '0.9rem', color: '#6EE7B7', fontWeight: 'bold' }}>META · VOTOS DEL GANADOR 2024</span>
                                                         <span style={{ fontSize: '1.5rem', fontWeight: 'bold', fontFamily: 'Oswald', color: '#10B981' }}>{meta40.toLocaleString()}</span>
                                                     </div>
                                                     <div style={{ height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden', marginBottom: '0.5rem' }}>
@@ -1690,7 +1690,9 @@ export const MapView = () => {
                                                     {(() => {
                                                         const v = Number(selectedRegion.properties?._votersRaw ?? 0);
                                                         const p = Number(selectedRegion.properties?._padronTotal ?? 0);
-                                                        return p > 0 && v > 0 ? `Participación ${(v / p * 100).toFixed(1)}% (2024)` : 'Participación 2024';
+                                                        if (!(p > 0 && v > 0)) return 'Participación 2024';
+                                                        const pct = v / p * 100;
+                                                        return `Participación ${pct.toFixed(1)}% (gubernatura 2024)${pct > 85 ? ' · alta: puede haber casilla especial' : ''}`;
                                                     })()}
                                                 </div>
                                             </div>
