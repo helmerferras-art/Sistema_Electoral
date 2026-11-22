@@ -1,19 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight, BarChart3, Brain, CalendarDays, Check, Download, DoorOpen, Lock, Map, ShieldCheck, Smartphone, Users, Vote, WifiOff, Wallet } from 'lucide-react';
+import { ArrowRight, BarChart3, Brain, CalendarDays, Check, ClipboardCheck, Compass, Download, DoorOpen, FileCheck, Lock, Map, Megaphone, Scale, ShieldCheck, Smartphone, Users, Vote, WifiOff, Wallet } from 'lucide-react';
 import { DemoLauncher } from './DemoLauncher';
 import { FREE_LEGEND, DEMO_ROLES } from '../lib/demo';
 import './landing.css';
 
 const MODULES = [
-    { key: 'mando', icon: <BarChart3 />, title: 'Tablero de mando', text: 'Avance contra la meta de votos, por sección y por equipo. Sabes hoy dónde vas bien y dónde no.' },
-    { key: 'campo', icon: <Smartphone />, title: 'Registro en campo', text: 'El brigadista registra simpatizantes con guion, foto y ubicación. Funciona sin señal y sube al reconectar.' },
-    { key: 'mapa', icon: <Map />, title: 'Radar territorial', text: 'Mapa de simpatizantes, secciones y resultados históricos para decidir dónde poner a cada brigada.' },
-    { key: 'zonas', icon: <DoorOpen />, title: 'Casa por casa', text: 'Zonas de recorrido con puertas tocadas, avance por zona y validación de visitas por WhatsApp.' },
-    { key: 'equipo', icon: <Users />, title: 'Estructura y referidos', text: 'Coordinación, líderes y brigadas con su cadena de mando, ligas de invitación y ranking de referidos.' },
-    { key: 'eventos', icon: <CalendarDays />, title: 'Eventos', text: 'Mítines y reuniones con registro público, asistencia y seguimiento de quién llegó.' },
-    { key: 'diad', icon: <Vote />, title: 'Día D y casillas', text: 'Representantes por casilla, pase de lista, cotejo de actas y conteo rápido el día de la elección.' },
+    { key: 'mando', icon: <BarChart3 />, title: 'Tablero de mando', text: 'Avance contra las metas de cada etapa —conocimiento, organización o votos— por sección y por equipo.' },
+    { key: 'campo', icon: <Smartphone />, title: 'Trabajo en territorio', text: 'Registro de contactos con consentimiento, guion, foto y ubicación. Funciona sin señal y sube al reconectar.' },
+    { key: 'mapa', icon: <Map />, title: 'Diagnóstico territorial', text: 'Secciones, padrón, resultados históricos y avance del equipo en un mismo mapa para decidir con datos.' },
+    { key: 'zonas', icon: <DoorOpen />, title: 'Recorridos casa por casa', text: 'Rutas automáticas por sección con puertas meta, avance por zona y validación de visitas.' },
+    { key: 'equipo', icon: <Users />, title: 'Estructura y equipo', text: 'Coordinaciones, líderes y brigadas con su cadena de mando, metas en cascada e invitaciones.' },
+    { key: 'eventos', icon: <CalendarDays />, title: 'Reuniones y eventos', text: 'Asambleas, reuniones vecinales y eventos con registro, asistencia y seguimiento.' },
+    { key: 'diad', icon: <Vote />, title: 'Jornada electoral', text: 'Representación en casillas, pase de lista, cotejo de actas y conteo rápido el día de la elección.' },
     { key: 'ia', icon: <Brain />, title: 'Inteligencia artificial', text: 'Resumen semanal por sección, asesor estratégico y lectura de actas por foto. Sin datos personales.' },
     { key: 'finanzas', icon: <Wallet />, title: 'Finanzas y fiscalización', text: 'Ingresos y gastos con comprobantes, topes y alertas de cumplimiento ante la autoridad electoral.' },
+];
+
+/** Etapas del proceso: el sistema se adapta a cada una y respeta sus tiempos legales. */
+const STAGES = [
+    { icon: <Compass />, title: 'Diagnóstico y organización', text: 'Conoce tu territorio antes de salir: padrón, histórico por sección, mapa de colonias y la estructura de tu equipo.' },
+    { icon: <ClipboardCheck />, title: 'Procesos internos', text: 'Mide tu reconocimiento con sondeos propios, documenta tu trabajo comunitario y organiza a tu equipo para la etapa de definición de tu partido.' },
+    { icon: <Megaphone />, title: 'Precampaña y campaña', text: 'Solo en los periodos que marca la autoridad: recorridos, eventos, mensajes y metas por sección, con gastos registrados para fiscalización.' },
+    { icon: <Vote />, title: 'Jornada electoral', text: 'Representantes en cada casilla, pase de lista, cotejo de actas y conteo rápido en tiempo real.' },
+    { icon: <FileCheck />, title: 'Después de la elección', text: 'Informes de gastos, seguimiento a las peticiones ciudadanas recibidas y una estructura que no se pierde para el siguiente proceso.' },
 ];
 
 /** Marco de teléfono con captura real de la app. */
@@ -56,6 +65,7 @@ export const Landing = () => {
             <header className="tl-nav tl-nav-float">
                 <a href="/" className="tl-brand">TLATOANI</a>
                 <nav className="tl-navlinks">
+                    <a href="#etapas">Etapas</a>
                     <a href="#modulos">Módulos</a>
                     <a href="#demo">Demo</a>
                     <a href="#planes">Planes</a>
@@ -70,9 +80,9 @@ export const Landing = () => {
                 <div className="tl-hero-glow" />
                 <div className="tl-container tl-hero-grid">
                     <div className="tl-hero-copy">
-                        <span className="tl-eyebrow">Sistema de operación electoral</span>
-                        <h1>Tu campaña, organizada <em>sección por sección</em>.</h1>
-                        <p>Estructura, brigadas, mapa, Día D e inteligencia artificial en una sola app. Del candidato al brigadista, cada quien ve lo que le toca.</p>
+                        <span className="tl-eyebrow">Gestión política y electoral</span>
+                        <h1>Tu proyecto político, organizado <em>en cada etapa</em>.</h1>
+                        <p>Del diagnóstico y los procesos internos a la campaña, la jornada electoral y la rendición de cuentas. Territorio, equipo y cumplimiento en una sola app, dentro de los tiempos que marca la ley.</p>
                         <div className="tl-hero-ctas">
                             <a href="#demo" className="tl-btn tl-btn-primary">Probar la demo <ArrowRight size={18} /></a>
                             <a href="/registro" className="tl-btn tl-btn-ghost">Crear cuenta gratis</a>
@@ -80,14 +90,14 @@ export const Landing = () => {
                         <ul className="tl-hero-points">
                             <li><WifiOff size={16} /> Funciona sin señal</li>
                             <li><Lock size={16} /> Cada campaña aislada</li>
-                            <li><Smartphone size={16} /> Android y web</li>
+                            <li><Scale size={16} /> Hecho para cumplir la ley electoral</li>
                         </ul>
                     </div>
                     <div className="tl-hero-visual" aria-hidden="true">
                         <Phone src="/landing/campo.jpg" alt="" className="tl-phone-back" />
                         <Phone src="/landing/mando.jpg" alt="" className="tl-phone-front" />
-                        <div className="tl-float tl-float-a"><strong>3,899</strong> personas contactadas</div>
-                        <div className="tl-float tl-float-b"><strong>33%</strong> validados por WhatsApp</div>
+                        <div className="tl-float tl-float-a"><strong>255</strong> secciones con diagnóstico</div>
+                        <div className="tl-float tl-float-b"><strong>5</strong> etapas, una sola app</div>
                     </div>
                 </div>
             </section>
@@ -102,10 +112,28 @@ export const Landing = () => {
                 </div>
             </section>
 
+            {/* ETAPAS DEL PROCESO */}
+            <section id="etapas" className="tl-section tl-section-soft">
+                <div className="tl-container">
+                    <h2 className="tl-h2 tl-reveal">Te acompaña en todo el proceso, no solo en la campaña</h2>
+                    <p className="tl-lead tl-reveal">Tlatoani se ajusta a la etapa en la que estás: cambia las metas, las herramientas y el lenguaje para que cada actividad corresponda a su momento.</p>
+                    <ol className="tl-stages">
+                        {STAGES.map((st, i) => (
+                            <li key={st.title} className="tl-stage tl-reveal">
+                                <div className="tl-stage-num">{i + 1}</div>
+                                <div className="tl-stage-icon">{st.icon}</div>
+                                <h3>{st.title}</h3>
+                                <p>{st.text}</p>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            </section>
+
             {/* MÓDULOS con teléfono fijo */}
             <section id="modulos" className="tl-section">
                 <div className="tl-container">
-                    <h2 className="tl-h2 tl-reveal">Todo lo que una campaña necesita en territorio</h2>
+                    <h2 className="tl-h2 tl-reveal">Las herramientas de cada etapa</h2>
                     <p className="tl-lead tl-reveal">Capturas reales del sistema, con datos ficticios de la demo.</p>
                     <div className="tl-showcase">
                         <div className="tl-showcase-list">
@@ -157,7 +185,7 @@ export const Landing = () => {
                         <div className="tl-plan tl-reveal">
                             <div className="tl-plan-tag">Gratis</div>
                             <h3>Plan Arranque</h3>
-                            <p>Para el candidato sin estructura que quiere ponerla a andar y probar el sistema.</p>
+                            <p>Para aspirantes, equipos y candidaturas que empiezan a organizarse y quieren probar el sistema.</p>
                             <ul>
                                 <li><Check size={16} /> Candidato, coordinación de campaña, comunicación, comunicación digital y coordinación territorial</li>
                                 <li><Check size={16} /> 2 líderes con 5 brigadistas cada uno</li>
@@ -171,12 +199,12 @@ export const Landing = () => {
                         <div className="tl-plan tl-plan-dark tl-reveal">
                             <div className="tl-plan-tag">Cotización</div>
                             <h3>A la medida</h3>
-                            <p>Para campañas con estructura: el precio depende del tipo de elección, el territorio y el tamaño del equipo.</p>
+                            <p>Para proyectos con estructura: el precio depende del tipo de elección, el territorio, la etapa y el tamaño del equipo.</p>
                             <ul>
                                 <li><Check size={16} /> Usuarios y simpatizantes sin tope</li>
-                                <li><Check size={16} /> Día D completo: casillas, representantes y conteo rápido</li>
+                                <li><Check size={16} /> Jornada electoral completa: casillas, representantes y conteo rápido</li>
                                 <li><Check size={16} /> Exportación, mensajería y alianzas entre campañas</li>
-                                <li><Check size={16} /> IA ampliada y app con la marca de tu campaña</li>
+                                <li><Check size={16} /> IA ampliada y app con la marca de tu proyecto</li>
                                 <li><Check size={16} /> Capacitación y acompañamiento</li>
                             </ul>
                             <a className="tl-btn tl-btn-primary tl-btn-wide" href="/cotizacion">Solicitar cotización</a>
@@ -192,12 +220,14 @@ export const Landing = () => {
                     <div className="tl-reveal"><ShieldCheck size={32} /><h3>Datos aislados por campaña</h3><p>Cada campaña sólo ve lo suyo. Los permisos se validan en el servidor, no en el teléfono.</p></div>
                     <div className="tl-reveal"><Lock size={32} /><h3>Privacidad desde el diseño</h3><p>Consentimiento en cada registro, aviso de privacidad y derecho a eliminar la cuenta en cualquier momento.</p></div>
                     <div className="tl-reveal"><Brain size={32} /><h3>IA sin datos personales</h3><p>La inteligencia artificial trabaja con cifras agregadas. Las llaves nunca salen del servidor.</p></div>
+                    <div className="tl-reveal"><Scale size={32} /><h3>Respeto a los tiempos electorales</h3><p>Las herramientas de promoción se activan según la etapa, los gastos quedan registrados y las peticiones ciudadanas nunca se condicionan.</p></div>
                 </div>
+                <p className="tl-container tl-legal-note">Tlatoani es una herramienta de organización y gestión. Cada proyecto es responsable de que sus actividades se apeguen a los plazos y reglas del INE, del IEPC y de la normatividad de su partido.</p>
             </section>
 
             <footer className="tl-footer">
                 <div className="tl-container tl-footer-grid">
-                    <div><div className="tl-brand">TLATOANI</div><p>Un producto de Ko'on Soluciones.</p></div>
+                    <div><div className="tl-brand">TLATOANI</div><p>Un producto de Ko'on Soluciones. Gestión política y electoral para cada etapa del proceso.</p></div>
                     <nav>
                         <a href="/privacidad">Aviso de privacidad</a>
                         <a href="/terminos">Términos de uso</a>

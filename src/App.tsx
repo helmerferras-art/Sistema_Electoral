@@ -28,6 +28,8 @@ const LegalPage = lazy(() => import('./components/LegalPage').then(m => ({ defau
 const PublicJoin = lazy(() => import('./components/PublicJoin').then(m => ({ default: m.PublicJoin })));
 const ReferralNetwork = lazy(() => import('./components/ReferralNetwork').then(m => ({ default: m.ReferralNetwork })));
 const WalkZones = lazy(() => import('./components/WalkZones').then(m => ({ default: m.WalkZones })));
+const InternalProcess = lazy(() => import('./components/InternalProcess').then(m => ({ default: m.InternalProcess })));
+const ThermoSurvey = lazy(() => import('./components/ThermoSurvey').then(m => ({ default: m.ThermoSurvey })));
 const Landing = lazy(() => import('./components/Landing').then(m => ({ default: m.Landing })));
 const DemoPage = lazy(() => import('./components/DemoLauncher').then(m => ({ default: m.DemoPage })));
 const SignupPage = lazy(() => import('./components/SignupPage').then(m => ({ default: m.SignupPage })));
@@ -337,8 +339,10 @@ const MainDashboard = () => {
         {activeTab === 'dia-d' && (diaDActive || ['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial'].includes(user?.role || '')) && <DiaDDashboard />}
         {activeTab === 'suministros' && (['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'coordinador', 'coordinador_logistica'].includes(user?.role || '') ? <SuppliesDashboard /> : <MySupplies />)}
         {activeTab === 'comunicados' && <CommunicationsDashboard />}
-        {activeTab === 'OBJETIVOS' && (<><GoalsCascade /><EventsModule /><ReferralNetwork /><CriticalPath /></>)}
-        {activeTab === 'campo' && (<><WalkZones /><FieldActivity /></>)}
+        {activeTab === 'OBJETIVOS' && (<>
+          {['superadmin', 'candidato', 'coordinador_campana', 'coordinador_territorial', 'comunicacion_digital'].includes(user?.role || '') && <InternalProcess />}
+          <GoalsCascade /><EventsModule /><ReferralNetwork /><CriticalPath /></>)}
+        {activeTab === 'campo' && (<><ThermoSurvey /><WalkZones /><FieldActivity /></>)}
         </Suspense>
       </main>
 

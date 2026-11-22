@@ -171,10 +171,10 @@
 /* ---------- Tableta y escritorio ---------- */
 @media (min-width: 640px) {
   .tl-form-row { grid-template-columns: 1fr 1fr; }
-  .tl-choice-grid { grid-template-columns: repeat(3, 1fr); }
+  .tl-choice-grid { grid-template-columns: repeat(2, 1fr); }
   .tl-role-grid { grid-template-columns: repeat(3, 1fr); }
   .tl-plans { grid-template-columns: 1fr 1fr; }
-  .tl-trust { grid-template-columns: repeat(3, 1fr); }
+  .tl-trust { grid-template-columns: repeat(2, 1fr); }
   .tl-footer-grid { grid-template-columns: 1fr auto; align-items: center; }
 }
 @media (min-width: 960px) {
@@ -206,3 +206,15 @@
 .tl-landing p, .tl-landing ul, .tl-landing ol { margin-top: 0; }
 .tl-landing .tl-code { font: inherit; font-size: 1.8rem; letter-spacing: 0.4em; text-align: center; padding: 0.7rem; border: 1.5px solid var(--tl-line); border-radius: 14px; background: #fff; color: var(--tl-ink); width: 100%; }
 .tl-landing .tl-code:focus { outline: none; border-color: var(--tl-orange); box-shadow: 0 0 0 3px rgba(232, 116, 59, 0.18); }
+
+/* ---------- Etapas del proceso ---------- */
+.tl-stages { list-style: none; padding: 0; margin: 2rem 0 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; counter-reset: none; }
+.tl-stage { position: relative; background: #fff; border: 1px solid var(--tl-line); border-radius: 16px; padding: 1.3rem 1.1rem 1.2rem; box-shadow: 0 6px 18px rgba(22, 50, 79, 0.06); }
+.tl-stage-num { position: absolute; top: 0.9rem; right: 1rem; font-family: Oswald, sans-serif; font-size: 1.6rem; color: var(--tl-peach); line-height: 1; }
+.tl-stage-icon { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: rgba(232, 116, 59, 0.12); color: var(--tl-orange); margin-bottom: 0.8rem; }
+.tl-stage h3 { margin: 0 0 0.4rem; font-size: 1rem; color: var(--tl-navy); }
+.tl-stage p { margin: 0; font-size: 0.86rem; color: var(--tl-muted); line-height: 1.45; }
+.tl-legal-note { margin-top: 1.6rem; text-align: center; font-size: 0.8rem; color: var(--tl-muted); }
+@media (max-width: 1000px) { .tl-stages { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .tl-stages { grid-template-columns: 1fr; } }
+@media (min-width: 960px) { .tl-trust { grid-template-columns: repeat(4, 1fr); } }

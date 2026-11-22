@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
             const { count: mine } = await admin.from('tenants').select('id', { count: 'exact', head: true })
                 .eq('is_sandbox', true).eq('demo_ip', ip).gte('created_at', new Date(Date.now() - 3600_000).toISOString());
             if ((mine || 0) >= MAX_PER_IP_HOUR) return json({ error: 'Abriste varias demos en la última hora. Intenta más tarde.' }, 429);
-            const k = [1, 2, 3].includes(Number(body?.campaign)) ? Number(body.campaign) : 2;
+            const k = [1, 2, 3, 4].includes(Number(body?.campaign)) ? Number(body.campaign) : 2;
             const { data: tenantId, error } = await admin.rpc('fn_demo_sandbox_create', { p_k: k, p_ip: ip });
             if (error || !tenantId) return json({ error: 'No se pudo crear la demo' }, 500);
             const s = await sessionFor(admin, tenantId as string, role);

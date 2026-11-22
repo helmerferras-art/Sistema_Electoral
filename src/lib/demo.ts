@@ -7,8 +7,9 @@ export const FREE_LEGEND = 'Versión de demostración gratuita. No constituye ap
 
 export const DEMO_CAMPAIGNS = [
     { k: 1, title: 'Gubernatura', place: 'Chiapas', blurb: 'Estructura estatal completa: 7 perfiles, cientos de simpatizantes, secciones y casillas.' },
-    { k: 2, title: 'Presidencia municipal', place: 'Tuxtla Gutiérrez', blurb: 'La campaña típica de ciudad: brigadas, recorridos casa por casa y Día D.' },
-    { k: 3, title: 'Aspirante', place: 'San Cristóbal', blurb: 'Precampaña con encuesta interna: medir conocimiento y armar equipo desde cero.' },
+    { k: 2, title: 'Presidencia municipal', place: 'Tuxtla Gutiérrez', blurb: 'Campaña de ciudad: estructura, recorridos casa por casa y jornada electoral.' },
+    { k: 3, title: 'Aspirante', place: 'San Cristóbal', blurb: 'Darse a conocer: medir el reconocimiento con sondeos propios y organizar al equipo desde cero.' },
+    { k: 4, title: 'Proceso interno', place: 'Coordinación distrital · Tuxtla', blurb: 'Rumbo a la encuesta de definición: termómetro con las 8 variables, rivales internos y mapa de reconocimiento.' },
 ] as const;
 
 export const DEMO_ROLES = [
