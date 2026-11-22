@@ -119,7 +119,7 @@ export const AIAdvisorModule = ({ tenantId, municipality }: { tenantId: string, 
                         {/* Listado de Tareas Asignadas */}
                         <div className="flex-col gap-2">
                             <h4 style={{ margin: 0, fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Tareas y Objetivos Asignados</h4>
-                            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+                            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
                                 {insight.suggested_tasks.map((task, tIdx) => (
                                     <div key={tIdx} className="tactile-card" style={{
                                         backgroundColor: (task as any).completed ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.02)',

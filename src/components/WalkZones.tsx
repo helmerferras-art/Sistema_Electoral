@@ -207,7 +207,7 @@ export const WalkZones = () => {
                     <div key={z.id} style={{ background: active === z.id ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.04)', border: active === z.id ? '1px solid var(--tertiary)' : '1px solid transparent', borderRadius: 8, padding: '0.7rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
                             <div>
-                                <div style={{ fontWeight: 700 }}>{z.name} · Secc. {z.section_id}</div>
+                                <div style={{ fontWeight: 700 }}>{z.name.startsWith('Secc.') ? z.name : `${z.name} · Secc. ${z.section_id}`}</div>
                                 <div style={{ fontSize: '0.78rem', color: '#94A3B8' }}>
                                     {assignee ? `${assignee} · ` : ''}{z.due_date ? `Para el ${new Date(z.due_date + 'T12:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}` : 'Sin fecha'}
                                 </div>

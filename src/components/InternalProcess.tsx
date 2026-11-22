@@ -218,7 +218,7 @@ export const InternalProcess = () => {
                                                         <span style={{ color: '#94A3B8' }}>{v.weight > 0 ? `vale ${fmtPts(v.weight)} pts` : 'filtro (no suma puntos)'}</span>
                                                     </div>
                                                     {v.results.map(r => (
-                                                        <div key={r.pid} style={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 38%) 1fr 48px', alignItems: 'center', gap: 6, fontSize: '0.75rem' }}>
+                                                        <div key={r.pid} style={{ display: 'grid', gridTemplateColumns: 'minmax(min(100%, 90px), 38%) 1fr 48px', alignItems: 'center', gap: 6, fontSize: '0.75rem' }}>
                                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: r.is_self ? 'var(--tertiary)' : '#cbd5e1' }}>{r.name}</span>
                                                             <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3 }}>
                                                                 <div style={{ width: `${(r.pct / max) * 100}%`, height: '100%', borderRadius: 3, background: r.points > 0 ? '#10B981' : r.is_self ? 'var(--tertiary)' : '#475569' }} />

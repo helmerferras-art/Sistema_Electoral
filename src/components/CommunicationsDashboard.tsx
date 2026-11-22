@@ -86,7 +86,7 @@ export const CommunicationsDashboard = () => {
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(300px, 1fr) minmax(300px, 1fr)', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(min(100%, 300px), 1fr) minmax(min(100%, 300px), 1fr)', gap: '1.5rem' }}>
                 {/* Panel Redactor */}
                 <div className="tactile-card" style={{ border: '1px solid var(--secondary)' }}>
                     <h2 style={{ fontFamily: 'Oswald', margin: '0 0 1rem 0', color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

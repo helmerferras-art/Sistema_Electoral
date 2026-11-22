@@ -60,7 +60,7 @@ export const SectionBrief = () => {
                     {running ? 'Analizando...' : brief ? 'Actualizar' : 'Generar'}
                 </button>
             </div>
-            {!available && <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>La IA no está configurada. El administrador del sistema la activa desde Modo Dios.</div>}
+            {!available && <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>La inteligencia artificial aún no está activada para este proyecto. Solicítala a soporte de Tlatoani.</div>}
             {error && <div style={{ fontSize: '0.85rem', color: 'var(--primary)' }}>{error}</div>}
             {!brief && available && !running && <div style={{ fontSize: '0.85rem', color: '#94A3B8' }}>Reúne las respuestas del guion, los reportes ciudadanos, las puertas tocadas y los resultados históricos de cada sección.</div>}
 

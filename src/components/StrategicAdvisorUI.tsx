@@ -170,7 +170,7 @@ export const StrategicAdvisorUI: React.FC<StrategicAdvisorUIProps> = ({ tenantId
             </div>
 
             {strategy ? (
-                <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1.5rem' }}>
 
                     {/* Estrategias Generales */}
                     <div className="flex-col gap-4" style={{ gridColumn: '1 / -1' }}>
@@ -192,7 +192,7 @@ export const StrategicAdvisorUI: React.FC<StrategicAdvisorUIProps> = ({ tenantId
                         <h3 style={{ margin: 0, fontSize: '1rem', color: '#10B981', borderBottom: '1px solid rgba(16,185,129,0.2)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <Target size={18} /> PLAN DE ACCIÓN RECOMENDADO
                         </h3>
-                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
                             {strategy.suggested_tasks.map((task: any, i: number) => (
                                 <div key={i} className="tactile-card mini flex-col gap-2" style={{ background: 'rgba(16,185,129,0.05)' }}>
                                     <div className="flex-row" style={{ justifyContent: 'space-between' }}>

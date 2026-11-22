@@ -100,7 +100,7 @@ export const CandidateLanding = () => {
             </div>
 
             {/* QUICK ACTIONS */}
-            <div style={{ padding: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ padding: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.5rem', maxWidth: '1200px', margin: '0 auto' }}>
 
                 <div className="tactile-card" style={{ border: '1px solid rgba(0, 212, 255, 0.2)', cursor: 'pointer' }} onClick={() => navigate(`/reportar?t=${tenant.id}`)}>
                     <div style={{ color: 'var(--tertiary)', marginBottom: '1rem' }}><Map size={32} /></div>
@@ -126,7 +126,7 @@ export const CandidateLanding = () => {
             <div style={{ padding: '4rem 2rem', background: 'rgba(255,255,255,0.02)', marginTop: '2rem' }}>
                 <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
                     <h2 style={{ fontFamily: 'Oswald', marginBottom: '3rem' }}>IMPACTO SOCIAL EN {tenant.geographic_scope.toUpperCase()}</h2>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '2rem' }}>
                         <div>
                             <div style={{ fontSize: '2.5rem', fontFamily: 'Oswald', color: 'var(--primary)' }}>{stats.supports}</div>
                             <div style={{ color: '#64748B', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Aliados Sumados</div>

@@ -268,7 +268,7 @@ export const CandidateDashboard = () => {
 
             {/* Navigation Tabs */}
             {/* Todas las opciones a la vista (antes había que deslizar de lado para descubrirlas) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 90px), 1fr))', gap: '0.4rem', padding: '0 1rem', paddingBottom: '0.5rem' }}>
                 <TabButton active={activeTab === 'pulso'} onClick={() => setActiveTab('pulso')} icon={<Activity size={18} />} label="Resumen" />
                 <TabButton active={activeTab === 'monitoreo'} onClick={() => setActiveTab('monitoreo')} icon={<Globe size={18} />} label="Redes" />
                 <TabButton active={activeTab === 'activismo'} onClick={() => setActiveTab('activismo')} icon={<Users size={18} />} label="Equipo" />
@@ -335,7 +335,7 @@ const AspirantPulse = ({ stats, recognition, historicalComparison }: { stats: an
     );
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem' }}>
+            <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))', gap: '1rem' }}>
                 {card('RECONOCIMIENTO', recognition !== null ? `${recognition}%` : '—', 'Te conocen (termómetro)', 'var(--tertiary)')}
                 {card('PERSONAS QUE SE SUMAN', (stats.convencidos || 0).toLocaleString(), 'Registradas por el equipo', '#10B981')}
                 {card('COBERTURA SECCIONAL', `${(stats.cobertura || 0).toFixed(1)}%`, `${stats.seccionesConSimpatizantes}/${stats.totalSecciones} secciones`, 'var(--secondary)')}
@@ -364,7 +364,7 @@ const AspirantPulse = ({ stats, recognition, historicalComparison }: { stats: an
 const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats: any, historicalComparison: any[] }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* Tactical Metric Cards */}
-        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '1rem' }}>
             <div className="tactile-card flex-col flex-center glow-tertiary" style={{ borderLeft: '4px solid var(--tertiary)' }}>
                 <p style={{ margin: 0, fontSize: '0.7rem', color: '#888' }}>META ELECTORAL</p>
                 <p style={{ margin: 0, fontSize: '1.8rem', fontFamily: 'Oswald', color: 'var(--tertiary)' }}>{stats.meta.toLocaleString()}</p>
@@ -434,7 +434,7 @@ const PulsoModule = ({ data, stats, historicalComparison }: { data: any[], stats
 
 const MonitoreoModule = ({ sentimentData }: { sentimentData: any[] }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
             <DashboardCard title="Sentimiento de Redes (Real)" icon={<MessageSquare />} glowColor="var(--secondary)">
 
                 <div style={{ height: '250px', width: '100%', minHeight: '250px' }}>
@@ -472,7 +472,7 @@ const MonitoreoModule = ({ sentimentData }: { sentimentData: any[] }) => (
 
 const ActivismoModule = ({ demoData, stats }: { demoData: any[], stats: any }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem' }}>
             <DashboardCard title="Demografía de Base Convencida" icon={<BarChart2 />} glowColor="var(--tertiary)">
 
                 <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>

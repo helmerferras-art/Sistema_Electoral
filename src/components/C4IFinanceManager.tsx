@@ -158,7 +158,7 @@ export const C4IFinanceManager = () => {
                 </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.7rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.7rem' }}>
                 <div style={kpi}>
                     <div style={kpiLbl}>Gasto ejercido</div>
                     <div style={kpiVal}>{money(comp.egresos)}</div>

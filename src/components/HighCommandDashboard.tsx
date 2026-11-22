@@ -1,3 +1,4 @@
+import { stageRoleLabel, useAspirantStage } from '../lib/stage';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
@@ -28,6 +29,9 @@ interface MetricTotals {
 
 export const HighCommandDashboard = () => {
     const { user } = useAuth();
+    // Etapa de aspirante: sin lenguaje de campaña ni Día D
+    const aspirant = useAspirantStage(user?.tenant_id);
+    const ROLE_NAMES: Record<string, string> = { superadmin: 'Administración', candidato: 'Candidato(a)', coordinador_campana: 'Coordinación de campaña', coordinador_territorial: 'Coordinación territorial' };
     const [activeTab, setActiveTab] = useState<'pulso' | 'monitoreo' | 'activismo' | 'recursos' | 'futuro' | 'gestiones' | 'alianzas'>('pulso');
 
     // Data for Activismo / Pulso
@@ -439,9 +443,9 @@ export const HighCommandDashboard = () => {
                         </div>
                         <div>
                             <h1 style={{ margin: 0, fontSize: '1.8rem', color: 'white', textShadow: diaDActive ? '0 0 10px #EF4444' : 'none' }}>
-                                {diaDActive ? 'DÍA D EN CURSO' : 'TABLERO DE CAMPAÑA'}
+                                {diaDActive ? 'DÍA D EN CURSO' : aspirant ? 'TABLERO DEL EQUIPO' : 'TABLERO DE CAMPAÑA'}
                             </h1>
-                            <p className="tactical-font" style={{ margin: 0, color: diaDActive ? '#EF4444' : 'var(--tertiary)', fontSize: '0.8rem' }}>ACCESO: {user?.role}</p>
+                            <p className="tactical-font" style={{ margin: 0, color: diaDActive ? '#EF4444' : 'var(--tertiary)', fontSize: '0.8rem' }}>{stageRoleLabel(user?.role || '', ROLE_NAMES[user?.role || ''] || user?.role || '', aspirant)}</p>
                         </div>
 
                     </div>
@@ -482,7 +486,7 @@ export const HighCommandDashboard = () => {
             </header>
 
             {/* MASTER SWITCH: BOTÓN DE PÁNICO DÍA D */}
-            {['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '') && (
+            {['superadmin', 'candidato', 'coordinador_campana'].includes(user?.role || '') && !aspirant && (
                 <button
                     onClick={handleToggleDiaD}
                     disabled={isTogglingDiaD}
@@ -550,7 +554,7 @@ export const HighCommandDashboard = () => {
                                     </p>
                                 </div>
                                 <div style={{ background: 'rgba(255, 90, 54, 0.03)', padding: '1rem', borderRadius: '12px', border: '1px solid rgba(255, 90, 54, 0.1)' }}>
-                                    <p className="tactical-font" style={{ fontSize: '0.6rem', color: '#94A3B8', margin: 0 }}>BRECHA HISTÓRICA</p>
+                                    <p className="tactical-font" style={{ fontSize: '0.6rem', color: '#94A3B8', margin: 0 }}>{aspirant ? 'MARGEN EN 2024 (DIAGNÓSTICO)' : 'BRECHA HISTÓRICA'}</p>
                                     <p style={{ fontSize: '1.4rem', margin: 0, fontFamily: 'Oswald', color: 'var(--secondary)' }}>
                                         {metrics.historicalContext ? (metrics.historicalContext.winner_votes - metrics.historicalContext.second_votes).toLocaleString() : '---'}
                                         <span style={{ fontSize: '0.6rem', color: '#64748B', display: 'block' }}>VOTOS DE DIFERENCIA</span>

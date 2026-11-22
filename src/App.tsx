@@ -1,3 +1,5 @@
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { isDemoMode } from './lib/supabase';
 import { stageRoleLabel, useAspirantStage } from './lib/stage';
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
@@ -89,10 +91,10 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 /** Pestañas con nombres sencillos. Cada perfil ve solo lo que usa, en el orden en que lo usa. */
-const navTabs = (role: string, diaDActive: boolean) => {
+const navTabs = (role: string, diaDActive: boolean, aspirant = false) => {
   const mando = MANDO_ROLES.includes(role);
   const T = {
-    crm: { id: 'crm', icon: <List size={22} />, label: mando ? 'Tablero' : 'Equipo' },
+    crm: { id: 'crm', icon: <List size={22} />, label: mando || ['comunicacion', 'comunicacion_digital'].includes(role) ? 'Tablero' : 'Equipo' },
     campo: { id: 'campo', icon: <Camera size={22} />, label: 'Campo' },
     profile: { id: 'profile', icon: <Users size={22} />, label: 'Registrar' },
     map: { id: 'map', icon: <MapIcon size={22} />, label: 'Mapa' },
@@ -101,7 +103,8 @@ const navTabs = (role: string, diaDActive: boolean) => {
     diad: { id: 'dia-d', icon: <ActivityIcon size={22} />, label: 'Día D' },
     admin: { id: 'admin', icon: <ShieldAlert size={22} />, label: 'Admin' },
   };
-  const diad = diaDActive || mando ? [T.diad] : [];
+  // En etapa de aspirante no hay jornada electoral que preparar
+  const diad = (diaDActive || mando) && !aspirant ? [T.diad] : [];
   if (role === 'brigadista') return [T.campo, T.profile, T.metas, T.map, ...(diaDActive ? [T.diad] : [T.material])];
   if (role === 'lider') return [T.campo, T.profile, T.crm, T.metas, T.map, ...(diaDActive ? [T.diad] : [])];
   if (role === 'coordinador_logistica') return [T.material, T.crm, T.map, ...diad];
@@ -323,6 +326,7 @@ const MainDashboard = () => {
 
       {/* Main Content Area */}
       <main className="main-content">
+        <ErrorBoundary key={activeTab}>
         <Suspense fallback={<PageLoader />}>
         {activeTab === 'profile' && <RegistroForm />}
         {activeTab === 'map' && <MapView />}
@@ -347,11 +351,12 @@ const MainDashboard = () => {
           <GoalsCascade /><EventsModule /><ReferralNetwork /><CriticalPath /></>)}
         {activeTab === 'campo' && (<><ThermoSurvey /><WalkZones /><FieldActivity /></>)}
         </Suspense>
+        </ErrorBoundary>
       </main>
 
       {/* Navegación inferior: siempre con texto, y solo lo que le sirve a cada perfil */}
       <nav className="bottom-nav" aria-label="Secciones">
-        {navTabs(user?.role || '', diaDActive).map(tab => (
+        {navTabs(user?.role || '', diaDActive, aspirantStage).map(tab => (
           <button
             key={tab.id}
             onClick={() => tab.id === 'admin' ? (window.location.href = '/superadmin') : setActiveTab(tab.id)}
@@ -409,7 +414,9 @@ function AppContent() {
   // El puente SMS vive en la PC: buscarlo cada 30 s desde un celular solo gasta batería y datos.
   useEffect(() => {
     const MANDOS = ['superadmin', 'candidato', 'coordinador_campana', 'coordinador', 'coordinador_territorial', 'coordinador_logistica'];
-    if (!user || isNativeApp() || !MANDOS.includes(user.role)) return;
+    // Solo en una computadora: el puente vive en la PC (en celular o en la demo solo genera errores de conexión)
+    const isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    if (!user || isNativeApp() || isPhone || isDemoMode() || !MANDOS.includes(user.role)) return;
     BridgeSync.startWatcher();
     return () => BridgeSync.stopWatcher();
   }, [user?.role]);
@@ -429,6 +436,7 @@ function AppContent() {
 
   return (
     <>
+      <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -470,6 +478,7 @@ function AppContent() {
         } />
       </Routes>
       </Suspense>
+      </ErrorBoundary>
       <PasswordSetModal />
     </>
   );

@@ -287,7 +287,7 @@ export const AlliancesManager = () => {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))', gap: '1.5rem' }}>
 
                 <div className="tactile-card" style={{ border: '1px solid var(--primary)', background: 'linear-gradient(135deg, rgba(255,90,54,0.05), rgba(0,0,0,0.5))' }}>
                     <h3 style={{ color: 'var(--primary)', fontFamily: 'Oswald', margin: '0 0 1rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
