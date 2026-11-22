@@ -62,6 +62,7 @@ const PageLoader = () => {
 // --- Protected Route Wrapper ---
 import { PasswordSetModal } from './components/PasswordSetModal';
 import { MotivationCard } from './components/MotivationCard';
+import { useBranding, applyBrandColor } from './lib/branding';
 import { quickPhrase } from './lib/motivation';
 import { Settings } from 'lucide-react';
 
@@ -140,6 +141,8 @@ const MainDashboard = () => {
   const plan = useMyPlan(!!user);
   // Antes de la precampaña el perfil principal se muestra como "Aspirante"
   const aspirantStage = useAspirantStage(user?.tenant_id);
+  const brand = useBranding(user?.tenant_id);
+  useEffect(() => { applyBrandColor(brand.color); return () => applyBrandColor(null); }, [brand.color]);
   // Si este celular es el puente de la campaña, sigue enviando al abrir la app
   useEffect(() => { if (user) resumeGateway(); }, [user?.id]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -231,7 +234,7 @@ const MainDashboard = () => {
         </div>
       )}
       <PlanBar plan={plan} role={user?.role} />
-      <MotivationCard role={user?.role} name={user?.name} />
+      <MotivationCard role={user?.role} name={user?.name} brand={brand} />
       <GatewayBanner />
       {/* HUD (Heads-Up Display) - Optimized for Mobile */}
       <header className="hud-header" style={{
@@ -246,17 +249,22 @@ const MainDashboard = () => {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: 'var(--header-height)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0, flex: '1 1 auto' }}>
-            <div aria-hidden="true" style={{
-              width: 42, height: 42, minWidth: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem'
-            }}>
-              {(user?.name || agentContext.name || '?').trim().charAt(0).toUpperCase()}
-            </div>
+            {brand.photo
+              ? <img src={brand.photo} alt={brand.shortName || 'Campaña'} style={{ width: 42, height: 42, minWidth: 42, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }} />
+              : <div aria-hidden="true" style={{
+                  width: 42, height: 42, minWidth: 42, borderRadius: '50%', background: 'var(--primary)', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.05rem'
+                }}>
+                  {(user?.name || agentContext.name || '?').trim().charAt(0).toUpperCase()}
+                </div>}
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Hola, {(user?.name || agentContext.name || '').split(' ')[0]}
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{stageRoleLabel(user?.role || '', ROLE_LABEL[user?.role || ''] || 'Equipo', aspirantStage)}</div>
+              <div style={{ fontSize: '0.8rem', color: '#94A3B8', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {stageRoleLabel(user?.role || '', ROLE_LABEL[user?.role || ''] || 'Equipo', aspirantStage)}
+                {brand.shortName && <> · <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Equipo {brand.shortName}</span></>}
+              </div>
             </div>
           </div>
 

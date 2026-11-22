@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { nextPhrase, type Phrase } from '../lib/motivation';
+import type { Brand } from '../lib/branding';
 
 /**
  * Frase para el equipo cada vez que se abre la app (una por apertura, no en cada cambio de pestaña).
@@ -9,7 +10,7 @@ const SESSION_KEY = 'tl_motiv_session';
 const MUTE_KEY = 'tl_motiv_mute';
 const today = () => new Date().toLocaleDateString('es-MX');
 
-export const MotivationCard = ({ role, name }: { role?: string; name?: string }) => {
+export const MotivationCard = ({ role, name, brand }: { role?: string; name?: string; brand?: Brand }) => {
     const [phrase, setPhrase] = useState<Phrase | null>(null);
 
     useEffect(() => {
@@ -30,9 +31,19 @@ export const MotivationCard = ({ role, name }: { role?: string; name?: string })
     return (
         <div className="motiv-overlay" role="dialog" aria-label="Frase del día" onClick={close}>
             <div className="motiv-card" onClick={e => e.stopPropagation()}>
+                {(brand?.photo || brand?.slogan) && (
+                    <div className="motiv-brand">
+                        {brand.photo && <img src={brand.photo} alt="" />}
+                        <div>
+                            {brand.shortName && <div className="motiv-brand-name">Equipo {brand.shortName}</div>}
+                            {brand.slogan && <div className="motiv-brand-slogan">{brand.slogan}</div>}
+                        </div>
+                    </div>
+                )}
                 <div className="motiv-kicker">{first ? `${first}, la frase de hoy` : 'La frase de hoy'}</div>
                 <blockquote className="motiv-text">“{phrase.text}”</blockquote>
                 <div className="motiv-source">{phrase.idea ? 'Idea de ' : '— '}{phrase.source}</div>
+                {brand?.shortName && role !== 'candidato' && <div className="motiv-thanks">Gracias por tu esfuerzo hoy. — {brand.shortName}</div>}
                 <div className="motiv-actions">
                     <button className="motiv-go" onClick={close}>¡A darle!</button>
                     <button className="motiv-link" onClick={() => setPhrase(nextPhrase(role))}>Otra frase</button>

@@ -1,4 +1,5 @@
 import { stageRoleLabel, useAspirantStage } from '../lib/stage';
+import { BrandingCard } from './BrandingEditor';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
@@ -418,6 +419,8 @@ export const HighCommandDashboard = () => {
         <div className={`flex-col gap-4 ${diaDActive ? 'dia-d-neon-bg' : ''}`} style={{ animation: 'fadeIn 0.5s ease-out', position: 'relative' }}>
             {diaDActive && <div className="red-alert-overlay"></div>}
             <div className="scanline"></div>
+
+            <BrandingCard />
 
             {/* C4I HEADER */}
             <header className="tactile-card" style={{

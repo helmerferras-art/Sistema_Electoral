@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BrandingCard } from './BrandingEditor';
 import { C4IPollManager } from './C4IPollManager';
 import { SectionBrief } from './SectionBrief';
 import { MessageSquareText } from 'lucide-react';
@@ -265,6 +266,8 @@ export const CandidateDashboard = () => {
                 </h1>
                 <p style={{ color: '#888', margin: '0.25rem 0 0 0', fontSize: '0.85rem' }}>{tenantInfo?.geographic_scope || ''}</p>
             </div>
+
+            <div style={{ padding: '0 1rem' }}><BrandingCard /></div>
 
             {/* Navigation Tabs */}
             {/* Todas las opciones a la vista (antes había que deslizar de lado para descubrirlas) */}
