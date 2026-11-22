@@ -47,6 +47,7 @@ async function callProvider(cfg: Cfg, m: Msg): Promise<string> {
             : m.text;
         const payload: Record<string, unknown> = {
             model, temperature: m.image ? 0 : 0.6,
+            max_tokens: m.image ? 1500 : 3000, // sin tope, OpenRouter reserva el máximo del modelo y falla con poco saldo
             messages: [{ role: 'system', content: m.system }, { role: 'user', content }],
         };
         if (m.json && p !== 'openrouter') payload.response_format = { type: 'json_object' };
@@ -66,7 +67,7 @@ async function callProvider(cfg: Cfg, m: Msg): Promise<string> {
         }
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${cfg.api_key}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: m.image ? 0 : 0.6, ...(m.json ? { responseMimeType: 'application/json' } : {}) } }),
+            body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: m.image ? 0 : 0.6, maxOutputTokens: m.image ? 4000 : 8000, ...(m.json ? { responseMimeType: 'application/json' } : {}) } }),
         });
         if (!r.ok) throw new Error(`gemini HTTP ${r.status}: ${(await r.text()).slice(0, 200)}`);
         const d = await r.json();

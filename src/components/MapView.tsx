@@ -1,5 +1,6 @@
 import { BASE_TILE_URL, BASE_TILE_ATTRIBUTION, BASE_TILE_CLASS } from '../lib/mapTiles';
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAuth } from '../lib/AuthContext';
@@ -184,6 +185,14 @@ export const MapView = () => {
     const [activityPoints, setActivityPoints] = useState<[number, number, number][]>([]);
     const [activityCount, setActivityCount] = useState(0);
     const [selectedRegion, setSelectedRegion] = useState<any>(null);
+    // En celular el detalle de la sección ocupa toda la pantalla (se leía tapado por la barra inferior)
+    const [isPhone, setIsPhone] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches);
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 767px)');
+        const on = () => setIsPhone(mq.matches);
+        mq.addEventListener('change', on);
+        return () => mq.removeEventListener('change', on);
+    }, []);
 
     const [seccionGeoJson, setSeccionGeoJson] = useState<any>(null);
     const [dataUpdateTick, setDataUpdateTick] = useState(0);
@@ -444,6 +453,26 @@ export const MapView = () => {
     }, [pointsScope, viewMode]);
 
     const [sidebarTab, setSidebarTab] = useState<'info' | 'coalition' | 'list'>('info');
+    const closeDetail = () => { setSelectedRegion(null); setSidebarTab('info'); };
+    // Botón "atrás" de Android: cierra el detalle y regresa al mapa en vez de salir de la app
+    const detailOpen = !!selectedRegion;
+    useEffect(() => {
+        if (!detailOpen || !isPhone) return;
+        window.history.pushState({ tlDetail: true }, '');
+        const onPop = () => { setSelectedRegion(null); setSidebarTab('info'); };
+        window.addEventListener('popstate', onPop);
+        return () => {
+            window.removeEventListener('popstate', onPop);
+            if (window.history.state?.tlDetail) window.history.back();
+        };
+    }, [detailOpen, isPhone]);
+    useEffect(() => {
+        if (!detailOpen || !isPhone) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = prev; };
+    }, [detailOpen, isPhone]);
+    const wrapDetail = (node: React.ReactNode) => (isPhone ? createPortal(node, document.body) : node);
 
     // Handle tactical focus from top-bar dropdown
     useEffect(() => {
@@ -1558,8 +1587,8 @@ export const MapView = () => {
                     )}
 
                     {/* Tactical Slide-Out Dashboard */}
-                    {selectedRegion && (
-                        <div className="radar-detail-panel" style={{
+                    {selectedRegion && wrapDetail(
+                        <div className={`radar-detail-panel${isPhone ? ' is-phone' : ''}`} role="dialog" aria-label={`Detalle ${selectedRegion.name}`} style={{
                             position: 'absolute',
                             top: 0,
                             right: 0,
@@ -1578,10 +1607,7 @@ export const MapView = () => {
                                     <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em' }}>DETALLE · {String(selectedRegion.type).toUpperCase()}</div>
                                     <h3 style={{ margin: 0, fontFamily: 'Oswald', color: 'var(--tertiary)', fontSize: '1.4rem' }}>{selectedRegion.name}</h3>
                                 </div>
-                                <button onClick={() => {
-                                    setSelectedRegion(null);
-                                    setSidebarTab('info');
-                                }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.8rem', cursor: 'pointer', opacity: 0.7 }}>&times;</button>
+                                <button onClick={closeDetail} aria-label="Cerrar detalle" className="rdp-close" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.8rem', cursor: 'pointer', opacity: 0.7 }}>&times;</button>
                             </div>
 
                             {/* Tactical Tabs */}
@@ -1616,10 +1642,10 @@ export const MapView = () => {
                                 })}
                             </div>
 
-                            <div style={{ padding: '1.2rem', flex: 1, overflowY: 'auto' }}>
+                            <div className="rdp-body" style={{ padding: '1.2rem', flex: 1, overflowY: 'auto' }}>
                                 {sidebarTab === 'info' && (
                                     <>
-                                        <div style={{ backgroundColor: 'rgba(255, 51, 102, 0.1)', border: '1px solid #FF3366', borderRadius: '8px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+                                        <div className="rdp-force" style={{ backgroundColor: 'rgba(255, 51, 102, 0.1)', border: '1px solid #FF3366', borderRadius: '8px', padding: '1rem', textAlign: 'center', marginBottom: '1.5rem' }}>
                                             <div style={{ fontSize: '0.9rem', color: '#ff99b3', fontWeight: 'bold' }}>FUERZA DESPLEGADA</div>
                                             <div style={{ fontSize: '3rem', fontWeight: 'bold', fontFamily: 'Oswald', color: '#FF3366', textShadow: '0 0 15px rgba(255, 51, 102, 0.5)', lineHeight: 1 }}>
                                                 {selectedRegion.count}
@@ -1651,7 +1677,7 @@ export const MapView = () => {
                                             );
                                         })()}
 
-                                        <div className="responsive-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                                        <div className="responsive-grid rdp-stats" style={{ gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
                                             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.8rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                                                 <div style={{ fontSize: '0.65rem', color: '#888' }}>PADRÓN TOTAL</div>
                                                 <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{(selectedRegion.properties?._padronTotal ?? selectedRegion.properties?.padron_total ?? 0).toLocaleString()}</div>
@@ -1747,6 +1773,9 @@ export const MapView = () => {
                                     </>
                                 )}
                             </div>
+                            {isPhone && (
+                                <button onClick={closeDetail} className="rdp-back">← Volver al mapa</button>
+                            )}
                         </div>
                     )}
                 </div>
