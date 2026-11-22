@@ -12,6 +12,9 @@ export const DEMO_CAMPAIGNS = [
     { k: 4, title: 'Proceso interno', place: 'Coordinación distrital · Tuxtla', blurb: 'Rumbo a la encuesta de definición: termómetro con las 8 variables, rivales internos y mapa de reconocimiento.' },
 ] as const;
 
+/** Proyectos ficticios en etapa de aspirante: el perfil principal se llama "Aspirante", no "Candidato". */
+export const ASPIRANT_CAMPAIGNS: number[] = [3, 4];
+
 export const DEMO_ROLES = [
     { role: 'candidato', label: 'Candidato(a)', what: 'Tablero de mando, metas, IA y finanzas.' },
     { role: 'coordinador_campana', label: 'Coordinación de campaña', what: 'Equipo, guiones, eventos, casillas y cotejo.' },

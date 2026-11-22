@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { FlaskConical, LogOut, Sparkles } from 'lucide-react';
 import { DEMO_ROLES, FREE_LEGEND, endDemo, switchDemoRole, useDemoHeartbeat, type MyPlan } from '../lib/demo';
+import { stageRoleLabel, useAspirantStage } from '../lib/stage';
+import { useAuth } from '../lib/AuthContext';
 
 /**
  * Franja superior según el plan de la campaña:
@@ -11,6 +13,8 @@ export const PlanBar = ({ plan, role }: { plan: MyPlan | null; role?: string }) 
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
     useDemoHeartbeat(!!plan?.sandbox);
+    const { user } = useAuth();
+    const aspirant = useAspirantStage(user?.tenant_id);
     if (!plan) return null;
 
     const bar: React.CSSProperties = {
@@ -41,7 +45,7 @@ export const PlanBar = ({ plan, role }: { plan: MyPlan | null; role?: string }) 
                         }}
                         style={{ background: '#0F1218', color: '#fff', border: '1px solid #E8743B', borderRadius: 8, padding: '0.25rem 0.3rem', fontSize: '0.78rem', maxWidth: 140 }}
                     >
-                        {DEMO_ROLES.map(r => <option key={r.role} value={r.role}>{r.label}</option>)}
+                        {DEMO_ROLES.map(r => <option key={r.role} value={r.role}>{stageRoleLabel(r.role, r.label, aspirant)}</option>)}
                     </select>
                 </label>
                 <button style={btn} disabled={busy} onClick={async () => { if (!confirm('¿Salir de la demo? Se borrará todo lo que hiciste.')) return; setBusy(true); await endDemo(); }}>

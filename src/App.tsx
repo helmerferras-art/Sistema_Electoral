@@ -1,3 +1,4 @@
+import { stageRoleLabel, useAspirantStage } from './lib/stage';
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Map as MapIcon, Users, List, Star, ShieldAlert, LogOut, Bell, X, Archive, Target, Activity as ActivityIcon, Camera, UserCog } from 'lucide-react'
@@ -123,6 +124,8 @@ const MainDashboard = () => {
   }, [user?.role]);
   const { notifications, unreadCount, markAsRead, toasts, removeToast } = useNotifications();
   const plan = useMyPlan(!!user);
+  // Antes de la precampaña el perfil principal se muestra como "Aspirante"
+  const aspirantStage = useAspirantStage(user?.tenant_id);
   // Si este celular es el puente de la campaña, sigue enviando al abrir la app
   useEffect(() => { if (user) resumeGateway(); }, [user?.id]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -238,7 +241,7 @@ const MainDashboard = () => {
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 Hola, {(user?.name || agentContext.name || '').split(' ')[0]}
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{ROLE_LABEL[user?.role || ''] || 'Equipo'}</div>
+              <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{stageRoleLabel(user?.role || '', ROLE_LABEL[user?.role || ''] || 'Equipo', aspirantStage)}</div>
             </div>
           </div>
 

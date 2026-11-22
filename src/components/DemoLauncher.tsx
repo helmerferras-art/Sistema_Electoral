@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Loader2, Play } from 'lucide-react';
-import { DEMO_CAMPAIGNS, DEMO_ROLES, FREE_LEGEND, startDemo } from '../lib/demo';
+import { ASPIRANT_CAMPAIGNS, DEMO_CAMPAIGNS, DEMO_ROLES, FREE_LEGEND, startDemo } from '../lib/demo';
+import { stageRoleLabel } from '../lib/stage';
+
+// En proyectos de aspirante el perfil principal no es "candidato" (evita actos anticipados de campaña)
+const ASPIRANT_WHAT: Record<string, string> = {
+    candidato: 'Tablero, termómetro, metas de conocimiento y equipo.',
+    coordinador_campana: 'Equipo, guiones, reuniones y seguimiento.',
+};
 import './landing.css';
 
 /** Elegir campaña ficticia y perfil, y entrar a una demo privada sin contraseña. */
@@ -10,6 +17,7 @@ export const DemoLauncher = ({ compact = false }: { compact?: boolean }) => {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
 
+    const aspirant = ASPIRANT_CAMPAIGNS.includes(campaign);
     const go = async () => {
         setBusy(true); setError('');
         try { await startDemo(campaign, role); } catch (e: any) { setError(e.message); setBusy(false); }
@@ -17,7 +25,7 @@ export const DemoLauncher = ({ compact = false }: { compact?: boolean }) => {
 
     return (
         <div className="tl-launcher">
-            <div className="tl-step">1 · Elige una campaña ficticia</div>
+            <div className="tl-step">1 · Elige un proyecto ficticio</div>
             <div className="tl-choice-grid">
                 {DEMO_CAMPAIGNS.map(c => (
                     <button key={c.k} type="button" className={`tl-choice ${campaign === c.k ? 'on' : ''}`} onClick={() => setCampaign(c.k)} aria-pressed={campaign === c.k}>
@@ -31,8 +39,8 @@ export const DemoLauncher = ({ compact = false }: { compact?: boolean }) => {
             <div className="tl-role-grid">
                 {DEMO_ROLES.map(r => (
                     <button key={r.role} type="button" className={`tl-role ${role === r.role ? 'on' : ''}`} onClick={() => setRole(r.role)} aria-pressed={role === r.role}>
-                        <strong>{r.label}</strong>
-                        {!compact && <span>{r.what}</span>}
+                        <strong>{stageRoleLabel(r.role, r.label, aspirant)}</strong>
+                        {!compact && <span>{(aspirant && ASPIRANT_WHAT[r.role]) || r.what}</span>}
                     </button>
                 ))}
             </div>

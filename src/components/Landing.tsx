@@ -107,7 +107,7 @@ export const Landing = () => {
                 <div className="tl-container">
                     <p className="tl-band-title tl-reveal">Un perfil para cada persona del equipo</p>
                     <div className="tl-role-strip tl-reveal">
-                        {DEMO_ROLES.map(r => <span key={r.role}>{r.label}</span>)}
+                        {DEMO_ROLES.map(r => <span key={r.role}>{r.role === 'candidato' ? 'Aspirante o candidato(a)' : r.label}</span>)}
                     </div>
                 </div>
             </section>
