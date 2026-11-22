@@ -937,3 +937,45 @@ h4,
 .exec-list li { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: .6rem 0; border-bottom: 1px solid #172031; }
 .exec-list li:last-child { border-bottom: none; }
 @media (max-width: 1100px) { .exec-grid { grid-template-columns: 1fr; } .exec-panel.span-2 { grid-column: auto; } }
+
+/* Panel de administración: control de campañas, planes, demo y bitácora */
+.exec-panel.span-3 { grid-column: 1 / -1; }
+.exec-search { display: flex; align-items: center; gap: .4rem; background: var(--ex-panel-2, #0f1520); border: 1px solid var(--ex-line-2, #273244); border-radius: 8px; padding: 0 .6rem; color: #64748b; }
+.exec-search input { background: none !important; border: none !important; outline: none; color: #e5e7eb; padding: .45rem 0; font-size: .84rem; width: 180px; box-shadow: none !important; }
+.exec-btn.primary-sm { background: #2563eb; border-color: #2563eb; color: #fff; }
+.exec-btn.primary-sm:hover { background: #1d4ed8; }
+.exec-btn:disabled { opacity: .5; cursor: not-allowed; }
+.exec-chip.chip-ok { background: rgba(34,197,94,.12); color: #4ade80; }
+.exec-chip.act-alta { background: rgba(34,197,94,.12); color: #4ade80; }
+.exec-chip.act-baja { background: rgba(239,68,68,.12); color: #f87171; }
+.exec-chip.act-cambio { background: rgba(59,130,246,.12); color: #93c5fd; }
+.exec-chip.act-entrar_como, .exec-chip.act-respaldo { background: rgba(245,158,11,.12); color: #fbbf24; }
+.exec-steps { margin: 1rem 0 1.2rem; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .8rem; font-size: .88rem; line-height: 1.5; color: #cbd5e1; }
+.exec-steps a { margin-left: .3rem; }
+.exec-steps code { background: #1e293b; padding: .1rem .35rem; border-radius: 4px; color: #e2e8f0; }
+.tc-input { padding: .35rem .5rem !important; font-size: .82rem !important; min-height: 0 !important; height: auto; }
+.tc-num { width: 76px; text-align: right; }
+.tc-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
+.tc-avatar-empty { background: #1e293b; color: #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem; }
+.tc-off td { opacity: .65; }
+.tc-switch { display: inline-flex; align-items: center; gap: .45rem; cursor: pointer; font-size: .8rem; color: #cbd5e1; }
+.tc-switch input { display: none; }
+.tc-switch span { width: 34px; height: 18px; border-radius: 999px; background: #374151; position: relative; transition: background .15s; flex: none; }
+.tc-switch span::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.tc-switch input:checked + span { background: #22c55e; }
+.tc-switch input:checked + span::after { transform: translateX(16px); }
+.tc-switch input:disabled + span { opacity: .5; }
+.tc-switch em { font-style: normal; }
+.plans-table td:first-child { color: #e2e8f0; }
+.plans-group td { background: #0f1520; color: #94a3b8 !important; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding-top: .8rem !important; }
+.plans-changed { border-color: #f59e0b !important; background: rgba(245,158,11,.08) !important; }
+.audit-detail td { background: #0f1520; font-size: .8rem; color: #cbd5e1; line-height: 1.6; }
+.demo-brand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: .9rem; }
+.demo-brand-card { border: 1px solid var(--ex-line, #1f2937); border-top: 3px solid var(--bp); border-radius: 10px; padding: .9rem; display: flex; flex-direction: column; gap: .55rem; background: #0f1520; }
+.demo-brand-head { display: flex; gap: .6rem; align-items: center; }
+.demo-brand-head img, .demo-brand-ph { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--bp); flex: none; }
+.demo-portraits { display: flex; gap: .35rem; }
+.demo-portraits button { padding: 0; border: 2px solid transparent; border-radius: 50%; background: none; cursor: pointer; width: 34px; height: 34px; overflow: hidden; }
+.demo-portraits button.on { border-color: #fff; }
+.demo-portraits img { width: 100%; height: 100%; object-fit: cover; }
+.brand-swatch.sm { width: 22px; height: 22px; }

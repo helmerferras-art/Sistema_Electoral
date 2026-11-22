@@ -152,13 +152,14 @@ const MainDashboard = () => {
   const [hasOnboarded, setHasOnboarded] = useState(false)
   const [agentContext, setAgentContext] = useState({ name: '', xp: 0, rank: 'Explorador', levelProgression: 0 })
   const [diaDActive, setDiaDActive] = useState(false)
+  const [suspended, setSuspended] = useState(false)
 
   // Fetch Dia D Status
   useEffect(() => {
     if (!user?.tenant_id) return;
     const fetchDiaDStatus = async () => {
-      const { data } = await supabase.from('tenants').select('dia_d_active').eq('id', user.tenant_id).single();
-      if (data) setDiaDActive(!!data.dia_d_active);
+      const { data } = await supabase.from('tenants').select('dia_d_active, is_active').eq('id', user.tenant_id).single();
+      if (data) { setDiaDActive(!!data.dia_d_active); setSuspended(data.is_active === false); }
     };
     fetchDiaDStatus();
 
@@ -169,6 +170,7 @@ const MainDashboard = () => {
           if (payload.new.hasOwnProperty('dia_d_active')) {
             setDiaDActive(!!payload.new.dia_d_active);
           }
+          if (payload.new.hasOwnProperty('is_active')) setSuspended(payload.new.is_active === false);
         }).subscribe();
 
     return () => { supabase.removeChannel(channel); };
@@ -213,6 +215,21 @@ const MainDashboard = () => {
 
   if (!hasOnboarded) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />
+  }
+
+  // Campaña suspendida por el administrador del sistema: el equipo ve un aviso (el administrador puede seguir entrando)
+  if (suspended && user?.role !== 'superadmin' && !isImpersonating) {
+    return (
+      <div className="flex-center flex-col" style={{ minHeight: '100vh', gap: '1rem', padding: '2rem', textAlign: 'center', background: '#0b0f17', color: '#e5e7eb' }}>
+        <ShieldAlert size={48} color="#f59e0b" />
+        <h2 style={{ margin: 0, fontFamily: 'Inter, sans-serif', textTransform: 'none', letterSpacing: 0 }}>Campaña en pausa</h2>
+        <p style={{ maxWidth: 420, color: '#94a3b8', lineHeight: 1.5 }}>
+          El acceso a esta campaña está suspendido por el momento. Tus datos están a salvo.
+          Comunícate con la coordinación de tu campaña o con el soporte de Tlatoani.
+        </p>
+        <button className="squishy-btn" onClick={signOut}>Cerrar sesión</button>
+      </div>
+    );
   }
 
   return (
