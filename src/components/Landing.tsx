@@ -33,12 +33,16 @@ const Phone = ({ src, alt, className = '' }: { src: string; alt: string; classNa
     </div>
 );
 
-/** Aparición suave al hacer scroll. */
+/**
+ * Aparición suave al hacer scroll.
+ * Se marca con el atributo data-in (no con una clase): React reescribe className cada vez que la página se redibuja
+ * y borraba la marca, dejando invisibles las tarjetas y sus capturas al deslizar en el celular.
+ */
 const useReveal = () => {
     useEffect(() => {
-        const els = document.querySelectorAll('.tl-reveal');
-        if (!('IntersectionObserver' in window)) { els.forEach(e => e.classList.add('in')); return; }
-        const io = new IntersectionObserver(entries => entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }), { threshold: 0.15 });
+        const els = document.querySelectorAll<HTMLElement>('.tl-reveal');
+        if (!('IntersectionObserver' in window)) { els.forEach(e => { e.dataset.in = '1'; }); return; }
+        const io = new IntersectionObserver(entries => entries.forEach(en => { if (en.isIntersecting) { (en.target as HTMLElement).dataset.in = '1'; io.unobserve(en.target); } }), { threshold: 0.1, rootMargin: '0px 0px 10% 0px' });
         els.forEach(e => io.observe(e));
         return () => io.disconnect();
     }, []);
@@ -51,8 +55,9 @@ export const Landing = () => {
     const refs = useRef<Record<string, HTMLElement | null>>({});
     const demoEnded = new URLSearchParams(window.location.search).get('demo') === 'fin';
 
-    // Teléfono fijo en escritorio que cambia de pantalla según el módulo visible
+    // Teléfono fijo en escritorio que cambia de pantalla según el módulo visible (en celular no hace falta redibujar)
     useEffect(() => {
+        if (!window.matchMedia('(min-width: 960px)').matches) return;
         const io = new IntersectionObserver(entries => {
             entries.forEach(en => { if (en.isIntersecting) setActive((en.target as HTMLElement).dataset.key!); });
         }, { rootMargin: '-45% 0px -45% 0px' });
