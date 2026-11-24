@@ -979,3 +979,28 @@ h4,
 .demo-portraits button.on { border-color: #fff; }
 .demo-portraits img { width: 100%; height: 100%; object-fit: cover; }
 .brand-swatch.sm { width: 22px; height: 22px; }
+
+/* Licencias y cobranza */
+.lic-panel { max-width: 860px; width: 100%; max-height: 92vh; overflow-y: auto; height: auto !important; font-size: .88rem;
+  background: #111827 !important; border: 1px solid #1f2937 !important; border-radius: 14px !important; color: #e5e7eb; display: flex; flex-direction: column; gap: .8rem; }
+.lic-panel .squishy-input { background: #0f1520 !important; border: 1px solid #273244 !important; border-radius: 8px !important; color: #e5e7eb !important; box-shadow: none !important; }
+.lic-tabs { display: flex; gap: .3rem; border-bottom: 1px solid #1f2937; flex-wrap: wrap; }
+.lic-tabs button { display: inline-flex; align-items: center; gap: .4rem; background: none; border: none; color: #94a3b8; padding: .55rem .8rem; font-size: .85rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; }
+.lic-tabs button.on { color: #fff; border-bottom-color: #3b82f6; }
+.lic-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: .75rem; }
+.lic-form > label { display: flex; flex-direction: column; gap: .3rem; color: #94a3b8; font-size: .78rem; }
+.lic-full { grid-column: 1 / -1; }
+.lic-full > span { color: #94a3b8; font-size: .78rem; }
+.lic-quick { display: flex; gap: .3rem; flex-wrap: wrap; }
+.lic-quick button { background: #1a2332; border: 1px solid #273244; color: #cbd5e1; border-radius: 999px; font-size: .72rem; padding: .15rem .55rem; cursor: pointer; }
+.lic-services { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .35rem; }
+.lic-services label { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .6rem; border-radius: 999px; border: 1px solid #273244; background: #0f1520; color: #cbd5e1; font-size: .78rem; cursor: pointer; }
+.lic-services label.on { border-color: #3b82f6; background: rgba(59,130,246,.12); color: #fff; }
+.lic-services input { display: none; }
+.lic-actions { display: flex; justify-content: space-between; align-items: center; gap: .8rem; flex-wrap: wrap; }
+.lic-tone { font-size: .78rem; font-weight: 600; white-space: nowrap; color: #94a3b8; }
+.lic-tone.ok { color: #4ade80; } .lic-tone.warn { color: #fbbf24; } .lic-tone.bad { color: #f87171; }
+.exec-chip.pay-pagado { background: rgba(34,197,94,.12); color: #4ade80; }
+.exec-chip.pay-parcial { background: rgba(245,158,11,.12); color: #fbbf24; }
+.exec-chip.pay-pendiente { background: rgba(239,68,68,.12); color: #f87171; }
+.exec-chip.pay-cortesia { background: rgba(148,163,184,.15); color: #cbd5e1; }

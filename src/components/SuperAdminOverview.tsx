@@ -71,7 +71,14 @@ export const SuperAdminOverview = ({ onGo }: { onGo: (tab: string) => void }) =>
 
         const last = ((lastSms as any).data?.[0]?.processed_at || (lastSms as any).data?.[0]?.created_at) as string | undefined;
         const minsAgo = last ? Math.round((Date.now() - new Date(last).getTime()) / 60000) : null;
+        const { data: lic } = await supabase.from('tenants').select('license_end, is_active, is_demo, is_sandbox').not('license_end', 'is', null);
+        const todayIso = new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 10);
+        const in15 = new Date(Date.now() + 15 * 86400_000).toISOString().slice(0, 10);
+        const realLic = (lic || []).filter((t: any) => !t.is_demo && !t.is_sandbox);
+        const expiring = realLic.filter((t: any) => t.license_end >= todayIso && t.license_end <= in15).length;
+        const expired = realLic.filter((t: any) => t.license_end < todayIso).length;
         setHealth([
+            { label: 'Licencias', ok: expired === 0 && expiring === 0, detail: expired || expiring ? `${expiring} vencen en 15 días · ${expired} vencidas` : 'Todas vigentes' },
             { label: 'Inteligencia artificial', ok: c(aiCfg) > 0, detail: c(aiCfg) ? `${c(aiCfg)} proveedor(es) con llave activa` : 'Sin llave configurada' },
             { label: 'Puente de SMS', ok: c(smsPend) < 20, detail: minsAgo === null ? 'Sin envíos registrados' : `Último envío hace ${minsAgo < 60 ? `${minsAgo} min` : `${Math.round(minsAgo / 60)} h`} · ${c(smsPend)} en cola` },
             { label: 'Alertas del sistema', ok: c(alertsQ) === 0, detail: c(alertsQ) ? `${c(alertsQ)} sin leer` : 'Sin pendientes' },

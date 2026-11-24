@@ -4,11 +4,12 @@ import { DemoAdmin } from './DemoAdmin';
 import { TenantControl } from './TenantControl';
 import { PlansEditor } from './PlansEditor';
 import { AuditLog } from './AuditLog';
+import { LicensesAdmin } from './LicensesAdmin';
 import React, { useState, useEffect } from 'react';
 import { USER_COLUMNS } from '../lib/userColumns';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { LayoutDashboard, Building2, Briefcase, UserCog, MessagesSquare, FlaskConical, SlidersHorizontal, ScrollText } from 'lucide-react';
+import { LayoutDashboard, Building2, Briefcase, UserCog, MessagesSquare, FlaskConical, SlidersHorizontal, ScrollText, BadgeCheck } from 'lucide-react';
 import { Layers, Shield, PlusCircle, Upload, LogOut, Trash2, Activity, Settings, BarChart2, Search, FileText, Users, PieChart, ChevronDown, Network, Brain, Cpu, Key, List, AlertCircle } from 'lucide-react';
 import { AdminManager } from './AdminManager';
 import { SecuritySettings } from './SecuritySettings';
@@ -22,6 +23,7 @@ const SA_NAV: { title: string; items: { id: string; label: string; icon: any }[]
     { title: 'Clientes', items: [
         { id: 'gestion', label: 'Campañas', icon: Building2 },
         { id: 'monitoreo', label: 'Control de campañas', icon: Activity },
+        { id: 'licencias', label: 'Licencias y cobranza', icon: BadgeCheck },
         { id: 'usuarios', label: 'Administradores', icon: UserCog },
         { id: 'ventas', label: 'Ventas', icon: Briefcase },
         { id: 'demo', label: 'Demo', icon: FlaskConical },
@@ -42,6 +44,7 @@ const SA_META: Record<string, { title: string; desc: string }> = {
     resumen: { title: 'Resumen ejecutivo', desc: 'Cómo va la plataforma completa: campañas, equipos, actividad y servicios.' },
     gestion: { title: 'Campañas', desc: 'Alta de campañas nuevas, cartografía base y administradores.' },
     monitoreo: { title: 'Control de campañas', desc: 'Plan, estado, topes de IA, respaldos y acceso a cada campaña.' },
+    licencias: { title: 'Licencias y cobranza', desc: 'Vigencias, pagos y servicios contratados de cada campaña.' },
     demo: { title: 'Demo', desc: 'Visitantes, demos abiertas, IA de la demo e identidad de las campañas ficticias.' },
     planes: { title: 'Planes y límites', desc: 'Lo que incluye cada plan. Los cambios aplican de inmediato.' },
     bitacora: { title: 'Bitácora y respaldos', desc: 'Quién cambió qué y cuándo; respaldo de la configuración.' },
@@ -58,7 +61,7 @@ export const SuperAdminDashboard = () => {
     const { user, signOut } = useAuth();
     const [tenants, setTenants] = useState<any[]>([]);
     const [globalLayers, setGlobalLayers] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'resumen' | 'demo' | 'planes' | 'bitacora' | 'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('resumen');
+    const [activeTab, setActiveTab] = useState<'resumen' | 'demo' | 'planes' | 'bitacora' | 'licencias' | 'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('resumen');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // OTA Deployment State
@@ -81,6 +84,10 @@ export const SuperAdminDashboard = () => {
     const [newTenantName, setNewTenantName] = useState('');
     const [newSlug, setNewSlug] = useState('');
     const [newAdminPhone, setNewAdminPhone] = useState('');
+    const [newCandidateName, setNewCandidateName] = useState('');
+    const [newStage, setNewStage] = useState<'aspirante' | 'candidato'>('aspirante');
+    const [newPlan, setNewPlan] = useState('profesional');
+    const [newLicenseEnd, setNewLicenseEnd] = useState(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d.toISOString().slice(0, 10); });
     const [electionType, setElectionType] = useState('local');
     const [position, setPosition] = useState('presidencia_municipal');
     const [geographicScope, setGeographicScope] = useState('');
@@ -548,15 +555,22 @@ export const SuperAdminDashboard = () => {
     const handleCreateTenant = async (e: React.FormEvent) => {
         e.preventDefault();
         setMessage('');
+        const phone10 = newAdminPhone.replace(/\D/g, '').slice(-10);
+        if (phone10.length !== 10) { setMessage('El celular debe tener 10 dígitos.'); return; }
+        if (!newCandidateName.trim()) { setMessage('Escribe el nombre de la persona (aspirante o candidato).'); return; }
+        const aspirante = newStage === 'aspirante';
+        const today = new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 10);
 
         const { data: tenantData, error: tenantError } = await supabase
             .from('tenants')
             .insert([{
-                name: newTenantName,
+                name: newTenantName.trim(),
                 slug: newSlug.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]/g, ''),
                 election_type: electionType,
                 position: position,
-                geographic_scope: geographicScope
+                cargo: position,
+                geographic_scope: geographicScope,
+                plan: newPlan,
             }])
             .select()
             .single();
@@ -568,28 +582,44 @@ export const SuperAdminDashboard = () => {
 
         const { data: accountResult, error: accountError } = await supabase.functions.invoke('create-team-member', {
             body: {
-                name: `Candidato - ${newTenantName}`,
-                phone: newAdminPhone,
+                name: newCandidateName.trim(),
+                phone: phone10,
                 role: 'candidato',
                 tenant_id: tenantData.id
             }
         });
 
         if (accountError || !accountResult?.success) {
-            setMessage(`Error al crear usuario administrador: ${accountError?.message || accountResult?.error}`);
+            setMessage(`Error al crear la cuenta del ${aspirante ? 'aspirante' : 'candidato'}: ${accountError?.message || accountResult?.error}`);
             return;
         }
 
-        // --- DESPACHO DE SMS DESDE EL HUB CENTRAL ---
-        const formattedPhone = newAdminPhone.startsWith('+52') ? newAdminPhone : `+52${newAdminPhone}`;
-        const welcomeMsg = `TLATOANI: Hola, candidato ${newTenantName}, tu clave tactica es ${accountResult.temp_code}. Ingresa en nemia.lat/login`;
-        BridgeService.sendSMS(formattedPhone, welcomeMsg).catch(console.error);
-        console.log(`[C4I] SMS de bienvenida enviado a Candidato ${newTenantName} (${formattedPhone})`);
+        // Etapa: el aspirante trabaja con metas de conocimiento; pasa a "votos" cuando lo eligen candidato
+        await supabase.from('goal_settings').upsert({ tenant_id: tenantData.id, objective: aspirante ? 'conocimiento' : 'votos' }, { onConflict: 'tenant_id' });
 
-        setMessage('¡Campaña y Administrador creados con éxito!');
+        // Licencia inicial: queda registrada como pendiente de pago para el control de cobranza
+        let licMsg = '';
+        if (newLicenseEnd && newLicenseEnd >= today) {
+            const { data: lic, error: licErr } = await supabase.rpc('fn_license_register', {
+                p_tenant: tenantData.id, p_plan: newPlan, p_start: today, p_end: newLicenseEnd,
+                p_status: 'pendiente', p_send_sms: false,
+            });
+            licMsg = licErr ? ` (No se pudo registrar la licencia: ${licErr.message})` : ` Licencia ${(lic as any)?.folio} registrada como pendiente de pago.`;
+        }
+
+        // SMS de bienvenida por el puente central
+        const first = newCandidateName.trim().split(' ')[0];
+        const planLabel = newPlan === 'arranque' ? 'Arranque' : newPlan === 'a_medida' ? 'A la medida' : 'Profesional';
+        const until = newLicenseEnd ? ` Tu plan ${planLabel} esta activo hasta el ${new Date(newLicenseEnd + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}.` : '';
+        const welcome = `TLATOANI: Hola ${first}, ya tienes tu cuenta de ${newTenantName.trim()}. Tu codigo de acceso es ${accountResult.temp_code}; entra en nemia.lat/login con tu celular.${until}`;
+        const { data: queued } = await supabase.rpc('fn_admin_send_sms', { p_tenant: tenantData.id, p_phone: phone10, p_message: welcome });
+        if (!queued) BridgeService.sendSMS(`+52${phone10}`, welcome).catch(console.error);
+
+        setMessage(`Campaña creada y ${aspirante ? 'aspirante' : 'candidato'} dado de alta. Se le envió su código por SMS.${licMsg}`);
         setNewTenantName('');
         setNewSlug('');
         setNewAdminPhone('');
+        setNewCandidateName('');
         setGeographicScope('');
         loadData();
     };
@@ -1219,6 +1249,7 @@ export const SuperAdminDashboard = () => {
                 {activeTab === 'resumen' && <SuperAdminOverview onGo={(t) => setActiveTab(t as any)} />}
                 {activeTab === 'ventas' && <SalesLeads />}
                 {activeTab === 'demo' && <DemoAdmin />}
+                {activeTab === 'licencias' && <LicensesAdmin />}
                 {activeTab === 'planes' && <PlansEditor />}
                 {activeTab === 'bitacora' && <AuditLog />}
                 {activeTab === 'gestion' && (
@@ -1292,9 +1323,35 @@ export const SuperAdminDashboard = () => {
                                         )}
                                     </div>
                                     <div className="flex-col gap-1">
-                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Celular del administrador</label>
-                                        <input className="squishy-input" type="tel" placeholder="10 dígitos" value={newAdminPhone} onChange={e => setNewAdminPhone(e.target.value)} required />
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Etapa</label>
+                                        <select className="squishy-input" value={newStage} onChange={e => setNewStage(e.target.value as any)}>
+                                            <option value="aspirante">Aspirante (aún no es candidato oficial)</option>
+                                            <option value="candidato">Candidato(a) registrado(a)</option>
+                                        </select>
                                     </div>
+                                    <div className="flex-col gap-1">
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Nombre completo de la persona</label>
+                                        <input className="squishy-input" placeholder="Ej. María López Hernández" value={newCandidateName} onChange={e => setNewCandidateName(e.target.value)} required />
+                                    </div>
+                                    <div className="flex-col gap-1">
+                                        <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Celular (10 dígitos)</label>
+                                        <input className="squishy-input" type="tel" placeholder="961 123 4567" value={newAdminPhone} onChange={e => setNewAdminPhone(e.target.value)} required />
+                                    </div>
+                                    <div className="responsive-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                                        <div className="flex-col gap-1">
+                                            <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Plan</label>
+                                            <select className="squishy-input" value={newPlan} onChange={e => setNewPlan(e.target.value)}>
+                                                <option value="arranque">Arranque (gratis)</option>
+                                                <option value="profesional">Profesional</option>
+                                                <option value="a_medida">A la medida</option>
+                                            </select>
+                                        </div>
+                                        <div className="flex-col gap-1">
+                                            <label style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold', marginLeft: '0.5rem' }}>Vigente hasta</label>
+                                            <input className="squishy-input" type="date" value={newLicenseEnd} onChange={e => setNewLicenseEnd(e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <p style={{ fontSize: '0.72rem', color: '#94a3b8', margin: 0 }}>La licencia queda como pendiente de pago; regístrala como pagada en Licencias y cobranza cuando te paguen.</p>
                                     <button type="submit" className="squishy-btn primary" style={{ background: 'var(--secondary)' }}>
                                         Crear campaña
                                     </button>

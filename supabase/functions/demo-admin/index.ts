@@ -35,6 +35,19 @@ Deno.serve(async (req) => {
     if (!me || me.role !== 'superadmin' || me.is_active === false) return json({ error: 'Solo el administrador del sistema' }, 403);
 
     if (!DEMO_KEY) return json({ error: 'Falta conectar la demo', needs_key: true }, 412);
+    // Revisa el tipo de llave sin mostrarla: la pública (publishable / anon) no puede leer la demo
+    const keyKind = (() => {
+        if (DEMO_KEY.startsWith('sb_secret_')) return 'secreta';
+        if (DEMO_KEY.startsWith('sb_publishable_')) return 'publica';
+        try { let p = DEMO_KEY.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); p += '='.repeat((4 - p.length % 4) % 4); return JSON.parse(atob(p)).role === 'service_role' ? 'secreta' : 'publica'; }
+        catch { return 'desconocida'; }
+    })();
+    if (keyKind !== 'secreta') return json({
+        error: keyKind === 'publica'
+            ? 'La llave guardada es la pública (publishable o anon). Copia la llave SECRETA (secret key o service_role) y reemplázala en el secreto DEMO_SERVICE_ROLE_KEY.'
+            : 'La llave guardada no se reconoce. Copia la llave secreta (secret key o service_role) de la demo y vuelve a pegarla completa.',
+        needs_key: true, wrong_key: true,
+    }, 412);
     const demo = createClient(DEMO_URL, DEMO_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 
     let body: any = {};

@@ -153,13 +153,14 @@ const MainDashboard = () => {
   const [agentContext, setAgentContext] = useState({ name: '', xp: 0, rank: 'Explorador', levelProgression: 0 })
   const [diaDActive, setDiaDActive] = useState(false)
   const [suspended, setSuspended] = useState(false)
+  const [licInfo, setLicInfo] = useState<{ end: string | null; reason: string | null }>({ end: null, reason: null })
 
   // Fetch Dia D Status
   useEffect(() => {
     if (!user?.tenant_id) return;
     const fetchDiaDStatus = async () => {
-      const { data } = await supabase.from('tenants').select('dia_d_active, is_active').eq('id', user.tenant_id).single();
-      if (data) { setDiaDActive(!!data.dia_d_active); setSuspended(data.is_active === false); }
+      const { data } = await supabase.from('tenants').select('*').eq('id', user.tenant_id).single();
+      if (data) { setDiaDActive(!!data.dia_d_active); setSuspended(data.is_active === false); setLicInfo({ end: (data as any).license_end || null, reason: (data as any).suspended_reason || null }); }
     };
     fetchDiaDStatus();
 
@@ -224,8 +225,12 @@ const MainDashboard = () => {
         <ShieldAlert size={48} color="#f59e0b" />
         <h2 style={{ margin: 0, fontFamily: 'Inter, sans-serif', textTransform: 'none', letterSpacing: 0 }}>Campaña en pausa</h2>
         <p style={{ maxWidth: 420, color: '#94a3b8', lineHeight: 1.5 }}>
-          El acceso a esta campaña está suspendido por el momento. Tus datos están a salvo.
-          Comunícate con la coordinación de tu campaña o con el soporte de Tlatoani.
+          {licInfo.reason === 'licencia_vencida' && licInfo.end
+            ? <>La licencia de esta campaña venció el {new Date(licInfo.end + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}. </>
+            : <>El acceso a esta campaña está suspendido por el momento. </>}
+          Tus datos están a salvo. {['candidato', 'coordinador_campana'].includes(user?.role || '')
+            ? 'Para renovarla comunícate con el soporte de Tlatoani.'
+            : 'Comunícate con la coordinación de tu campaña.'}
         </p>
         <button className="squishy-btn" onClick={signOut}>Cerrar sesión</button>
       </div>
@@ -251,6 +256,17 @@ const MainDashboard = () => {
         </div>
       )}
       <PlanBar plan={plan} role={user?.role} />
+      {(() => {
+        // Aviso al candidato y a la coordinación cuando la licencia está por vencer
+        if (!licInfo.end || !['candidato', 'coordinador_campana'].includes(user?.role || '')) return null;
+        const days = Math.round((new Date(licInfo.end + 'T23:59:59').getTime() - Date.now()) / 86400_000);
+        if (days < 0 || days > 10) return null;
+        return (
+          <div style={{ background: '#78350f', color: '#fde68a', padding: '0.55rem 1rem', fontSize: '0.85rem', textAlign: 'center' }}>
+            La licencia de tu campaña vence {days === 0 ? 'hoy' : days === 1 ? 'mañana' : `en ${days} días`} ({new Date(licInfo.end + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'long' })}). Renueva para que tu equipo no se detenga.
+          </div>
+        );
+      })()}
       <MotivationCard role={user?.role} name={user?.name} brand={brand} />
       <GatewayBanner />
       {/* HUD (Heads-Up Display) - Optimized for Mobile */}
