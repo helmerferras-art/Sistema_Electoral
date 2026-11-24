@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshCw, Download, LogIn, Save, Search } from 'lucide-react';
+import { RefreshCw, Download, LogIn, Save, Search, BadgeCheck } from 'lucide-react';
+import { LicensePanel, vigencia } from './LicensePanel';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { USER_COLUMNS } from '../lib/userColumns';
@@ -14,7 +15,7 @@ const ADMIN_ROLES = ['candidato', 'coordinador_campana'];
 type T = {
     id: string; name: string; plan: string | null; is_active: boolean | null; ai_daily_limit: number | null; ai_user_daily_limit: number | null;
     cargo?: string | null; municipio?: string | null; geographic_scope?: string | null; brand_photo_url?: string | null; brand_short_name?: string | null;
-    created_at: string; is_demo?: boolean; is_sandbox?: boolean;
+    created_at: string; is_demo?: boolean; is_sandbox?: boolean; license_start?: string | null; license_end?: string | null; suspended_reason?: string | null;
 };
 
 export const logAdmin = (action: string, entity: string, summary: string, tenant_id?: string, detail?: unknown) =>
@@ -29,6 +30,7 @@ export const TenantControl = () => {
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState('');
     const [msg, setMsg] = useState('');
+    const [lic, setLic] = useState<T | null>(null);
 
     const load = async () => {
         setLoading(true);
@@ -58,7 +60,9 @@ export const TenantControl = () => {
         const patch = edits[t.id]; if (!patch) return;
         if (patch.is_active === false && t.is_active !== false && !confirm(`¿Suspender "${t.name}"? Su equipo verá un aviso y no podrá trabajar hasta que la reactives.`)) return;
         setBusy(t.id); setMsg('');
-        const { data, error } = await supabase.from('tenants').update(patch).eq('id', t.id).select('id');
+        // Al reactivar a mano se borra el motivo de la pausa (por ejemplo, licencia vencida)
+        const body = patch.is_active === true ? { ...patch, suspended_reason: null } : patch.is_active === false ? { ...patch, suspended_reason: 'manual' } : patch;
+        const { data, error } = await supabase.from('tenants').update(body).eq('id', t.id).select('id');
         setBusy('');
         if (error || !data?.length) { setMsg(`❌ ${error?.message || 'No se guardó (permisos)'}`); return; }
         setMsg(`✅ "${t.name}" actualizada`);
@@ -104,7 +108,7 @@ export const TenantControl = () => {
                 <div className="exec-table-wrap">
                     <table className="exec-table tc-table">
                         <thead><tr>
-                            <th>Campaña</th><th>Estado</th><th>Plan</th><th className="num">IA / día</th><th className="num">IA por persona</th>
+                            <th>Campaña</th><th>Estado</th><th>Vigencia</th><th>Plan</th><th className="num">IA / día</th><th className="num">IA por persona</th>
                             <th className="num">Equipo</th><th className="num">Simpatizantes</th><th></th>
                         </tr></thead>
                         <tbody>
@@ -126,9 +130,10 @@ export const TenantControl = () => {
                                         <td>
                                             <label className="tc-switch" title={active ? 'Activa' : 'Suspendida'}>
                                                 <input type="checkbox" checked={active} disabled={own} onChange={e => set(t.id, { is_active: e.target.checked })} />
-                                                <span /> <em>{active ? 'Activa' : 'Suspendida'}</em>
+                                                <span /> <em>{active ? 'Activa' : t.suspended_reason === 'licencia_vencida' ? 'Vencida' : 'Suspendida'}</em>
                                             </label>
                                         </td>
+                                        <td>{(() => { const v = vigencia(t.license_end); return <span className={`lic-tone ${v.tone}`}>{v.label}</span>; })()}</td>
                                         <td>
                                             <select className="squishy-input tc-input" value={val(t, 'plan') || ''} onChange={e => set(t.id, { plan: e.target.value })}>
                                                 {!PLAN_OPTIONS.some(([v]) => v === val(t, 'plan')) && <option value={val(t, 'plan') || ''}>{val(t, 'plan') || '—'}</option>}
@@ -141,13 +146,14 @@ export const TenantControl = () => {
                                         <td className="num">{s ? s.supporters.toLocaleString('es-MX') : '…'}</td>
                                         <td className="num" style={{ whiteSpace: 'nowrap' }}>
                                             {dirty(t.id) && <button className="exec-btn primary-sm" disabled={busy === t.id} onClick={() => save(t)}><Save size={13} /> Guardar</button>}
+                                            <button className="exec-btn ghost" title="Licencia, cobranza y límites propios" onClick={() => setLic(t)}><BadgeCheck size={14} /> Licencia</button>
                                             <button className="exec-btn ghost" title="Descargar respaldo" disabled={busy === t.id + ':b'} onClick={() => backup(t)}><Download size={14} /></button>
                                             {!own && <button className="exec-btn ghost" title="Entrar como su administrador" onClick={() => enterAs(t)}><LogIn size={14} /></button>}
                                         </td>
                                     </tr>
                                 );
                             })}
-                            {!shown.length && <tr><td colSpan={8} className="exec-empty">{loading ? 'Cargando…' : 'Sin campañas.'}</td></tr>}
+                            {!shown.length && <tr><td colSpan={9} className="exec-empty">{loading ? 'Cargando…' : 'Sin campañas.'}</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -156,6 +162,7 @@ export const TenantControl = () => {
                     Para cambiar los límites de un plan completo, usa <b>Planes y límites</b>.
                 </div>
             </section>
+            {lic && <LicensePanel tenant={lic} onClose={() => setLic(null)} onSaved={load} />}
         </div>
     );
 };

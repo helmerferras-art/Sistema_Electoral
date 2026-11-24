@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
  */
 const PLANS: [string, string][] = [['demo', 'Demo'], ['arranque', 'Arranque'], ['profesional', 'Profesional'], ['a_medida', 'A la medida']];
 
-const KEY_LABEL: Record<string, string> = {
+export const KEY_LABEL: Record<string, string> = {
     simpatizantes: 'Simpatizantes registrados',
     'rol:candidato': 'Cuentas de candidato(a)',
     'rol:coordinador_campana': 'Coordinación general',
@@ -28,7 +28,7 @@ const KEY_LABEL: Record<string, string> = {
     mensajeria: 'Mensajería SMS/WhatsApp (1 = sí, 0 = no)',
     exportar: 'Exportar datos (1 = sí, 0 = no)',
 };
-const GROUPS: [string, string[]][] = [
+export const GROUPS: [string, string[]][] = [
     ['Equipo', ['rol:candidato', 'rol:coordinador_campana', 'rol:comunicacion', 'rol:comunicacion_digital', 'rol:coordinador_territorial', 'rol:coordinador', 'rol:coordinador_logistica', 'rol:lider', 'brigadistas_por_lider']],
     ['Operación', ['simpatizantes', 'zonas_abiertas', 'guiones_activos', 'sondeos_activos', 'eventos_mes', 'casillas']],
     ['Servicios', ['ia_diaria', 'mensajeria', 'exportar']],

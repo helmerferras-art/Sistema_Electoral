@@ -35,12 +35,14 @@ export const DemoAdmin = () => {
     const [brands, setBrands] = useState<any[]>([]);
 
     const load = async () => {
-        setLoading(true); setMsg('');
+        setLoading(true);
         try {
             const d = await demoAdmin('overview');
-            setData(d); setBrands(d.brands || []); setNeedsKey(false);
+            setData(d); setBrands(d.brands || []); setNeedsKey(false); setMsg('');
         } catch (e: any) {
-            if (e.needsKey) setNeedsKey(true); else setMsg(`❌ ${e.message}`);
+            // La llave falta, es la pública o la demo la rechaza: se muestran de nuevo los pasos para conectarla
+            if (e.needsKey || /api key|llave/i.test(e.message || '')) { setNeedsKey(true); setMsg(`⚠️ ${e.message}`); }
+            else setMsg(`❌ ${e.message}`);
         }
         const since = new Date(Date.now() - 30 * 86400_000).toISOString();
         const [l, s] = await Promise.all([

@@ -6,12 +6,12 @@ import { supabase } from '../lib/supabase';
  * Bitácora de cambios importantes (quién, qué, cuándo) y respaldo de la configuración del sistema.
  * Nunca muestra llaves ni contraseñas: el registro las omite desde la base.
  */
-const ENTITY_LABEL: Record<string, string> = { 'campaña': 'Campaña', plan: 'Plan', ia: 'IA', usuario: 'Usuario', demo: 'Demo' };
+const ENTITY_LABEL: Record<string, string> = { 'campaña': 'Campaña', plan: 'Plan', ia: 'IA', usuario: 'Usuario', demo: 'Demo', licencia: 'Licencia', 'límite': 'Límite propio' };
 const ACTION_LABEL: Record<string, string> = { alta: 'Alta', cambio: 'Cambio', baja: 'Baja', respaldo: 'Respaldo', entrar_como: 'Entró como', demo: 'Demo' };
 const FIELD_LABEL: Record<string, string> = {
     is_active: 'Activa', plan: 'Plan', ai_daily_limit: 'IA por día', ai_user_daily_limit: 'IA por persona', name: 'Nombre', role: 'Perfil',
     value: 'Valor', brand_color: 'Color', brand_slogan: 'Slogan', brand_short_name: 'Nombre corto', brand_photo_url: 'Foto', is_sandbox: 'Demo privada',
-    provider: 'Proveedor', llave: 'Llave', tenant_id: 'Campaña', dia_d_active: 'Día D', brand_rights_ok: 'Derechos de imagen', brand_updated_at: 'Identidad actualizada',
+    provider: 'Proveedor', llave: 'Llave', license_start: 'Inicio de licencia', license_end: 'Fin de licencia', suspended_reason: 'Motivo de pausa', payment_status: 'Estado de pago', amount: 'Monto', paid_at: 'Fecha de pago', end_date: 'Fin', start_date: 'Inicio', tenant_id: 'Campaña', dia_d_active: 'Día D', brand_rights_ok: 'Derechos de imagen', brand_updated_at: 'Identidad actualizada',
 };
 const fmt = (v: unknown) => v === null || v === undefined ? '—' : typeof v === 'boolean' ? (v ? 'sí' : 'no') : typeof v === 'object' ? JSON.stringify(v) : String(v);
 
