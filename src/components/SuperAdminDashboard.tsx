@@ -1,10 +1,14 @@
 import { SalesLeads } from './SalesLeads';
 import { SuperAdminOverview } from './SuperAdminOverview';
+import { DemoAdmin } from './DemoAdmin';
+import { TenantControl } from './TenantControl';
+import { PlansEditor } from './PlansEditor';
+import { AuditLog } from './AuditLog';
 import React, { useState, useEffect } from 'react';
 import { USER_COLUMNS } from '../lib/userColumns';
 import { useAuth } from '../lib/AuthContext';
 import { supabase } from '../lib/supabase';
-import { LayoutDashboard, Building2, Briefcase, UserCog, MessagesSquare, Map as MapIcon } from 'lucide-react';
+import { LayoutDashboard, Building2, Briefcase, UserCog, MessagesSquare, FlaskConical, SlidersHorizontal, ScrollText } from 'lucide-react';
 import { Layers, Shield, PlusCircle, Upload, LogOut, Trash2, Activity, Settings, BarChart2, Search, FileText, Users, PieChart, ChevronDown, Network, Brain, Cpu, Key, List, AlertCircle } from 'lucide-react';
 import { AdminManager } from './AdminManager';
 import { SecuritySettings } from './SecuritySettings';
@@ -17,24 +21,30 @@ const SA_NAV: { title: string; items: { id: string; label: string; icon: any }[]
     { title: 'General', items: [{ id: 'resumen', label: 'Resumen ejecutivo', icon: LayoutDashboard }] },
     { title: 'Clientes', items: [
         { id: 'gestion', label: 'Campañas', icon: Building2 },
-        { id: 'monitoreo', label: 'Estado de campañas', icon: Activity },
+        { id: 'monitoreo', label: 'Control de campañas', icon: Activity },
         { id: 'usuarios', label: 'Administradores', icon: UserCog },
         { id: 'ventas', label: 'Ventas', icon: Briefcase },
+        { id: 'demo', label: 'Demo', icon: FlaskConical },
     ] },
     { title: 'Datos electorales', items: [
         { id: 'estadistica', label: 'Resultados históricos', icon: BarChart2 },
         { id: 'padron', label: 'Padrón electoral', icon: Users },
     ] },
     { title: 'Plataforma', items: [
+        { id: 'planes', label: 'Planes y límites', icon: SlidersHorizontal },
         { id: 'inteligencia', label: 'Inteligencia artificial', icon: Brain },
         { id: 'comunicaciones', label: 'Mensajería y puentes', icon: MessagesSquare },
         { id: 'sistema', label: 'Versiones y sistema', icon: Settings },
     ] },
+    { title: 'Seguridad', items: [{ id: 'bitacora', label: 'Bitácora y respaldos', icon: ScrollText }] },
 ];
 const SA_META: Record<string, { title: string; desc: string }> = {
     resumen: { title: 'Resumen ejecutivo', desc: 'Cómo va la plataforma completa: campañas, equipos, actividad y servicios.' },
     gestion: { title: 'Campañas', desc: 'Alta de campañas nuevas, cartografía base y administradores.' },
-    monitoreo: { title: 'Estado de campañas', desc: 'Actividad, equipos y simpatizantes de cada campaña.' },
+    monitoreo: { title: 'Control de campañas', desc: 'Plan, estado, topes de IA, respaldos y acceso a cada campaña.' },
+    demo: { title: 'Demo', desc: 'Visitantes, demos abiertas, IA de la demo e identidad de las campañas ficticias.' },
+    planes: { title: 'Planes y límites', desc: 'Lo que incluye cada plan. Los cambios aplican de inmediato.' },
+    bitacora: { title: 'Bitácora y respaldos', desc: 'Quién cambió qué y cuándo; respaldo de la configuración.' },
     usuarios: { title: 'Administradores', desc: 'Cuentas de candidatos y coordinaciones generales.' },
     ventas: { title: 'Ventas', desc: 'Prospectos que llegaron desde la página y su seguimiento.' },
     estadistica: { title: 'Resultados históricos', desc: 'Carga y consulta de resultados electorales por sección.' },
@@ -48,7 +58,7 @@ export const SuperAdminDashboard = () => {
     const { user, signOut } = useAuth();
     const [tenants, setTenants] = useState<any[]>([]);
     const [globalLayers, setGlobalLayers] = useState<any[]>([]);
-    const [activeTab, setActiveTab] = useState<'resumen' | 'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('resumen');
+    const [activeTab, setActiveTab] = useState<'resumen' | 'demo' | 'planes' | 'bitacora' | 'gestion' | 'monitoreo' | 'estadistica' | 'padron' | 'usuarios' | 'sistema' | 'comunicaciones' | 'inteligencia' | 'ventas'>('resumen');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // OTA Deployment State
@@ -1208,6 +1218,9 @@ export const SuperAdminDashboard = () => {
                 </div>
                 {activeTab === 'resumen' && <SuperAdminOverview onGo={(t) => setActiveTab(t as any)} />}
                 {activeTab === 'ventas' && <SalesLeads />}
+                {activeTab === 'demo' && <DemoAdmin />}
+                {activeTab === 'planes' && <PlansEditor />}
+                {activeTab === 'bitacora' && <AuditLog />}
                 {activeTab === 'gestion' && (
                     <>
                         <div className="flex-row-resp" style={{ justifyContent: 'center', alignItems: 'stretch', gap: '2rem', width: '100%' }}>
@@ -1346,46 +1359,7 @@ export const SuperAdminDashboard = () => {
                 )}
 
                 {
-                    activeTab === 'monitoreo' && (
-                        <div className="flex-col gap-4">
-                            <div className="flex-row-resp" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h2 style={{ margin: 0, fontFamily: 'Oswald' }}>Estado de las campañas</h2>
-                                <button onClick={loadData} className="squishy-btn mini"><Activity size={14} /> REFRESCAR</button>
-                            </div>
-                            {tenants.map(t => {
-                                const stats = tenantStats[t.id] || { users: 0, convencidos: 0, adminName: '...', adminPhone: '...' };
-                                return (
-                                    <div key={t.id} className="tactile-card flex-row-resp" style={{ gap: '1.5rem', alignItems: 'center', borderLeft: '4px solid var(--tertiary)' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <h3 style={{ margin: 0, fontSize: '1.3rem' }}>{t.name}</h3>
-                                            <p style={{ margin: 0, color: '#64748B', fontSize: '0.8rem' }}>{(t.position || 'SIN CARGO').replace('_', ' ').toUpperCase()} - {t.geographic_scope || 'TUXTLA GUTIÉRREZ'}</p>
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <p style={{ margin: 0, fontSize: '0.7rem', color: '#64748B' }}>ADMINISTRADOR</p>
-                                            <p style={{ margin: 0, fontWeight: 'bold' }}>{stats.adminName}</p>
-                                            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--tertiary)' }}>{stats.adminPhone}</p>
-                                        </div>
-                                        <div className="responsive-grid" style={{ flex: 1, gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
-                                            <div style={{ textAlign: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
-                                                <p style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'Oswald' }}>{stats.users}</p>
-                                                <p style={{ margin: 0, fontSize: '0.6rem', color: '#64748B' }}>USER</p>
-                                            </div>
-                                            <div style={{ textAlign: 'center', background: 'rgba(0,212,255,0.05)', padding: '0.5rem', borderRadius: '8px' }}>
-                                                <p style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'Oswald', color: 'var(--tertiary)' }}>{stats.convencidos}</p>
-                                                <p style={{ margin: 0, fontSize: '0.6rem', color: '#64748B' }}>VOTES</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex-col gap-2">
-                                            <button onClick={() => handleBackup(t.id, t.name)} disabled={downloadingDb === t.id} className="squishy-btn mini secondary" style={{ width: '100%' }}>
-                                                {downloadingDb === t.id ? 'EXTRACT...' : 'BACKUP'}
-                                            </button>
-                                            <button className="squishy-btn mini" style={{ width: '100%', opacity: 0.5 }}><Settings size={14} /> RESCUE</button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )
+                    activeTab === 'monitoreo' && <TenantControl />
                 }
 
                 {

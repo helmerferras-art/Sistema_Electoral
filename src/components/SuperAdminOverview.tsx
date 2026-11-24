@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Building2, Users, UserCheck, Footprints, Sparkles, MessageSquare, Briefcase, Bell, RefreshCw, ArrowRight, CircleCheck, CircleAlert } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/AuthContext';
 
 /**
  * Resumen ejecutivo del administrador del sistema: cómo va la plataforma completa de un vistazo.
@@ -12,9 +13,10 @@ type Row = { id: string; name: string; plan: string; scope: string; users: numbe
 const nf = new Intl.NumberFormat('es-MX');
 const daysAgo = (d: number) => new Date(Date.now() - d * 86400_000).toISOString();
 const todayMx = () => { const s = new Date(); s.setUTCHours(6, 0, 0, 0); if (s > new Date()) s.setUTCDate(s.getUTCDate() - 1); return s.toISOString(); };
-const PLAN_LABEL: Record<string, string> = { arranque: 'Arranque', basico: 'Básico', pro: 'Profesional', premium: 'Premium', enterprise: 'Institucional', demo: 'Demo' };
+const PLAN_LABEL: Record<string, string> = { arranque: 'Arranque', profesional: 'Profesional', a_medida: 'A la medida', demo: 'Demo' };
 
 export const SuperAdminOverview = ({ onGo }: { onGo: (tab: string) => void }) => {
+    const { user } = useAuth();
     const [kpis, setKpis] = useState<Kpi[]>([]);
     const [rows, setRows] = useState<Row[]>([]);
     const [leads, setLeads] = useState<any[]>([]);
@@ -27,7 +29,8 @@ export const SuperAdminOverview = ({ onGo }: { onGo: (tab: string) => void }) =>
         setLoading(true);
         const head = { count: 'exact' as const, head: true };
         const { data: tenants } = await supabase.from('tenants').select('id, name, plan, cargo, municipio, geographic_scope, created_at, is_active, is_demo, is_sandbox').order('created_at', { ascending: false });
-        const real = (tenants || []).filter((t: any) => !t.is_demo && !t.is_sandbox);
+        // Solo campañas de clientes: sin demos ni la cuenta del propio administrador
+        const real = (tenants || []).filter((t: any) => !t.is_demo && !t.is_sandbox && t.id !== user?.tenant_id);
         const realIds = real.map((t: any) => t.id);
 
         const [usersQ, supTot, sup7, act7, aiOk, aiErr, smsOk, smsPend, smsFail, leads30, alertsQ, aiCfg, lastSms, leadsQ, alertList] = await Promise.all([
@@ -43,7 +46,7 @@ export const SuperAdminOverview = ({ onGo }: { onGo: (tab: string) => void }) =>
             supabase.from('sales_leads').select('id', head).gte('created_at', daysAgo(30)),
             supabase.from('system_alerts').select('id', head).eq('is_read', false),
             supabase.from('ai_config').select('id', head).eq('is_active', true).neq('api_key', ''),
-            supabase.from('gateway_commands').select('processed_at').eq('status', 'completed').order('processed_at', { ascending: false }).limit(1),
+            supabase.from('gateway_commands').select('processed_at, created_at').eq('status', 'completed').order('created_at', { ascending: false }).limit(1),
             supabase.from('sales_leads').select('id, name, election_type, territory, status, created_at').order('created_at', { ascending: false }).limit(5),
             supabase.from('system_alerts').select('id, created_at, source, message, is_read').order('created_at', { ascending: false }).limit(5),
         ]);
@@ -66,7 +69,7 @@ export const SuperAdminOverview = ({ onGo }: { onGo: (tab: string) => void }) =>
             { label: 'Alertas sin leer', value: c(alertsQ), sub: c(alertsQ) ? 'requieren revisión' : 'todo en orden', icon: Bell, tone: c(alertsQ) ? 'bad' : 'ok' },
         ]);
 
-        const last = (lastSms as any).data?.[0]?.processed_at as string | undefined;
+        const last = ((lastSms as any).data?.[0]?.processed_at || (lastSms as any).data?.[0]?.created_at) as string | undefined;
         const minsAgo = last ? Math.round((Date.now() - new Date(last).getTime()) / 60000) : null;
         setHealth([
             { label: 'Inteligencia artificial', ok: c(aiCfg) > 0, detail: c(aiCfg) ? `${c(aiCfg)} proveedor(es) con llave activa` : 'Sin llave configurada' },
